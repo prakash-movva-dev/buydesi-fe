@@ -1,0 +1,354 @@
+import { useNavigate } from 'react-router-dom';
+import {
+  ArrowRight,
+  ClipboardList,
+  CreditCard,
+  Headset,
+  Lock,
+  Package,
+  RefreshCw,
+  ScrollText,
+  ShoppingBag,
+  UserCheck,
+} from 'lucide-react';
+import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/Card';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { useActivityList } from '@/features/activity/api';
+import { CategoryAdminDashboard } from '@/features/category-admin/CategoryAdminDashboard';
+import { useDashboardOverview } from '@/features/dashboard/api';
+import { PromoterDashboard } from '@/features/promoter/dashboard/PromoterDashboard';
+import { RegionalAdminDashboard } from '@/features/regional-admin/RegionalAdminDashboard';
+import { SellerDashboard } from '@/features/seller/dashboard/SellerDashboard';
+import { SupportAdminDashboard } from '@/features/support-admin/SupportAdminDashboard';
+import { useAuth } from '@/lib/auth';
+import { formatDateTime } from '@/lib/format';
+import { ADMIN_ROLES, UserRole } from '@/types/api';
+
+export const DashboardPage = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const isAdmin = user ? ADMIN_ROLES.has(user.role) : false;
+  const isSuperTier =
+    user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.SUB_SUPER_ADMIN;
+
+  // Role-specific dashboards. Each one owns its own layout/queries; the rest of
+  // this component is the generic super-tier admin shell.
+  if (user?.role === UserRole.SELLER) return <SellerDashboard />;
+  if (user?.role === UserRole.PROMOTER) return <PromoterDashboard />;
+  if (user?.role === UserRole.REGIONAL_ADMIN) return <RegionalAdminDashboard />;
+  if (user?.role === UserRole.CATEGORY_ADMIN) return <CategoryAdminDashboard />;
+  if (user?.role === UserRole.SUPPORT_ADMIN) return <SupportAdminDashboard />;
+
+  const overview = useDashboardOverview();
+  const activity = useActivityList({ page: 1, limit: 8 });
+
+  if (!user) return null;
+
+  // Buyers and any future roles fall through to the admin shell. Sellers and
+  // promoters have already returned above.
+  const greeting = 'Operations overview.';
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {`Hi, ${user.name.split(' ')[0]}`}
+          </h1>
+          <p className="text-muted-foreground">{greeting}</p>
+        </div>
+        {isAdmin && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => overview.refetch()}
+            disabled={overview.isFetching}
+          >
+            <RefreshCw className={`h-4 w-4 ${overview.isFetching ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        )}
+      </div>
+
+      {isAdmin && <AdminOverview navigate={navigate} />}
+
+      {isAdmin && isSuperTier && <RecentActivity navigate={navigate} />}
+
+      {!isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Welcome</CardTitle>
+            <CardDescription>
+              Your role-specific dashboards land here. The seller / promoter experiences are on
+              the roadmap.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      )}
+
+      {overview.isError && isAdmin && (
+        <Card>
+          <CardContent className="pt-6 text-sm text-destructive">
+            Couldn't load dashboard data:{' '}
+            {overview.error instanceof Error ? overview.error.message : 'Unknown error'}
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+
+  // Embedded components below — they share `overview` and `activity` via closure.
+
+  function AdminOverview({ navigate }: { navigate: ReturnType<typeof useNavigate> }) {
+    const o = overview.data;
+    const loading = overview.isLoading;
+
+    return (
+      <>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <MetricCard
+            label="Sellers — pending KYC"
+            value={loading ? null : o?.sellers.pendingApproval ?? 0}
+            secondary={
+              loading ? null : `${o?.sellers.approved ?? 0} approved · ${o?.sellers.total ?? 0} total`
+            }
+            tone="warning"
+          />
+          <MetricCard
+            label="Orders today"
+            value={loading ? null : o?.orders.placedToday ?? 0}
+            secondary={
+              loading
+                ? null
+                : `${o?.orders.cancelledToday ?? 0} cancelled · ${o?.orders.total ?? 0} all-time`
+            }
+            tone="info"
+          />
+          <MetricCard
+            label="Open support tickets"
+            value={loading ? null : o?.support.open ?? 0}
+            secondary={
+              loading ? null : `${o?.support.escalated ?? 0} escalated`
+            }
+            tone="warning"
+          />
+          <MetricCard
+            label="Escrow held"
+            value={loading ? null : o?.escrow.held ?? 0}
+            secondary={
+              loading ? null : `${o?.escrow.releasedToday ?? 0} released today`
+            }
+            tone="info"
+          />
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Needs attention</CardTitle>
+            <CardDescription>
+              Direct links into filtered work queues. The number is the live count.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <ActionTile
+              icon={UserCheck}
+              label="Pending seller KYC"
+              count={o?.sellers.pendingApproval}
+              loading={loading}
+              onClick={() => navigate('/admin/sellers?status=PENDING')}
+            />
+            <ActionTile
+              icon={Package}
+              label="Products awaiting review"
+              count={undefined}
+              loading={loading}
+              hint="Open queue"
+              onClick={() => navigate('/admin/products?status=PENDING')}
+            />
+            <ActionTile
+              icon={Headset}
+              label="Escalated tickets"
+              count={o?.support.escalated}
+              loading={loading}
+              onClick={() => navigate('/admin/support?escalationLevel=super')}
+            />
+            <ActionTile
+              icon={CreditCard}
+              label="Pending payouts"
+              count={o?.payouts.pending}
+              loading={loading}
+              onClick={() => navigate('/admin/payouts?status=PENDING')}
+            />
+            <ActionTile
+              icon={ShoppingBag}
+              label="Orders placed today"
+              count={o?.orders.placedToday}
+              loading={loading}
+              onClick={() => navigate('/admin/orders')}
+            />
+            <ActionTile
+              icon={Lock}
+              label="Escrow held"
+              count={o?.escrow.held}
+              loading={loading}
+              hint="See orders with held escrow"
+              onClick={() => navigate('/admin/orders')}
+            />
+            <ActionTile
+              icon={ClipboardList}
+              label="All orders"
+              count={o?.orders.total}
+              loading={loading}
+              onClick={() => navigate('/admin/orders')}
+            />
+            <ActionTile
+              icon={Headset}
+              label="Open tickets"
+              count={o?.support.open}
+              loading={loading}
+              onClick={() => navigate('/admin/support?status=OPEN')}
+            />
+          </CardContent>
+        </Card>
+      </>
+    );
+  }
+
+  function RecentActivity({ navigate }: { navigate: ReturnType<typeof useNavigate> }) {
+    return (
+      <Card>
+        <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <ScrollText className="h-5 w-5" />
+              Recent activity
+            </CardTitle>
+            <CardDescription>Latest admin mutations across the platform.</CardDescription>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => navigate('/admin/activity-log')}
+          >
+            See full log
+            <ArrowRight className="h-4 w-4" />
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {activity.isLoading && (
+            <div className="space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-10 w-full" />
+              ))}
+            </div>
+          )}
+          {activity.isError && (
+            <p className="text-sm text-destructive">
+              {activity.error instanceof Error ? activity.error.message : 'Failed to load activity'}
+            </p>
+          )}
+          {!activity.isLoading && !activity.isError && (
+            <ul className="space-y-2">
+              {(activity.data?.items ?? []).map((e) => {
+                const path =
+                  typeof e.metadata?.path === 'string' ? (e.metadata.path as string) : null;
+                return (
+                  <li
+                    key={e.id ?? e._id}
+                    className="flex flex-wrap items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-secondary/30"
+                  >
+                    {e.actorRole && <Badge variant="muted">{e.actorRole}</Badge>}
+                    <span className="font-mono text-xs">{e.action}</span>
+                    {path && (
+                      <span className="truncate font-mono text-xs text-muted-foreground">
+                        {path}
+                      </span>
+                    )}
+                    <span className="ml-auto text-xs text-muted-foreground">
+                      {formatDateTime(e.at)}
+                    </span>
+                  </li>
+                );
+              })}
+              {(activity.data?.items.length ?? 0) === 0 && (
+                <li className="py-4 text-center text-sm text-muted-foreground">
+                  No activity yet.
+                </li>
+              )}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
+    );
+  }
+};
+
+interface MetricCardProps {
+  label: string;
+  value: number | null;
+  secondary: string | null;
+  tone: 'info' | 'warning' | 'success' | 'destructive';
+}
+
+const toneClasses: Record<MetricCardProps['tone'], string> = {
+  info: 'text-blue-700',
+  warning: 'text-amber-700',
+  success: 'text-emerald-700',
+  destructive: 'text-destructive',
+};
+
+const MetricCard = ({ label, value, secondary, tone }: MetricCardProps) => (
+  <Card>
+    <CardHeader className="pb-2">
+      <CardDescription>{label}</CardDescription>
+      {value === null ? (
+        <Skeleton className="h-9 w-20" />
+      ) : (
+        <CardTitle className={`text-3xl ${toneClasses[tone]}`}>{value}</CardTitle>
+      )}
+      {secondary !== null && (
+        <p className="text-xs text-muted-foreground">{secondary}</p>
+      )}
+    </CardHeader>
+  </Card>
+);
+
+interface ActionTileProps {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  count: number | undefined;
+  loading: boolean;
+  hint?: string;
+  onClick: () => void;
+}
+
+const ActionTile = ({ icon: Icon, label, count, loading, hint, onClick }: ActionTileProps) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="flex items-center justify-between gap-3 rounded-md border border-border bg-secondary/20 px-3 py-3 text-left transition-colors hover:bg-secondary/40"
+  >
+    <div className="flex min-w-0 items-center gap-3">
+      <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+      <div className="min-w-0">
+        <div className="truncate text-sm font-medium">{label}</div>
+        {hint && <div className="text-xs text-muted-foreground">{hint}</div>}
+      </div>
+    </div>
+    {loading ? (
+      <Skeleton className="h-6 w-8" />
+    ) : count !== undefined ? (
+      <Badge variant={count > 0 ? 'warning' : 'muted'}>{count}</Badge>
+    ) : (
+      <ArrowRight className="h-4 w-4 text-muted-foreground" />
+    )}
+  </button>
+);

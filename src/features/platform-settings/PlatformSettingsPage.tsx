@@ -1,0 +1,270 @@
+import { useMemo, useState } from 'react';
+import { Check, Pencil, X } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { Input } from '@/components/ui/Input';
+import { Select } from '@/components/ui/Select';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { cn } from '@/lib/cn';
+import { formatDateTime } from '@/lib/format';
+import { ApiError } from '@/types/api';
+import { usePlatformSettings, useUpdatePlatformSetting } from './api';
+import type { PlatformSetting, SettingValue, SettingValueType } from './types';
+
+const GROUP_LABEL: Record<string, string> = {
+  support: 'Support',
+  orders: 'Orders',
+  reviews: 'Reviews',
+  notifications: 'Notifications',
+  payouts: 'Payouts',
+  delivery: 'Delivery',
+};
+
+const titleCase = (s: string): string =>
+  s
+    .split(/[-_]/)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+
+export const PlatformSettingsPage = () => {
+  const settings = usePlatformSettings();
+  const [group, setGroup] = useState<string | null>(null);
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, PlatformSetting[]>();
+    for (const s of settings.data ?? []) {
+      const list = map.get(s.group) ?? [];
+      list.push(s);
+      map.set(s.group, list);
+    }
+    return map;
+  }, [settings.data]);
+
+  const groups = Array.from(grouped.keys()).sort();
+  const activeGroup = group ?? groups[0] ?? null;
+  const rows = activeGroup ? grouped.get(activeGroup) ?? [] : [];
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-semibold tracking-tight">Platform settings</h1>
+        <p className="text-muted-foreground">
+          Runtime-editable knobs. Changes apply within 5 minutes platform-wide. Every change is
+          recorded to the activity log.
+        </p>
+      </div>
+
+      {settings.isLoading && (
+        <div className="space-y-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-24 w-full" />
+          ))}
+        </div>
+      )}
+
+      {settings.isError && (
+        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
+          {settings.error instanceof Error ? settings.error.message : 'Failed to load settings'}
+        </div>
+      )}
+
+      {!settings.isLoading && !settings.isError && (
+        <>
+          <div className="flex flex-wrap gap-2">
+            {groups.map((g) => (
+              <button
+                key={g}
+                type="button"
+                onClick={() => setGroup(g)}
+                className={cn(
+                  'rounded-md border px-3 py-1.5 text-sm font-medium transition-colors',
+                  g === activeGroup
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border bg-secondary/30 text-muted-foreground hover:bg-secondary/60',
+                )}
+              >
+                {GROUP_LABEL[g] ?? titleCase(g)}
+              </button>
+            ))}
+          </div>
+
+          <div className="space-y-3">
+            {rows.map((s) => (
+              <SettingRow key={s.key} setting={s} />
+            ))}
+            {rows.length === 0 && (
+              <p className="text-sm text-muted-foreground">No settings in this group.</p>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
+const SettingRow = ({ setting }: { setting: PlatformSetting }) => {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState<string>(String(setting.value));
+  const [error, setError] = useState<string | null>(null);
+  const update = useUpdatePlatformSetting();
+
+  const onCancel = () => {
+    setEditing(false);
+    setDraft(String(setting.value));
+    setError(null);
+  };
+
+  const onSave = async () => {
+    const parsed = parseDraft(draft, setting.valueType);
+    if (parsed.error) {
+      setError(parsed.error);
+      return;
+    }
+    if (typeof parsed.value === 'number') {
+      if (setting.min !== null && parsed.value < setting.min) {
+        setError(`Must be >= ${setting.min}`);
+        return;
+      }
+      if (setting.max !== null && parsed.value > setting.max) {
+        setError(`Must be <= ${setting.max}`);
+        return;
+      }
+    }
+    try {
+      await update.mutateAsync({ key: setting.key, value: parsed.value });
+      setEditing(false);
+      setError(null);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'Save failed');
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <CardTitle className="text-base">{setting.label}</CardTitle>
+            <CardDescription className="font-mono text-xs">{setting.key}</CardDescription>
+          </div>
+          {!editing && (
+            <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+              <Pencil className="h-4 w-4" />
+              Edit
+            </Button>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="space-y-3 pt-0">
+        {setting.description && (
+          <p className="text-sm text-muted-foreground">{setting.description}</p>
+        )}
+
+        {editing ? (
+          <div className="flex flex-wrap items-end gap-2">
+            <Editor
+              valueType={setting.valueType}
+              draft={draft}
+              onChange={setDraft}
+              min={setting.min}
+              max={setting.max}
+            />
+            <Button size="sm" onClick={onSave} disabled={update.isPending}>
+              <Check className="h-4 w-4" />
+              Save
+            </Button>
+            <Button size="sm" variant="outline" onClick={onCancel} disabled={update.isPending}>
+              <X className="h-4 w-4" />
+              Cancel
+            </Button>
+            {error && <p className="basis-full text-xs text-destructive">{error}</p>}
+          </div>
+        ) : (
+          <div className="flex items-center gap-3 text-sm">
+            <span className="text-muted-foreground">Current value:</span>
+            <span className="font-mono font-semibold">{displayValue(setting)}</span>
+            <span className="ml-auto text-xs text-muted-foreground">
+              Updated {formatDateTime(setting.updatedAt)}
+            </span>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+const Editor = ({
+  valueType,
+  draft,
+  onChange,
+  min,
+  max,
+}: {
+  valueType: SettingValueType;
+  draft: string;
+  onChange: (v: string) => void;
+  min: number | null;
+  max: number | null;
+}) => {
+  if (valueType === 'boolean') {
+    return (
+      <Select
+        value={draft}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-40"
+      >
+        <option value="true">Enabled</option>
+        <option value="false">Disabled</option>
+      </Select>
+    );
+  }
+  const inputProps =
+    valueType === 'integer' || valueType === 'duration_hours' || valueType === 'number'
+      ? {
+          type: 'number' as const,
+          inputMode: 'numeric' as const,
+          min: min ?? undefined,
+          max: max ?? undefined,
+          step: valueType === 'number' ? '0.01' : '1',
+        }
+      : { type: 'text' as const };
+  return (
+    <Input
+      {...inputProps}
+      value={draft}
+      onChange={(e) => onChange(e.target.value)}
+      className="w-64"
+    />
+  );
+};
+
+interface ParseResult {
+  value: SettingValue;
+  error?: string;
+}
+
+const parseDraft = (draft: string, type: SettingValueType): ParseResult => {
+  switch (type) {
+    case 'boolean':
+      if (draft === 'true') return { value: true };
+      if (draft === 'false') return { value: false };
+      return { value: false, error: 'Must be true or false' };
+    case 'integer':
+    case 'duration_hours':
+      if (!/^-?\d+$/.test(draft.trim())) return { value: 0, error: 'Must be an integer' };
+      return { value: parseInt(draft, 10) };
+    case 'number': {
+      const n = Number(draft);
+      if (!Number.isFinite(n)) return { value: 0, error: 'Must be a number' };
+      return { value: n };
+    }
+    case 'string':
+      return { value: draft };
+  }
+};
+
+const displayValue = (s: PlatformSetting): string => {
+  if (s.valueType === 'boolean') return s.value ? 'Enabled' : 'Disabled';
+  if (s.valueType === 'duration_hours') return `${s.value} hours`;
+  return String(s.value);
+};
