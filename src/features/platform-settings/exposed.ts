@@ -8,16 +8,21 @@ import type { PlatformSetting, SettingValue } from './types';
  * tier. Use this from lower-tier admin UIs (Support, Regional, Category)
  * that need to render configurable thresholds without the super-tier
  * settings page.
+ *
+ * The endpoint is admin-only — pass `enabled: false` when the current
+ * viewer is a non-admin (e.g. a seller/promoter raiser on a shared page)
+ * to avoid a guaranteed 403.
  */
-export const useExposedSettings = () =>
+export const useExposedSettings = (enabled = true) =>
   useQuery({
     queryKey: ['platform-settings', 'exposed'],
     queryFn: () => api.get<PlatformSetting[]>('/admin/platform-settings/exposed'),
     staleTime: 5 * 60 * 1000,
+    enabled,
   });
 
-export const useExposedSettingMap = () => {
-  const { data, ...rest } = useExposedSettings();
+export const useExposedSettingMap = (enabled = true) => {
+  const { data, ...rest } = useExposedSettings(enabled);
   const map = useMemo(() => {
     const m = new Map<string, SettingValue>();
     for (const s of data ?? []) m.set(s.key, s.value);

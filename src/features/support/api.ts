@@ -3,6 +3,7 @@ import { api, fetchEnvelope } from '@/lib/api';
 import type {
   SupportResolutionAction,
   SupportTicket,
+  TicketDetailResponse,
   TicketsListMeta,
   TicketsListQuery,
 } from './types';
@@ -46,7 +47,7 @@ export const useTicketsList = (q: TicketsListQuery) =>
 export const useTicket = (id: string | undefined) =>
   useQuery({
     queryKey: id ? ticketKeys.detail(id) : ['tickets', 'detail', 'none'],
-    queryFn: () => api.get<SupportTicket>(`/support/tickets/${id}`),
+    queryFn: () => api.get<TicketDetailResponse>(`/support/tickets/${id}`),
     enabled: Boolean(id),
   });
 
@@ -112,6 +113,23 @@ export const useScheduleReversePickup = () => {
   return useMutation({
     mutationFn: ({ id }: { id: string }) =>
       api.post<SupportTicket>(`/support/tickets/${id}/reverse-pickup`),
+    onSuccess: (_, v) => invalidate(qc, v.id),
+  });
+};
+
+export const usePostTicketMessage = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      body,
+      internal,
+    }: {
+      id: string;
+      body: string;
+      internal: boolean;
+    }) =>
+      api.post<SupportTicket>(`/support/tickets/${id}/messages`, { body, internal }),
     onSuccess: (_, v) => invalidate(qc, v.id),
   });
 };

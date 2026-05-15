@@ -27,6 +27,17 @@ export interface SupportTicketEvent {
   toLevel?: SupportEscalationLevel;
 }
 
+export type SupportMessageAuthorRole = 'BUYER' | 'SELLER' | 'STAFF';
+
+export interface SupportTicketMessage {
+  _id?: string;
+  body: string;
+  authorId: string;
+  authorRole: SupportMessageAuthorRole;
+  internal: boolean;
+  at: string;
+}
+
 export interface SupportTicket {
   id: string;
   ticketNumber: string;
@@ -59,8 +70,18 @@ export interface SupportTicket {
     by: string;
   } | null;
   history: SupportTicketEvent[];
+  messages: SupportTicketMessage[];
   createdAt: string;
   updatedAt: string;
+}
+
+/** Shape returned by GET /support/tickets/:id. */
+export interface TicketDetailResponse {
+  ticket: SupportTicket;
+  sla: {
+    responseBreached: boolean;
+    resolutionBreached: boolean;
+  };
 }
 
 export interface TicketsListQuery {
