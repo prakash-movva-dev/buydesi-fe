@@ -1,7 +1,7 @@
 import { ApiError, type ApiEnvelope, type AuthTokens } from '@/types/api';
 import { tokenStore } from './token-store';
 
-const BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://buydesi-alb-1497579380.ap-south-1.elb.amazonaws.com/api/v1', 'http://localhost:4000/api/v1').replace(
+const BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? 'http://buydesi-alb-1497579380.ap-south-1.elb.amazonaws.com/api/v1').replace(
   /\/+$/,
   '',
 );
