@@ -38,9 +38,13 @@ export interface KycUploadUrlInput {
 
 export interface PresignedUploadUrl {
   url: string;
+  /** Headers the URL was signed with — sent verbatim on the upload PUT. */
+  headers?: Record<string, string>;
   fields?: Record<string, string>;
-  key: string;
-  expiresAt: string;
+  /** Backend returns `s3Key`; `key` kept for backward compatibility. */
+  s3Key?: string;
+  key?: string;
+  expiresAt?: string;
 }
 
 export const useKycUploadUrl = () =>

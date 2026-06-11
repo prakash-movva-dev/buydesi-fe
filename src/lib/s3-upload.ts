@@ -1,7 +1,15 @@
 interface PresignedUploadUrl {
   url: string;
+  /**
+   * Headers the URL was signed with — they MUST be sent verbatim on the PUT or
+   * S3 rejects the request (403, SignatureDoesNotMatch). For KYC this includes
+   * `x-amz-server-side-encryption: AES256` alongside the signed `Content-Type`.
+   */
+  headers?: Record<string, string>;
   fields?: Record<string, string>;
-  key: string;
+  /** Backend returns `s3Key`; older/alt shapes may use `key`. */
+  s3Key?: string;
+  key?: string;
 }
 
 /**
@@ -13,6 +21,8 @@ export const uploadToPresignedUrl = async (
   presigned: PresignedUploadUrl,
   file: File,
 ): Promise<string> => {
+  const key = presigned.s3Key ?? presigned.key ?? '';
+
   if (presigned.fields) {
     // POST policy form upload
     const form = new FormData();
@@ -21,13 +31,14 @@ export const uploadToPresignedUrl = async (
     const res = await fetch(presigned.url, { method: 'POST', body: form });
     if (!res.ok) throw new Error(`S3 upload failed (${res.status})`);
   } else {
-    // PUT URL — content-type matters
-    const res = await fetch(presigned.url, {
-      method: 'PUT',
-      headers: { 'Content-Type': file.type || 'application/octet-stream' },
-      body: file,
-    });
+    // PUT URL — send exactly the headers the URL was signed with (the signed
+    // Content-Type and any server-side-encryption header). Falling back to the
+    // file's own content type only when the backend didn't return headers.
+    const headers = presigned.headers ?? {
+      'Content-Type': file.type || 'application/octet-stream',
+    };
+    const res = await fetch(presigned.url, { method: 'PUT', headers, body: file });
     if (!res.ok) throw new Error(`S3 upload failed (${res.status})`);
   }
-  return presigned.key;
+  return key;
 };
