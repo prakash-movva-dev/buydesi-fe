@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
@@ -6,6 +6,7 @@ import {
   ClipboardList,
   CreditCard,
   Headset,
+  IndianRupee,
   Lock,
   Package,
   RefreshCw,
@@ -22,16 +23,18 @@ import {
   CardTitle,
 } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { useDashboardOverview } from '@/features/dashboard/api';
+import { useDashboardOverview, type DashboardPeriod } from '@/features/dashboard/api';
 import { usePayoutsList } from '@/features/payouts/api';
 import { useProductsList } from '@/features/products/api';
 import { ScopedAdminBanner } from '@/features/scoped-admin/ScopedAdminBanner';
 import { useAuth } from '@/lib/auth';
+import { formatInr } from '@/lib/format';
 
 export const RegionalAdminDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const overview = useDashboardOverview();
+  const [period, setPeriod] = useState<DashboardPeriod>('today');
+  const overview = useDashboardOverview(undefined, period);
   const pendingPayouts = usePayoutsList({ status: 'PENDING', page: 1, limit: 1 });
   const lowStock = useProductsList({ status: 'LIVE', page: 1, limit: 200 });
 
@@ -55,20 +58,23 @@ export const RegionalAdminDashboard = () => {
             automatically.
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => overview.refetch()}
-          disabled={overview.isFetching}
-        >
-          <RefreshCw className={`h-4 w-4 ${overview.isFetching ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <PeriodToggle value={period} onChange={setPeriod} />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => overview.refetch()}
+            disabled={overview.isFetching}
+          >
+            <RefreshCw className={`h-4 w-4 ${overview.isFetching ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       <ScopedAdminBanner />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <Metric
           label="Pending seller KYC"
           value={overview.isLoading ? null : o?.sellers.pendingApproval ?? 0}
@@ -80,12 +86,18 @@ export const RegionalAdminDashboard = () => {
           tone="warning"
         />
         <Metric
-          label="Orders today"
-          value={overview.isLoading ? null : o?.orders.placedToday ?? 0}
+          label={`Orders (${periodLabel(period)})`}
+          value={overview.isLoading ? null : o?.orders.placed ?? 0}
           secondary={
-            overview.isLoading ? null : `${o?.orders.cancelledToday ?? 0} cancelled today`
+            overview.isLoading ? null : `${o?.orders.cancelled ?? 0} cancelled`
           }
           tone="info"
+        />
+        <Metric
+          label={`Revenue (${periodLabel(period)})`}
+          display={overview.isLoading ? null : formatInr(o?.orders.revenueInr ?? 0)}
+          secondary={null}
+          tone="success"
         />
         <Metric
           label="Open support tickets"
@@ -97,7 +109,7 @@ export const RegionalAdminDashboard = () => {
           label="Escrow held"
           value={overview.isLoading ? null : o?.escrow.held ?? 0}
           secondary={
-            overview.isLoading ? null : `${o?.escrow.releasedToday ?? 0} released today`
+            overview.isLoading ? null : `${o?.escrow.released ?? 0} released (${periodLabel(period)})`
           }
           tone="info"
         />
@@ -150,9 +162,17 @@ export const RegionalAdminDashboard = () => {
           />
           <ActionTile
             icon={ShoppingBag}
-            label="Orders placed today"
-            count={o?.orders.placedToday}
+            label={`Orders placed (${periodLabel(period)})`}
+            count={o?.orders.placed}
             loading={overview.isLoading}
+            onClick={() => navigate('/admin/orders')}
+          />
+          <ActionTile
+            icon={IndianRupee}
+            label={`Revenue (${periodLabel(period)})`}
+            count={undefined}
+            loading={overview.isLoading}
+            hint={overview.isLoading ? undefined : formatInr(o?.orders.revenueInr ?? 0)}
             onClick={() => navigate('/admin/orders')}
           />
           <ActionTile
@@ -196,9 +216,47 @@ export const RegionalAdminDashboard = () => {
   );
 };
 
+const PERIOD_OPTIONS: Array<{ value: DashboardPeriod; label: string }> = [
+  { value: 'today', label: 'Today' },
+  { value: 'week', label: 'Week' },
+  { value: 'month', label: 'Month' },
+  { value: 'all', label: 'All' },
+];
+
+const periodLabel = (p: DashboardPeriod): string =>
+  PERIOD_OPTIONS.find((o) => o.value === p)?.label ?? 'Today';
+
+const PeriodToggle = ({
+  value,
+  onChange,
+}: {
+  value: DashboardPeriod;
+  onChange: (p: DashboardPeriod) => void;
+}) => (
+  <div className="inline-flex rounded-md border border-border bg-secondary/20 p-0.5">
+    {PERIOD_OPTIONS.map((opt) => (
+      <button
+        key={opt.value}
+        type="button"
+        onClick={() => onChange(opt.value)}
+        className={`rounded px-2.5 py-1 text-sm font-medium transition-colors ${
+          value === opt.value
+            ? 'bg-background text-foreground shadow-sm'
+            : 'text-muted-foreground hover:text-foreground'
+        }`}
+        aria-pressed={value === opt.value}
+      >
+        {opt.label}
+      </button>
+    ))}
+  </div>
+);
+
 interface MetricProps {
   label: string;
-  value: number | null;
+  value?: number | null;
+  /** Pre-formatted string value (e.g. currency). Takes precedence over `value`. */
+  display?: string | null;
   secondary: string | null;
   tone: 'info' | 'warning' | 'success' | 'destructive';
 }
@@ -210,19 +268,22 @@ const toneClasses: Record<MetricProps['tone'], string> = {
   destructive: 'text-destructive',
 };
 
-const Metric = ({ label, value, secondary, tone }: MetricProps) => (
-  <Card>
-    <CardHeader className="pb-2">
-      <CardDescription>{label}</CardDescription>
-      {value === null ? (
-        <Skeleton className="h-9 w-20" />
-      ) : (
-        <CardTitle className={`text-3xl ${toneClasses[tone]}`}>{value}</CardTitle>
-      )}
-      {secondary !== null && <p className="text-xs text-muted-foreground">{secondary}</p>}
-    </CardHeader>
-  </Card>
-);
+const Metric = ({ label, value, display, secondary, tone }: MetricProps) => {
+  const content = display !== undefined ? display : value;
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardDescription>{label}</CardDescription>
+        {content === null || content === undefined ? (
+          <Skeleton className="h-9 w-20" />
+        ) : (
+          <CardTitle className={`text-3xl ${toneClasses[tone]}`}>{content}</CardTitle>
+        )}
+        {secondary !== null && <p className="text-xs text-muted-foreground">{secondary}</p>}
+      </CardHeader>
+    </Card>
+  );
+};
 
 interface ActionTileProps {
   icon: React.ComponentType<{ className?: string }>;

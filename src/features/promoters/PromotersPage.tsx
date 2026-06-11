@@ -18,6 +18,7 @@ import { formatDate } from '@/lib/format';
 import { UserRole } from '@/types/api';
 import { useDeletePromoter, usePromotersList } from './api';
 import { PromoterFormDialog } from './PromoterFormDialog';
+import { PromoterPerformancePanel } from './PromoterPerformancePanel';
 import type { Promoter, PromotersListQuery } from './types';
 
 const PAGE_SIZE = 25;
@@ -111,6 +112,8 @@ export const PromotersPage = () => {
           </p>
         </div>
       )}
+
+      <PromoterPerformancePanel />
 
       <div className="flex flex-wrap items-center gap-3">
         <Select

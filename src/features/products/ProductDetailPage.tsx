@@ -1,8 +1,11 @@
 import { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import {
+  AlertTriangle,
   ArrowLeft,
   CheckCircle2,
+  Copy,
+  ExternalLink,
   Image as ImageIcon,
   PauseCircle,
   RotateCcw,
@@ -17,13 +20,25 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/Card';
+import { Dialog } from '@/components/ui/Dialog';
+import { Label } from '@/components/ui/Label';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { Textarea } from '@/components/ui/Textarea';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/Table';
 import { useCategoriesList } from '@/features/categories/api';
-import { formatDateTime, formatInr } from '@/lib/format';
-import { useProduct, useSetProductStatus } from './api';
+import { formatDate, formatDateTime, formatInr } from '@/lib/format';
+import { ApiError } from '@/types/api';
+import { useProduct, useProductDuplicates, useSetProductStatus } from './api';
 import { ProductStatusBadge } from './status-badge';
 import { StatusReviewDialog, type StatusAction } from './StatusReviewDialog';
-import type { ProductStatus } from './types';
+import type { DuplicateCandidate, ProductStatus } from './types';
 
 const tierLabels: Record<'standard' | 'organic' | 'premium', string> = {
   standard: 'Standard',
@@ -38,6 +53,7 @@ export const ProductDetailPage = () => {
   const { data: categories } = useCategoriesList();
   const setStatusMut = useSetProductStatus();
   const [action, setAction] = useState<StatusAction | null>(null);
+  const [dupCandidate, setDupCandidate] = useState<DuplicateCandidate | null>(null);
 
   const categoryName = useMemo(
     () => categories?.find((c) => c.id === product?.categoryId)?.name ?? product?.categoryId,
@@ -84,6 +100,22 @@ export const ProductDetailPage = () => {
         <ArrowLeft className="h-4 w-4" />
         Back to products
       </Button>
+
+      {product.duplicateOfId && (
+        <div className="flex flex-wrap items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <Copy className="h-4 w-4 shrink-0" />
+          <span>
+            This product was marked as a duplicate of another listing.
+          </span>
+          <Link
+            to={`/admin/products/${product.duplicateOfId}`}
+            className="inline-flex items-center gap-1 font-medium underline underline-offset-2"
+          >
+            View original
+            <ExternalLink className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
@@ -221,6 +253,12 @@ export const ProductDetailPage = () => {
         </CardContent>
       </Card>
 
+      <DuplicateCheck
+        productId={product.id}
+        categoryName={categoryName}
+        onMarkDuplicate={setDupCandidate}
+      />
+
       <Card>
         <CardHeader>
           <CardTitle>Review history</CardTitle>
@@ -252,7 +290,190 @@ export const ProductDetailPage = () => {
         onClose={() => setAction(null)}
         onSubmit={submitAction}
       />
+
+      <MarkDuplicateDialog
+        candidate={dupCandidate}
+        onClose={() => setDupCandidate(null)}
+        onSubmit={async (notes) => {
+          if (!dupCandidate) return;
+          await setStatusMut.mutateAsync({
+            id: product.id,
+            status: 'REJECTED',
+            duplicateOfId: dupCandidate.id,
+            notes,
+          });
+        }}
+      />
     </div>
+  );
+};
+
+const DuplicateCheck = ({
+  productId,
+  categoryName,
+  onMarkDuplicate,
+}: {
+  productId: string;
+  categoryName: React.ReactNode;
+  onMarkDuplicate: (candidate: DuplicateCandidate) => void;
+}) => {
+  const { data, isLoading, isError, error } = useProductDuplicates(productId);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Duplicate check</CardTitle>
+        <CardDescription>
+          Other PENDING or LIVE listings in {categoryName} with similar names. If this product is a
+          copy, mark it as a duplicate of the original.
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        {isLoading && <Skeleton className="h-24 w-full" />}
+        {isError && (
+          <p className="text-sm text-destructive">
+            {error instanceof Error ? error.message : 'Failed to load duplicate candidates'}
+          </p>
+        )}
+        {!isLoading && !isError && (data?.length ?? 0) === 0 && (
+          <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
+            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+            No likely duplicates found.
+          </div>
+        )}
+        {!isLoading && !isError && (data?.length ?? 0) > 0 && (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-px" />
+                <TableHead>Name</TableHead>
+                <TableHead>Seller</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Submitted</TableHead>
+                <TableHead className="w-px" />
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {(data ?? []).map((c) => (
+                <TableRow key={c.id}>
+                  <TableCell>
+                    {c.image ? (
+                      <img
+                        src={c.image}
+                        alt={c.name}
+                        className="h-10 w-10 rounded-md border border-border object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-10 w-10 items-center justify-center rounded-md border border-border bg-secondary text-muted-foreground">
+                        <ImageIcon className="h-4 w-4" />
+                      </div>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Link
+                      to={`/admin/products/${c.id}`}
+                      className="font-medium text-primary underline-offset-2 hover:underline"
+                    >
+                      {c.name}
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {c.sellerId.slice(-6)}
+                    </span>
+                  </TableCell>
+                  <TableCell>
+                    <ProductStatusBadge status={c.status} />
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {formatDate(c.createdAt)}
+                  </TableCell>
+                  <TableCell>
+                    <Button size="sm" variant="outline" onClick={() => onMarkDuplicate(c)}>
+                      <Copy className="h-3.5 w-3.5" />
+                      Mark as duplicate
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+const MarkDuplicateDialog = ({
+  candidate,
+  onClose,
+  onSubmit,
+}: {
+  candidate: DuplicateCandidate | null;
+  onClose: () => void;
+  onSubmit: (notes: string | undefined) => Promise<unknown>;
+}) => {
+  const [notes, setNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  const open = candidate !== null;
+
+  const handleSubmit = async () => {
+    setErr(null);
+    setSubmitting(true);
+    try {
+      await onSubmit(notes.trim() || undefined);
+      setNotes('');
+      onClose();
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : 'Action failed. Try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <Dialog
+      open={open}
+      onClose={() => {
+        setNotes('');
+        setErr(null);
+        onClose();
+      }}
+      title="Mark as duplicate"
+      description={
+        candidate
+          ? `This product will be REJECTED and linked to "${candidate.name}" as the original.`
+          : undefined
+      }
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose} disabled={submitting}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={handleSubmit} disabled={submitting}>
+            {submitting ? 'Working…' : 'Reject as duplicate'}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-2">
+        <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+          The seller will see your note explaining why their listing was rejected.
+        </div>
+        <Label htmlFor="dup-notes">Notes (optional)</Label>
+        <Textarea
+          id="dup-notes"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          placeholder="Visible to the seller."
+          rows={4}
+        />
+        {err && <p className="text-sm text-destructive">{err}</p>}
+      </div>
+    </Dialog>
   );
 };
 

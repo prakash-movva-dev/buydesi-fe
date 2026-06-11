@@ -25,6 +25,29 @@ export interface ClusterStats {
   activeCategoryCount: number;
 }
 
+export interface ClusterPerformanceRow {
+  clusterId: string;
+  clusterName: string;
+  state: string;
+  sellers: number;
+  liveListings: number;
+  orders: number;
+  revenueInr: number;
+  openTickets: number;
+  avgDeliveryHours: number;
+}
+
+export interface ClusterPerformanceReport {
+  range: { from: string; to: string };
+  rows: ClusterPerformanceRow[];
+}
+
+export interface ClusterPerformanceQuery {
+  from: string;
+  to: string;
+  clusterId?: string;
+}
+
 export interface ClustersListQuery {
   state?: string;
   status?: ClusterStatus;

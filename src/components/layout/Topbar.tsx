@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { LogOut } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { NotificationBell } from '@/features/notifications/NotificationBell';
 import { useAuth } from '@/lib/auth';
 
 const roleLabel: Record<string, string> = {
@@ -35,10 +36,13 @@ export const Topbar = () => {
           </span>
         </p>
       </div>
-      <Button variant="outline" size="sm" onClick={onLogout}>
-        <LogOut className="h-4 w-4" />
-        Sign out
-      </Button>
+      <div className="flex items-center gap-2">
+        <NotificationBell />
+        <Button variant="outline" size="sm" onClick={onLogout}>
+          <LogOut className="h-4 w-4" />
+          Sign out
+        </Button>
+      </div>
     </header>
   );
 };

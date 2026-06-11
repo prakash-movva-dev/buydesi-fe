@@ -1,6 +1,16 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, BadgeCheck, CheckCircle2, FileText, MessageSquare, XCircle } from 'lucide-react';
+import {
+  AlertTriangle,
+  ArrowLeft,
+  BadgeCheck,
+  Ban,
+  CheckCircle2,
+  FileText,
+  MessageSquare,
+  RotateCcw,
+  XCircle,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
@@ -16,13 +26,18 @@ import { formatDate, formatDateTime } from '@/lib/format';
 import { UserRole } from '@/types/api';
 import {
   useApproveSeller,
+  useReactivateSeller,
   useRejectSeller,
   useRequestSellerInfo,
   useSeller,
+  useSuspendSeller,
   useToggleVerifiedBadge,
+  useWarnSeller,
 } from './api';
+import { DisciplinaryDialog, type DisciplinaryAction } from './DisciplinaryDialog';
 import { ReviewDialog, type ReviewAction } from './ReviewDialog';
 import { SellerStatusBadge } from './status-badge';
+import type { DisciplinaryActionType } from './types';
 
 const docLabel: Record<string, string> = {
   pan: 'PAN',
@@ -54,8 +69,12 @@ export const SellerDetailPage = () => {
   const reject = useRejectSeller();
   const requestInfo = useRequestSellerInfo();
   const toggleBadge = useToggleVerifiedBadge();
+  const warn = useWarnSeller();
+  const suspend = useSuspendSeller();
+  const reactivate = useReactivateSeller();
 
   const [dialogAction, setDialogAction] = useState<ReviewAction | null>(null);
+  const [disciplinaryAction, setDisciplinaryAction] = useState<DisciplinaryAction | null>(null);
 
   if (isLoading) {
     return (
@@ -76,6 +95,10 @@ export const SellerDetailPage = () => {
   }
 
   const isSuper = user?.role === UserRole.SUPER_ADMIN;
+  const canDiscipline =
+    user?.role === UserRole.SUPER_ADMIN ||
+    user?.role === UserRole.SUB_SUPER_ADMIN ||
+    user?.role === UserRole.REGIONAL_ADMIN;
   const reviewable =
     seller.status === 'PENDING' || seller.status === 'INFO_REQUESTED' || seller.status === 'REJECTED';
 
@@ -84,6 +107,13 @@ export const SellerDetailPage = () => {
     if (dialogAction === 'approve') await approve.mutateAsync({ id, notes });
     if (dialogAction === 'reject') await reject.mutateAsync({ id, notes });
     if (dialogAction === 'request-info') await requestInfo.mutateAsync({ id, notes });
+  };
+
+  const submitDisciplinary = async (reason: string) => {
+    if (!disciplinaryAction || !id) return;
+    if (disciplinaryAction === 'warn') await warn.mutateAsync({ id, reason });
+    if (disciplinaryAction === 'suspend') await suspend.mutateAsync({ id, reason });
+    if (disciplinaryAction === 'reactivate') await reactivate.mutateAsync({ id, reason });
   };
 
   return (
@@ -140,6 +170,22 @@ export const SellerDetailPage = () => {
               <BadgeCheck className="h-4 w-4" />
               {seller.verifiedBadge ? 'Revoke verified' : 'Grant verified'}
             </Button>
+          )}
+          {canDiscipline && (
+            <>
+              <Button variant="outline" onClick={() => setDisciplinaryAction('warn')}>
+                <AlertTriangle className="h-4 w-4" />
+                Issue warning
+              </Button>
+              <Button variant="destructive" onClick={() => setDisciplinaryAction('suspend')}>
+                <Ban className="h-4 w-4" />
+                Suspend
+              </Button>
+              <Button variant="outline" onClick={() => setDisciplinaryAction('reactivate')}>
+                <RotateCcw className="h-4 w-4" />
+                Reactivate
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -306,14 +352,70 @@ export const SellerDetailPage = () => {
         </CardContent>
       </Card>
 
+      {canDiscipline && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Disciplinary history</CardTitle>
+            <CardDescription>
+              Warnings, suspensions and reactivations recorded against this seller.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {!seller.disciplinaryActions || seller.disciplinaryActions.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No disciplinary actions recorded.</p>
+            ) : (
+              <ul className="divide-y divide-border">
+                {[...seller.disciplinaryActions]
+                  .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+                  .map((action, i) => (
+                    <li
+                      key={`${action.type}-${action.at}-${i}`}
+                      className="flex items-start justify-between gap-4 py-3"
+                    >
+                      <div className="space-y-1">
+                        <Badge variant={disciplinaryVariant[action.type]}>
+                          {disciplinaryLabel[action.type]}
+                        </Badge>
+                        <p className="whitespace-pre-wrap text-sm">{action.reason}</p>
+                      </div>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        {formatDateTime(action.at)}
+                      </span>
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <ReviewDialog
         open={dialogAction !== null}
         action={dialogAction}
         onClose={() => setDialogAction(null)}
         onSubmit={submitReview}
       />
+
+      <DisciplinaryDialog
+        open={disciplinaryAction !== null}
+        action={disciplinaryAction}
+        onClose={() => setDisciplinaryAction(null)}
+        onSubmit={submitDisciplinary}
+      />
     </div>
   );
+};
+
+const disciplinaryLabel: Record<DisciplinaryActionType, string> = {
+  warning: 'Warning',
+  suspension: 'Suspension',
+  reactivation: 'Reactivation',
+};
+
+const disciplinaryVariant: Record<DisciplinaryActionType, 'warning' | 'destructive' | 'success'> = {
+  warning: 'warning',
+  suspension: 'destructive',
+  reactivation: 'success',
 };
 
 const Field = ({ label, value }: { label: string; value: React.ReactNode }) => (

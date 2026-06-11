@@ -1,9 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, fetchEnvelope } from '@/lib/api';
+import { tokenStore } from '@/lib/token-store';
 import type {
   CreatePromoterInput,
   Promoter,
   PromoterDashboard,
+  PromoterPerformanceReport,
   PromotersListMeta,
   PromotersListQuery,
   UpdatePromoterInput,
@@ -13,6 +15,7 @@ export const promoterKeys = {
   all: ['promoters'] as const,
   list: (q: PromotersListQuery) => ['promoters', 'list', q] as const,
   dashboard: ['promoters', 'me-dashboard'] as const,
+  performance: (clusterId?: string) => ['promoters', 'performance', clusterId ?? 'all'] as const,
 };
 
 interface ListResult {
@@ -75,4 +78,60 @@ export const useDeletePromoter = () => {
     mutationFn: (id: string) => api.delete<{ id: string }>(`/admin/promoters/${id}`),
     onSuccess: () => qc.invalidateQueries({ queryKey: promoterKeys.all }),
   });
+};
+
+// ─── Performance (CA-4, story 3.11) ────────────────────────────────────────
+
+const BASE = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000/api/v1').replace(
+  /\/+$/,
+  '',
+);
+
+const performanceParams = (clusterId?: string, format?: 'json' | 'csv'): URLSearchParams => {
+  const params = new URLSearchParams();
+  if (clusterId) params.set('clusterId', clusterId);
+  if (format) params.set('format', format);
+  return params;
+};
+
+/**
+ * Cluster-scoped promoter performance. For regional admins the backend ignores
+ * any clusterId and pins the scope to their own cluster; super-tier admins may
+ * pass a clusterId (or omit it for all clusters).
+ */
+export const usePromoterPerformance = (clusterId?: string) =>
+  useQuery({
+    queryKey: promoterKeys.performance(clusterId),
+    queryFn: () =>
+      api.get<PromoterPerformanceReport>(
+        `/admin/promoters/performance?${performanceParams(clusterId, 'json').toString()}`,
+      ),
+  });
+
+/**
+ * Downloads the performance CSV via a direct fetch (the api client unwraps JSON
+ * envelopes, which would corrupt a CSV body). Sends the bearer token manually.
+ */
+export const downloadPromoterPerformanceCsv = async (clusterId?: string): Promise<void> => {
+  const res = await fetch(
+    `${BASE}/admin/promoters/performance?${performanceParams(clusterId, 'csv').toString()}`,
+    {
+      headers: {
+        Authorization: `Bearer ${tokenStore.access ?? ''}`,
+      },
+    },
+  );
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Performance download failed (${res.status}): ${text}`);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'buy-desi-promoter-performance.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
 };

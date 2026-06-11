@@ -57,3 +57,28 @@ export interface UpdatePromoterInput {
   name?: string;
   active?: boolean;
 }
+
+// Mirrors backend `getPromoterPerformance` (promoters.service.ts).
+export interface PromoterPerformanceRow {
+  promoterId: string;
+  name: string;
+  couponCode: string;
+  clusterId: string | null;
+  uses: number;
+  totalDiscountInr: number;
+}
+
+export interface PromoterPerformanceTop {
+  promoterId: string;
+  name: string;
+  uses: number;
+  totalDiscountInr: number;
+}
+
+export interface PromoterPerformanceReport {
+  totalPromoters: number;
+  totalUses: number;
+  totalDiscountInr: number;
+  rows: PromoterPerformanceRow[];
+  topPerformers: PromoterPerformanceTop[];
+}

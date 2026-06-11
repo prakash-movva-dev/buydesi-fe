@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, fetchEnvelope } from '@/lib/api';
 import type {
+  ClusterPerformanceQuery,
+  ClusterPerformanceReport,
   ClusterStats,
   ClustersListMeta,
   ClustersListQuery,
@@ -14,6 +16,7 @@ export const clusterKeys = {
   list: (q: ClustersListQuery) => ['clusters', 'list', q] as const,
   detail: (id: string) => ['clusters', 'detail', id] as const,
   stats: (id: string) => ['clusters', 'stats', id] as const,
+  performance: (q: ClusterPerformanceQuery) => ['clusters', 'performance', q] as const,
 };
 
 interface ListResult {
@@ -55,6 +58,22 @@ export const useClusterStats = (id: string | undefined) =>
     queryKey: id ? clusterKeys.stats(id) : ['clusters', 'stats', 'none'],
     queryFn: () => api.get<ClusterStats>(`/clusters/${id}/stats`),
     enabled: Boolean(id),
+  });
+
+export const useClusterPerformance = (query: ClusterPerformanceQuery, enabled = true) =>
+  useQuery({
+    queryKey: clusterKeys.performance(query),
+    queryFn: () => {
+      const params = new URLSearchParams();
+      params.set('from', query.from);
+      params.set('to', query.to);
+      if (query.clusterId) params.set('clusterId', query.clusterId);
+      params.set('format', 'json');
+      return api.get<ClusterPerformanceReport>(
+        `/admin/reports/clusters?${params.toString()}`,
+      );
+    },
+    enabled,
   });
 
 export const useCreateCluster = () => {

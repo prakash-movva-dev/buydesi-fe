@@ -1,7 +1,17 @@
 import { useEffect, useMemo, useState } from 'react';
-import { CheckCircle2, ChevronLeft, ChevronRight, Save, Sparkles, XCircle } from 'lucide-react';
+import {
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  Save,
+  Sparkles,
+  Trash2,
+  XCircle,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import {
   Card,
   CardContent,
@@ -33,7 +43,20 @@ import {
   useTradeConfig,
   useTradeListings,
 } from './api';
-import type { TradeListingStatus } from './types';
+import type { TradeCategoryOverride, TradeListingStatus } from './types';
+
+// Local editor state: commissionPercent is a string while typing, and `key`
+// gives each row a stable React identity independent of the chosen category.
+interface OverrideRow {
+  key: string;
+  categoryId: string | null;
+  commissionPercent: string;
+}
+
+const cryptoKey = (): string =>
+  typeof crypto !== 'undefined' && 'randomUUID' in crypto
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2);
 
 export const TradeSettingsPage = () => {
   const { user } = useAuth();
@@ -44,6 +67,7 @@ export const TradeSettingsPage = () => {
 
   const [commission, setCommission] = useState('');
   const [platformFee, setPlatformFee] = useState('');
+  const [overrides, setOverrides] = useState<OverrideRow[]>([]);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<Date | null>(null);
 
@@ -51,8 +75,27 @@ export const TradeSettingsPage = () => {
     if (config) {
       setCommission(String(config.interClusterCommissionPercent));
       setPlatformFee(String(config.platformFeeInr));
+      setOverrides(
+        (config.categoryOverrides ?? []).map((o) => ({
+          key: o.categoryId || cryptoKey(),
+          categoryId: o.categoryId,
+          commissionPercent: String(o.commissionPercent),
+        })),
+      );
     }
   }, [config]);
+
+  const addOverride = () =>
+    setOverrides((rows) => [
+      ...rows,
+      { key: cryptoKey(), categoryId: null, commissionPercent: '' },
+    ]);
+
+  const updateOverride = (key: string, patch: Partial<OverrideRow>) =>
+    setOverrides((rows) => rows.map((r) => (r.key === key ? { ...r, ...patch } : r)));
+
+  const removeOverride = (key: string) =>
+    setOverrides((rows) => rows.filter((r) => r.key !== key));
 
   const save = async () => {
     setSaveError(null);
@@ -66,8 +109,33 @@ export const TradeSettingsPage = () => {
       setSaveError('Platform fee must be ≥ 0');
       return;
     }
+
+    const cleaned: TradeCategoryOverride[] = [];
+    const seen = new Set<string>();
+    for (const row of overrides) {
+      if (!row.categoryId) {
+        setSaveError('Every override needs a category selected');
+        return;
+      }
+      if (seen.has(row.categoryId)) {
+        setSaveError('Each category can only have one override');
+        return;
+      }
+      const pct = Number(row.commissionPercent);
+      if (!Number.isFinite(pct) || pct < 0 || pct > 100) {
+        setSaveError('Override commission must be between 0 and 100');
+        return;
+      }
+      seen.add(row.categoryId);
+      cleaned.push({ categoryId: row.categoryId, commissionPercent: pct });
+    }
+
     try {
-      await setMut.mutateAsync({ interClusterCommissionPercent: c, platformFeeInr: p });
+      await setMut.mutateAsync({
+        interClusterCommissionPercent: c,
+        platformFeeInr: p,
+        categoryOverrides: cleaned,
+      });
       setSavedAt(new Date());
     } catch (err) {
       setSaveError(err instanceof ApiError ? err.message : 'Save failed');
@@ -137,6 +205,75 @@ export const TradeSettingsPage = () => {
               </div>
             </div>
           )}
+
+          {config && (
+            <div className="mt-6 border-t border-border pt-5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <h3 className="text-sm font-medium">Per-category commission overrides</h3>
+                  <p className="text-xs text-muted-foreground">
+                    Override the global inter-cluster commission % for specific categories. The
+                    global rate applies to any category not listed here.
+                  </p>
+                </div>
+                {isSuper && (
+                  <Button type="button" variant="outline" size="sm" onClick={addOverride}>
+                    <Plus className="h-4 w-4" />
+                    Add override
+                  </Button>
+                )}
+              </div>
+
+              <div className="mt-3 space-y-2">
+                {overrides.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    No category overrides — every category uses the global rate above.
+                  </p>
+                )}
+                {overrides.map((row) => (
+                  <div key={row.key} className="flex flex-wrap items-center gap-2">
+                    <div className="min-w-[16rem] flex-1">
+                      <CategoryPicker
+                        value={row.categoryId}
+                        onChange={(id) => updateOverride(row.key, { categoryId: id })}
+                        disabled={!isSuper}
+                        activeOnly={false}
+                        placeholder="Pick a category…"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        step="0.1"
+                        value={row.commissionPercent}
+                        onChange={(e) =>
+                          updateOverride(row.key, { commissionPercent: e.target.value })
+                        }
+                        disabled={!isSuper}
+                        className="w-28"
+                        aria-label="Override commission percent"
+                      />
+                      <span className="text-sm text-muted-foreground">%</span>
+                    </div>
+                    {isSuper && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeOverride(row.key)}
+                        title="Remove override"
+                      >
+                        <Trash2 className="h-4 w-4 text-destructive" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {isSuper && config && (
             <div className="mt-4 flex items-center gap-3">
               <Button onClick={save} disabled={setMut.isPending}>

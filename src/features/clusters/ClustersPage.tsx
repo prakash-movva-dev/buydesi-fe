@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Pencil, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -132,13 +132,18 @@ export const ClustersPage = () => {
                 <TableHead className="text-right">Active categories</TableHead>
                 <TableHead>Transport default</TableHead>
                 <TableHead>Regional admin</TableHead>
+                <TableHead className="w-px" />
                 {isSuper && <TableHead className="w-px" />}
               </TableRow>
             </TableHeader>
             <TableBody>
               {(data?.items ?? []).map((c) => (
                 <TableRow key={c.id}>
-                  <TableCell className="font-medium">{c.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <Link to={`/admin/clusters/${c.id}`} className="hover:underline">
+                      {c.name}
+                    </Link>
+                  </TableCell>
                   <TableCell className="text-xs">
                     <div>{c.state}</div>
                     <div className="text-muted-foreground">{c.district}</div>
@@ -153,6 +158,14 @@ export const ClustersPage = () => {
                   </TableCell>
                   <TableCell className="font-mono text-xs">
                     {c.adminId ? c.adminId.slice(-10) : '— unassigned'}
+                  </TableCell>
+                  <TableCell>
+                    <Link
+                      to={`/admin/clusters/${c.id}`}
+                      className="inline-flex h-8 items-center rounded-md px-3 text-sm font-medium text-primary hover:bg-accent hover:text-accent-foreground"
+                    >
+                      View
+                    </Link>
                   </TableCell>
                   {isSuper && (
                     <TableCell>
@@ -172,7 +185,7 @@ export const ClustersPage = () => {
               ))}
               {(data?.items.length ?? 0) === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={9} className="py-12 text-center text-sm text-muted-foreground">
                     No clusters match the current filter.
                   </TableCell>
                 </TableRow>

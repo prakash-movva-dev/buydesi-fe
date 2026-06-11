@@ -29,9 +29,13 @@ export interface SafeProduct {
   status: ProductStatus;
   approvalNotes: string | null;
   approvedAt: string | null;
+  duplicateOfId?: string | null;
   createdAt: string;
   updatedAt: string;
 }
+
+export type StockState = 'low' | 'out';
+export type ProductsSort = 'stock_asc' | 'stock_desc' | 'price_asc' | 'price_desc';
 
 export interface ProductsListQuery {
   status?: ProductStatus;
@@ -41,8 +45,20 @@ export interface ProductsListQuery {
   q?: string;
   minPrice?: number;
   maxPrice?: number;
+  stockState?: StockState;
+  sort?: ProductsSort;
   page: number;
   limit: number;
+}
+
+/** Candidate match returned by GET /products/:id/duplicates. */
+export interface DuplicateCandidate {
+  id: string;
+  name: string;
+  sellerId: string;
+  status: ProductStatus;
+  image: string | null;
+  createdAt: string;
 }
 
 export interface ProductsListMeta {

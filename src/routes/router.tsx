@@ -3,8 +3,10 @@ import { AppShell } from '@/components/layout/AppShell';
 import { ActivityLogPage } from '@/features/activity/ActivityLogPage';
 import { CartLimitsPage } from '@/features/cartlimits/CartLimitsPage';
 import { CategoriesPage } from '@/features/categories/CategoriesPage';
+import { ClusterDetailPage } from '@/features/clusters/ClusterDetailPage';
 import { ClustersPage } from '@/features/clusters/ClustersPage';
 import { CommissionPage } from '@/features/commission/CommissionPage';
+import { EscalationPanelPage } from '@/features/escalation/EscalationPanelPage';
 import { DeliveryPage } from '@/features/delivery/DeliveryPage';
 import { NotificationTemplatesPage } from '@/features/notification-templates/NotificationTemplatesPage';
 import { PlatformSettingsPage } from '@/features/platform-settings/PlatformSettingsPage';
@@ -13,6 +15,7 @@ import { OrdersListPage } from '@/features/orders/OrdersListPage';
 import { PayoutsPage } from '@/features/payouts/PayoutsPage';
 import { ProductDetailPage } from '@/features/products/ProductDetailPage';
 import { ProductsListPage } from '@/features/products/ProductsListPage';
+import { StockMonitorPage } from '@/features/products/StockMonitorPage';
 import { PromotersPage } from '@/features/promoters/PromotersPage';
 import { PromotionsPage } from '@/features/promotions/PromotionsPage';
 import { ReportsPage } from '@/features/reports/ReportsPage';
@@ -40,6 +43,7 @@ import { TradeCataloguePage } from '@/features/seller/trade/TradeCataloguePage';
 import { TradeOrderDetailPage as SellerTradeOrderDetailPage } from '@/features/seller/trade/TradeOrderDetailPage';
 import { MyWalletPage } from '@/features/seller/wallet/MyWalletPage';
 import { SellerDetailPage } from '@/features/sellers/SellerDetailPage';
+import { SellerPerformancePage } from '@/features/sellers/SellerPerformancePage';
 import { SellersListPage } from '@/features/sellers/SellersListPage';
 import { VerifiedBadgePage } from '@/features/sellers/VerifiedBadgePage';
 import { TicketDetailPage } from '@/features/support/TicketDetailPage';
@@ -122,6 +126,7 @@ const router = createBrowserRouter([
             element: <ProtectedRoute roles={SELLER_REVIEW_ROLES} />,
             children: [
               { path: '/admin/sellers', element: <SellersListPage /> },
+              { path: '/admin/sellers/performance', element: <SellerPerformancePage /> },
               { path: '/admin/sellers/:id', element: <SellerDetailPage /> },
             ],
           },
@@ -130,6 +135,7 @@ const router = createBrowserRouter([
             children: [
               { path: '/admin/products', element: <ProductsListPage /> },
               { path: '/admin/products/:id', element: <ProductDetailPage /> },
+              { path: '/admin/stock-monitor', element: <StockMonitorPage /> },
               { path: '/admin/commission', element: <CommissionPage /> },
             ],
           },
@@ -156,6 +162,7 @@ const router = createBrowserRouter([
               { path: '/admin/promoters', element: <PromotersPage /> },
               { path: '/admin/promotions', element: <PromotionsPage /> },
               { path: '/admin/clusters', element: <ClustersPage /> },
+              { path: '/admin/clusters/:id', element: <ClusterDetailPage /> },
               { path: '/admin/reports', element: <ReportsPage /> },
             ],
           },
@@ -164,6 +171,7 @@ const router = createBrowserRouter([
             children: [
               { path: '/admin/activity-log', element: <ActivityLogPage /> },
               { path: '/admin/trade', element: <TradeSettingsPage /> },
+              { path: '/admin/escalation', element: <EscalationPanelPage /> },
             ],
           },
           {

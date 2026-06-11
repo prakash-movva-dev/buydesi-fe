@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
   ClipboardList,
   CreditCard,
   Headset,
+  IndianRupee,
   Lock,
   Package,
   RefreshCw,
@@ -23,13 +25,13 @@ import {
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useActivityList } from '@/features/activity/api';
 import { CategoryAdminDashboard } from '@/features/category-admin/CategoryAdminDashboard';
-import { useDashboardOverview } from '@/features/dashboard/api';
+import { useDashboardOverview, type DashboardPeriod } from '@/features/dashboard/api';
 import { PromoterDashboard } from '@/features/promoter/dashboard/PromoterDashboard';
 import { RegionalAdminDashboard } from '@/features/regional-admin/RegionalAdminDashboard';
 import { SellerDashboard } from '@/features/seller/dashboard/SellerDashboard';
 import { SupportAdminDashboard } from '@/features/support-admin/SupportAdminDashboard';
 import { useAuth } from '@/lib/auth';
-import { formatDateTime } from '@/lib/format';
+import { formatDateTime, formatInr } from '@/lib/format';
 import { ADMIN_ROLES, UserRole } from '@/types/api';
 
 export const DashboardPage = () => {
@@ -47,7 +49,8 @@ export const DashboardPage = () => {
   if (user?.role === UserRole.CATEGORY_ADMIN) return <CategoryAdminDashboard />;
   if (user?.role === UserRole.SUPPORT_ADMIN) return <SupportAdminDashboard />;
 
-  const overview = useDashboardOverview();
+  const [period, setPeriod] = useState<DashboardPeriod>('today');
+  const overview = useDashboardOverview(undefined, period);
   const activity = useActivityList({ page: 1, limit: 8 });
 
   if (!user) return null;
@@ -66,15 +69,18 @@ export const DashboardPage = () => {
           <p className="text-muted-foreground">{greeting}</p>
         </div>
         {isAdmin && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => overview.refetch()}
-            disabled={overview.isFetching}
-          >
-            <RefreshCw className={`h-4 w-4 ${overview.isFetching ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <PeriodToggle value={period} onChange={setPeriod} />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => overview.refetch()}
+              disabled={overview.isFetching}
+            >
+              <RefreshCw className={`h-4 w-4 ${overview.isFetching ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </div>
         )}
       </div>
 
@@ -113,7 +119,7 @@ export const DashboardPage = () => {
 
     return (
       <>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           <MetricCard
             label="Sellers — pending KYC"
             value={loading ? null : o?.sellers.pendingApproval ?? 0}
@@ -123,14 +129,20 @@ export const DashboardPage = () => {
             tone="warning"
           />
           <MetricCard
-            label="Orders today"
-            value={loading ? null : o?.orders.placedToday ?? 0}
+            label={`Orders (${periodLabel(period)})`}
+            value={loading ? null : o?.orders.placed ?? 0}
             secondary={
               loading
                 ? null
-                : `${o?.orders.cancelledToday ?? 0} cancelled · ${o?.orders.total ?? 0} all-time`
+                : `${o?.orders.cancelled ?? 0} cancelled · ${o?.orders.total ?? 0} all-time`
             }
             tone="info"
+          />
+          <MetricCard
+            label={`Revenue (${periodLabel(period)})`}
+            display={loading ? null : formatInr(o?.orders.revenueInr ?? 0)}
+            secondary={null}
+            tone="success"
           />
           <MetricCard
             label="Open support tickets"
@@ -144,7 +156,7 @@ export const DashboardPage = () => {
             label="Escrow held"
             value={loading ? null : o?.escrow.held ?? 0}
             secondary={
-              loading ? null : `${o?.escrow.releasedToday ?? 0} released today`
+              loading ? null : `${o?.escrow.released ?? 0} released (${periodLabel(period)})`
             }
             tone="info"
           />
@@ -189,9 +201,17 @@ export const DashboardPage = () => {
             />
             <ActionTile
               icon={ShoppingBag}
-              label="Orders placed today"
-              count={o?.orders.placedToday}
+              label={`Orders placed (${periodLabel(period)})`}
+              count={o?.orders.placed}
               loading={loading}
+              onClick={() => navigate('/admin/orders')}
+            />
+            <ActionTile
+              icon={IndianRupee}
+              label={`Revenue (${periodLabel(period)})`}
+              count={undefined}
+              loading={loading}
+              hint={loading ? undefined : formatInr(o?.orders.revenueInr ?? 0)}
               onClick={() => navigate('/admin/orders')}
             />
             <ActionTile
@@ -291,9 +311,47 @@ export const DashboardPage = () => {
   }
 };
 
+const PERIOD_OPTIONS: Array<{ value: DashboardPeriod; label: string }> = [
+  { value: 'today', label: 'Today' },
+  { value: 'week', label: 'Week' },
+  { value: 'month', label: 'Month' },
+  { value: 'all', label: 'All' },
+];
+
+const periodLabel = (p: DashboardPeriod): string =>
+  PERIOD_OPTIONS.find((o) => o.value === p)?.label ?? 'Today';
+
+const PeriodToggle = ({
+  value,
+  onChange,
+}: {
+  value: DashboardPeriod;
+  onChange: (p: DashboardPeriod) => void;
+}) => (
+  <div className="inline-flex rounded-md border border-border bg-secondary/20 p-0.5">
+    {PERIOD_OPTIONS.map((opt) => (
+      <button
+        key={opt.value}
+        type="button"
+        onClick={() => onChange(opt.value)}
+        className={`rounded px-2.5 py-1 text-sm font-medium transition-colors ${
+          value === opt.value
+            ? 'bg-background text-foreground shadow-sm'
+            : 'text-muted-foreground hover:text-foreground'
+        }`}
+        aria-pressed={value === opt.value}
+      >
+        {opt.label}
+      </button>
+    ))}
+  </div>
+);
+
 interface MetricCardProps {
   label: string;
-  value: number | null;
+  value?: number | null;
+  /** Pre-formatted string value (e.g. currency). Takes precedence over `value`. */
+  display?: string | null;
   secondary: string | null;
   tone: 'info' | 'warning' | 'success' | 'destructive';
 }
@@ -305,21 +363,24 @@ const toneClasses: Record<MetricCardProps['tone'], string> = {
   destructive: 'text-destructive',
 };
 
-const MetricCard = ({ label, value, secondary, tone }: MetricCardProps) => (
-  <Card>
-    <CardHeader className="pb-2">
-      <CardDescription>{label}</CardDescription>
-      {value === null ? (
-        <Skeleton className="h-9 w-20" />
-      ) : (
-        <CardTitle className={`text-3xl ${toneClasses[tone]}`}>{value}</CardTitle>
-      )}
-      {secondary !== null && (
-        <p className="text-xs text-muted-foreground">{secondary}</p>
-      )}
-    </CardHeader>
-  </Card>
-);
+const MetricCard = ({ label, value, display, secondary, tone }: MetricCardProps) => {
+  const content = display !== undefined ? display : value;
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardDescription>{label}</CardDescription>
+        {content === null || content === undefined ? (
+          <Skeleton className="h-9 w-20" />
+        ) : (
+          <CardTitle className={`text-3xl ${toneClasses[tone]}`}>{content}</CardTitle>
+        )}
+        {secondary !== null && (
+          <p className="text-xs text-muted-foreground">{secondary}</p>
+        )}
+      </CardHeader>
+    </Card>
+  );
+};
 
 interface ActionTileProps {
   icon: React.ComponentType<{ className?: string }>;

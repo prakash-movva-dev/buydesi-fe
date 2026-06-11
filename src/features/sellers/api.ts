@@ -1,10 +1,18 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, fetchEnvelope } from '@/lib/api';
+import { tokenStore } from '@/lib/token-store';
 import type {
   SafeSellerProfile,
+  SellerPerformanceQuery,
+  SellerPerformanceReport,
   SellersListMeta,
   SellersListQuery,
 } from './types';
+
+const BASE = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000/api/v1').replace(
+  /\/+$/,
+  '',
+);
 
 // ─── Keys ─────────────────────────────────────────────────────────────────
 
@@ -12,6 +20,7 @@ export const sellerKeys = {
   all: ['sellers'] as const,
   list: (q: SellersListQuery) => ['sellers', 'list', q] as const,
   detail: (id: string) => ['sellers', 'detail', id] as const,
+  performance: (q: SellerPerformanceQuery) => ['sellers', 'performance', q] as const,
 };
 
 // ─── Queries ──────────────────────────────────────────────────────────────
@@ -49,6 +58,59 @@ export const useSeller = (id: string | undefined) =>
     queryFn: () => api.get<SafeSellerProfile>(`/admin/sellers/${id}`),
     enabled: Boolean(id),
   });
+
+// ─── CA-1: Seller performance ───────────────────────────────────────────────
+
+const buildPerformanceParams = (
+  q: SellerPerformanceQuery & { format?: 'json' | 'csv' },
+): URLSearchParams => {
+  const params = new URLSearchParams();
+  params.set('from', q.from);
+  params.set('to', q.to);
+  params.set('sort', q.sort);
+  if (q.clusterId) params.set('clusterId', q.clusterId);
+  if (q.format) params.set('format', q.format);
+  return params;
+};
+
+export const useSellerPerformance = (q: SellerPerformanceQuery) =>
+  useQuery({
+    queryKey: sellerKeys.performance(q),
+    queryFn: () =>
+      api.get<SellerPerformanceReport>(
+        `/admin/sellers/performance?${buildPerformanceParams({ ...q, format: 'json' }).toString()}`,
+      ),
+  });
+
+/**
+ * Downloads the CSV via a direct fetch (the api client unwraps JSON envelopes,
+ * which would corrupt a CSV body). Sends the bearer token manually.
+ */
+export const downloadSellerPerformanceCsv = async (
+  q: SellerPerformanceQuery,
+): Promise<void> => {
+  const res = await fetch(
+    `${BASE}/admin/sellers/performance?${buildPerformanceParams({ ...q, format: 'csv' }).toString()}`,
+    {
+      headers: {
+        Authorization: `Bearer ${tokenStore.access ?? ''}`,
+      },
+    },
+  );
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Performance download failed (${res.status}): ${text}`);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `buy-desi-seller-performance-${q.from.slice(0, 10)}_${q.to.slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
 
 // ─── Mutations ────────────────────────────────────────────────────────────
 
@@ -103,6 +165,40 @@ export const useToggleVerifiedBadge = () => {
         verifiedBadge,
         notes,
       }),
+    onSuccess: (_, vars) => invalidateSellers(qc, vars.id),
+  });
+};
+
+// ─── CA-2: Disciplinary actions ─────────────────────────────────────────────
+
+interface DisciplinaryVars {
+  id: string;
+  reason: string;
+}
+
+export const useWarnSeller = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: DisciplinaryVars) =>
+      api.put<SafeSellerProfile>(`/admin/sellers/${id}/warn`, { reason }),
+    onSuccess: (_, vars) => invalidateSellers(qc, vars.id),
+  });
+};
+
+export const useSuspendSeller = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: DisciplinaryVars) =>
+      api.put<SafeSellerProfile>(`/admin/sellers/${id}/suspend`, { reason }),
+    onSuccess: (_, vars) => invalidateSellers(qc, vars.id),
+  });
+};
+
+export const useReactivateSeller = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: DisciplinaryVars) =>
+      api.put<SafeSellerProfile>(`/admin/sellers/${id}/reactivate`, { reason }),
     onSuccess: (_, vars) => invalidateSellers(qc, vars.id),
   });
 };

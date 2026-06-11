@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -15,7 +15,7 @@ import {
   TableRow,
 } from '@/components/ui/Table';
 import { formatDateTime } from '@/lib/format';
-import { useActivityList } from './api';
+import { downloadActivityCsv, useActivityList } from './api';
 import type { ActivityListQuery } from './types';
 
 const ROLE_OPTIONS = [
@@ -66,6 +66,25 @@ export const ActivityLogPage = () => {
   const { data, isLoading, isError, error } = useActivityList(query);
   const total = data?.meta.total ?? 0;
   const pageCount = total > 0 ? Math.ceil(total / PAGE_SIZE) : 1;
+
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  const downloadCsv = async () => {
+    setDownloadError(null);
+    setDownloading(true);
+    try {
+      // Export the full filtered set (page/limit are list-only concerns).
+      const { page: _p, limit: _l, ...filters } = query;
+      void _p;
+      void _l;
+      await downloadActivityCsv(filters);
+    } catch (err) {
+      setDownloadError(err instanceof Error ? err.message : 'Download failed');
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   const setParam = (next: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams);
@@ -130,7 +149,15 @@ export const ActivityLogPage = () => {
         <Button variant="outline" onClick={() => setSearchParams(new URLSearchParams())}>
           Clear filters
         </Button>
+        <Button variant="outline" onClick={downloadCsv} disabled={downloading}>
+          <Download className="h-4 w-4" />
+          {downloading ? 'Exporting…' : 'Download CSV'}
+        </Button>
       </div>
+
+      {downloadError && (
+        <p className="text-sm text-destructive">{downloadError}</p>
+      )}
 
       {isLoading && (
         <div className="space-y-2">

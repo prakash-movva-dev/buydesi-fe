@@ -1,8 +1,14 @@
+export interface TradeCategoryOverride {
+  categoryId: string;
+  commissionPercent: number;
+}
+
 export interface TradeConfig {
   _id?: string;
   id?: string;
   interClusterCommissionPercent: number;
   platformFeeInr: number;
+  categoryOverrides: TradeCategoryOverride[];
   updatedBy?: string | null;
   createdAt?: string;
   updatedAt?: string;
@@ -11,6 +17,7 @@ export interface TradeConfig {
 export interface SetTradeConfigInput {
   interClusterCommissionPercent: number;
   platformFeeInr: number;
+  categoryOverrides: TradeCategoryOverride[];
 }
 
 export type TradeListingStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'PAUSED' | 'CLOSED';

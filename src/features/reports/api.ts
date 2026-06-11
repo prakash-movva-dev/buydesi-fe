@@ -1,6 +1,7 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import { tokenStore } from '@/lib/token-store';
+import type { ClusterPerformanceReport } from '@/features/clusters/types';
 import type { ReportTotals } from './types';
 
 interface ReportRange {
@@ -51,6 +52,42 @@ export const downloadReportCsv = async (range: ReportRange): Promise<void> => {
   const a = document.createElement('a');
   a.href = url;
   a.download = `buy-desi-report-${range.from.slice(0, 10)}_${range.to.slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+/** Cluster performance report (all clusters) for a date range. */
+export const useClusterPerformanceReport = (range: ReportRange, enabled = true) =>
+  useQuery({
+    queryKey: ['reports', 'clusters', range],
+    queryFn: () =>
+      api.get<ClusterPerformanceReport>(
+        `/admin/reports/clusters?${buildParams({ ...range, format: 'json' }).toString()}`,
+      ),
+    enabled,
+  });
+
+/** Downloads the cluster-performance CSV via direct fetch (mirrors downloadReportCsv). */
+export const downloadClusterPerformanceCsv = async (range: ReportRange): Promise<void> => {
+  const res = await fetch(
+    `${BASE}/admin/reports/clusters?${buildParams({ ...range, format: 'csv' }).toString()}`,
+    {
+      headers: {
+        Authorization: `Bearer ${tokenStore.access ?? ''}`,
+      },
+    },
+  );
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Cluster performance download failed (${res.status}): ${text}`);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `buy-desi-cluster-performance-${range.from.slice(0, 10)}_${range.to.slice(0, 10)}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);

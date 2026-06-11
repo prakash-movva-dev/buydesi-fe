@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   BarChart3,
   Bell,
   Box,
@@ -10,6 +11,7 @@ import {
   LayoutDashboard,
   Map,
   Megaphone,
+  PackageSearch,
   Receipt,
   ReceiptText,
   ScrollText,
@@ -21,6 +23,7 @@ import {
   Star,
   Store,
   Truck,
+  TrendingUp,
   UserCheck,
   Users,
   Wallet,
@@ -202,9 +205,21 @@ export const navSections: NavSection[] = [
         roles: SUPPORT_TIER,
       },
       {
+        label: 'Seller performance',
+        path: '/admin/sellers/performance',
+        icon: TrendingUp,
+        roles: OPS_ADMINS,
+      },
+      {
         label: 'Products',
         path: '/admin/products',
         icon: Box,
+        roles: CATALOG_ADMINS,
+      },
+      {
+        label: 'Stock monitor',
+        path: '/admin/stock-monitor',
+        icon: PackageSearch,
         roles: CATALOG_ADMINS,
       },
       {
@@ -285,6 +300,12 @@ export const navSections: NavSection[] = [
         label: 'Trade settings',
         path: '/admin/trade',
         icon: Sparkles,
+        roles: [UserRole.SUPER_ADMIN, UserRole.SUB_SUPER_ADMIN],
+      },
+      {
+        label: 'Escalation panel',
+        path: '/admin/escalation',
+        icon: AlertTriangle,
         roles: [UserRole.SUPER_ADMIN, UserRole.SUB_SUPER_ADMIN],
       },
       {

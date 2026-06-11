@@ -1,5 +1,5 @@
-import { useState, type FormEvent } from 'react';
-import { Calendar, Download, Play } from 'lucide-react';
+import { useMemo, useState, type FormEvent } from 'react';
+import { ArrowUpDown, Calendar, Download, Play } from 'lucide-react';
 import { ClusterPicker } from '@/components/pickers/ClusterPicker';
 import { Button } from '@/components/ui/Button';
 import {
@@ -12,10 +12,23 @@ import {
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Skeleton } from '@/components/ui/Skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/Table';
 import { useAuth } from '@/lib/auth';
 import { formatInr } from '@/lib/format';
 import { ApiError, UserRole } from '@/types/api';
-import { downloadReportCsv, useRunReport } from './api';
+import {
+  downloadClusterPerformanceCsv,
+  downloadReportCsv,
+  useClusterPerformanceReport,
+  useRunReport,
+} from './api';
 
 // Default to the last 30 days.
 const defaultFrom = (): string => {
@@ -67,6 +80,42 @@ export const ReportsPage = () => {
       setDownloading(false);
     }
   };
+
+  // Cluster performance section (super / sub-super only).
+  const [sortDesc, setSortDesc] = useState(true);
+  const [clusterDownloadError, setClusterDownloadError] = useState<string | null>(null);
+  const [clusterDownloading, setClusterDownloading] = useState(false);
+
+  const clusterPerf = useClusterPerformanceReport(
+    { from: isoFrom, to: isoTo },
+    isSuper,
+  );
+
+  const sortedRows = useMemo(() => {
+    const rows = clusterPerf.data?.rows ?? [];
+    return [...rows].sort((a, b) =>
+      sortDesc ? b.revenueInr - a.revenueInr : a.revenueInr - b.revenueInr,
+    );
+  }, [clusterPerf.data, sortDesc]);
+
+  const onClusterDownload = async () => {
+    setClusterDownloadError(null);
+    setClusterDownloading(true);
+    try {
+      await downloadClusterPerformanceCsv({ from: isoFrom, to: isoTo });
+    } catch (err) {
+      setClusterDownloadError((err as Error).message);
+    } finally {
+      setClusterDownloading(false);
+    }
+  };
+
+  const clusterPerfError =
+    clusterPerf.error instanceof ApiError
+      ? clusterPerf.error.message
+      : clusterPerf.isError
+        ? 'Cluster performance failed to load'
+        : null;
 
   const result = run.data;
   const runError =
@@ -202,6 +251,87 @@ export const ReportsPage = () => {
         <Card>
           <CardContent className="py-12 text-center text-sm text-muted-foreground">
             Pick a date range and click "Run report".
+          </CardContent>
+        </Card>
+      )}
+
+      {isSuper && (
+        <Card>
+          <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+            <div>
+              <CardTitle className="text-base">Cluster performance</CardTitle>
+              <CardDescription>
+                Per-cluster sellers, listings, orders, revenue, open tickets and average
+                delivery time for {from} → {to}.
+              </CardDescription>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClusterDownload}
+              disabled={clusterDownloading}
+            >
+              <Download className="h-4 w-4" />
+              {clusterDownloading ? 'Downloading…' : 'Download CSV'}
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {clusterPerf.isLoading && <Skeleton className="h-40 w-full" />}
+            {clusterPerfError && <p className="text-sm text-destructive">{clusterPerfError}</p>}
+            {clusterDownloadError && (
+              <p className="mb-3 text-sm text-destructive">{clusterDownloadError}</p>
+            )}
+            {!clusterPerf.isLoading && !clusterPerfError && (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Cluster</TableHead>
+                    <TableHead>State</TableHead>
+                    <TableHead className="text-right">Sellers</TableHead>
+                    <TableHead className="text-right">Live listings</TableHead>
+                    <TableHead className="text-right">Orders</TableHead>
+                    <TableHead className="text-right">
+                      <button
+                        type="button"
+                        onClick={() => setSortDesc((d) => !d)}
+                        className="ml-auto inline-flex items-center gap-1 hover:text-foreground"
+                      >
+                        Revenue
+                        <ArrowUpDown className="h-3.5 w-3.5" />
+                      </button>
+                    </TableHead>
+                    <TableHead className="text-right">Open tickets</TableHead>
+                    <TableHead className="text-right">Avg delivery</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {sortedRows.map((r) => (
+                    <TableRow key={r.clusterId}>
+                      <TableCell className="font-medium">{r.clusterName}</TableCell>
+                      <TableCell>{r.state}</TableCell>
+                      <TableCell className="text-right">{r.sellers}</TableCell>
+                      <TableCell className="text-right">{r.liveListings}</TableCell>
+                      <TableCell className="text-right">{r.orders}</TableCell>
+                      <TableCell className="text-right">{formatInr(r.revenueInr)}</TableCell>
+                      <TableCell className="text-right">{r.openTickets}</TableCell>
+                      <TableCell className="text-right">
+                        {r.avgDeliveryHours ? `${r.avgDeliveryHours.toFixed(1)} h` : '—'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {sortedRows.length === 0 && (
+                    <TableRow>
+                      <TableCell
+                        colSpan={8}
+                        className="py-10 text-center text-sm text-muted-foreground"
+                      >
+                        No cluster activity in the selected range.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
       )}

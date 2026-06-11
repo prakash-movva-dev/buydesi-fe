@@ -51,3 +51,13 @@ export const useUpdateCategory = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: categoryKeys.all }),
   });
 };
+
+/** Bulk reorder siblings — sends [{id, displayOrder}] in one atomic call. */
+export const useReorderCategories = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (items: Array<{ id: string; displayOrder: number }>) =>
+      api.put<{ matched: number; modified: number }>('/categories/reorder', { items }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: categoryKeys.all }),
+  });
+};

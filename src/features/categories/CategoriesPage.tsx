@@ -1,5 +1,13 @@
 import { useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight, FolderTree, Pencil, Plus } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowUp,
+  ChevronDown,
+  ChevronRight,
+  FolderTree,
+  Pencil,
+  Plus,
+} from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -7,7 +15,7 @@ import { ScopedAdminBanner } from '@/features/scoped-admin/ScopedAdminBanner';
 import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/cn';
 import { UserRole } from '@/types/api';
-import { useCategoriesList } from './api';
+import { useCategoriesList, useReorderCategories } from './api';
 import { CategoryFormDialog } from './CategoryFormDialog';
 import type { SafeCategory } from './types';
 
@@ -61,6 +69,23 @@ export const CategoriesPage = () => {
   // Super admins create anything. Sub-super follows the same backend rule
   // as super (top-level), so we let them try and backend enforces.
   const canCreateTopLevel = isSuper || user?.role === UserRole.SUB_SUPER_ADMIN;
+  const canReorder =
+    isSuper ||
+    user?.role === UserRole.SUB_SUPER_ADMIN ||
+    user?.role === UserRole.CATEGORY_ADMIN;
+
+  const reorderMut = useReorderCategories();
+
+  // Move a node up/down among its siblings by renormalising the group's
+  // displayOrder to its new array positions, then persisting in one call.
+  const moveSibling = (siblings: TreeNode[], index: number, dir: -1 | 1) => {
+    const target = index + dir;
+    if (target < 0 || target >= siblings.length) return;
+    const ordered = siblings.map((s) => s.cat);
+    const [moved] = ordered.splice(index, 1);
+    ordered.splice(target, 0, moved);
+    reorderMut.mutate(ordered.map((cat, i) => ({ id: cat.id, displayOrder: i })));
+  };
 
   return (
     <div className="space-y-6">
@@ -105,10 +130,12 @@ export const CategoriesPage = () => {
             </div>
           ) : (
             <ul className="divide-y divide-border">
-              {tree.map((node) => (
+              {tree.map((node, index) => (
                 <CategoryRow
                   key={node.cat.id}
                   node={node}
+                  siblings={tree}
+                  index={index}
                   depth={0}
                   expanded={expanded}
                   onToggle={(id) =>
@@ -116,6 +143,9 @@ export const CategoriesPage = () => {
                   }
                   onEdit={openEdit}
                   onAddChild={openCreate}
+                  canReorder={canReorder}
+                  onMove={moveSibling}
+                  reordering={reorderMut.isPending}
                 />
               ))}
             </ul>
@@ -136,14 +166,31 @@ export const CategoriesPage = () => {
 
 interface CategoryRowProps {
   node: TreeNode;
+  siblings: TreeNode[];
+  index: number;
   depth: number;
   expanded: Record<string, boolean>;
   onToggle: (id: string) => void;
   onEdit: (c: SafeCategory) => void;
   onAddChild: (parentId: string) => void;
+  canReorder: boolean;
+  onMove: (siblings: TreeNode[], index: number, dir: -1 | 1) => void;
+  reordering: boolean;
 }
 
-const CategoryRow = ({ node, depth, expanded, onToggle, onEdit, onAddChild }: CategoryRowProps) => {
+const CategoryRow = ({
+  node,
+  siblings,
+  index,
+  depth,
+  expanded,
+  onToggle,
+  onEdit,
+  onAddChild,
+  canReorder,
+  onMove,
+  reordering,
+}: CategoryRowProps) => {
   const hasChildren = node.children.length > 0;
   const isOpen = expanded[node.cat.id] ?? depth === 0; // expand top-level by default
   return (
@@ -186,6 +233,30 @@ const CategoryRow = ({ node, depth, expanded, onToggle, onEdit, onAddChild }: Ca
         </div>
 
         <div className="flex items-center gap-1">
+          {canReorder && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={index === 0 || reordering}
+                onClick={() => onMove(siblings, index, -1)}
+                aria-label="Move up"
+                title="Move up"
+              >
+                <ArrowUp className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={index === siblings.length - 1 || reordering}
+                onClick={() => onMove(siblings, index, 1)}
+                aria-label="Move down"
+                title="Move down"
+              >
+                <ArrowDown className="h-4 w-4" />
+              </Button>
+            </>
+          )}
           <Button variant="ghost" size="sm" onClick={() => onAddChild(node.cat.id)}>
             <Plus className="h-4 w-4" />
             Sub-category
@@ -198,15 +269,20 @@ const CategoryRow = ({ node, depth, expanded, onToggle, onEdit, onAddChild }: Ca
       </div>
       {hasChildren && isOpen && (
         <ul className="divide-y divide-border border-t border-border bg-secondary/10">
-          {node.children.map((child) => (
+          {node.children.map((child, childIndex) => (
             <CategoryRow
               key={child.cat.id}
               node={child}
+              siblings={node.children}
+              index={childIndex}
               depth={depth + 1}
               expanded={expanded}
               onToggle={onToggle}
               onEdit={onEdit}
               onAddChild={onAddChild}
+              canReorder={canReorder}
+              onMove={onMove}
+              reordering={reordering}
             />
           ))}
         </ul>

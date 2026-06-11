@@ -4,6 +4,14 @@ export type SellerStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'INFO_REQUESTED
 export type KycDocType = 'pan' | 'aadhaar' | 'fssai' | 'gst' | 'other';
 export type KycDocStatus = 'pending' | 'approved' | 'rejected';
 export type PayoutPreference = 'daily' | 'weekly' | 'on_demand';
+export type DisciplinaryActionType = 'warning' | 'suspension' | 'reactivation';
+
+export interface SafeDisciplinaryAction {
+  type: DisciplinaryActionType;
+  reason: string;
+  byUserId: string;
+  at: string;
+}
 
 export interface SellerAddress {
   line1: string;
@@ -48,6 +56,8 @@ export interface SafeSellerProfile {
   isLive: boolean;
   payoutPreference: PayoutPreference;
   verifiedBadge: boolean;
+  /** Admin-only surface — present only when serialised for an admin viewer. */
+  disciplinaryActions?: SafeDisciplinaryAction[];
   createdAt: string;
   updatedAt: string;
 }
@@ -68,4 +78,34 @@ export interface SellersListQuery {
   clusterId?: string;
   page: number;
   limit: number;
+}
+
+// ─── CA-1: Seller performance ───────────────────────────────────────────────
+
+export type SellerPerformanceSort = 'revenue' | 'orders' | 'rating';
+
+export interface SellerPerformanceRow {
+  sellerId: string;
+  farmName: string;
+  clusterId: string | null;
+  orders: number;
+  fulfilled: number;
+  returned: number;
+  avgRating: number | null;
+  complaints: number;
+  revenueInr: number;
+}
+
+export interface SellerPerformanceReport {
+  range: { from: string; to: string };
+  scope: { clusterId: string | null };
+  sort: SellerPerformanceSort;
+  rows: SellerPerformanceRow[];
+}
+
+export interface SellerPerformanceQuery {
+  from: string;
+  to: string;
+  clusterId?: string;
+  sort: SellerPerformanceSort;
 }
