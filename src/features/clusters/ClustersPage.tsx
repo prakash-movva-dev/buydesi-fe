@@ -37,7 +37,9 @@ const PAGE_SIZE = 25;
 
 export const ClustersPage = () => {
   const { user } = useAuth();
-  const isSuper = user?.role === UserRole.SUPER_ADMIN;
+  // Super & Sub-Super Admin can create/edit clusters (story 2.1 / 2.2).
+  const isSuper =
+    user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.SUB_SUPER_ADMIN;
   const [searchParams, setSearchParams] = useSearchParams();
   const status = (searchParams.get('status') as ClusterStatus | null) ?? '';
   const stateFilter = searchParams.get('state') ?? '';
