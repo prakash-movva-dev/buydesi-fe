@@ -110,12 +110,8 @@ export const SellerOnboardingPage = () => {
         },
         pincode: pincode.trim(),
         categoryIds,
-        kycDocuments: docs.map(({ type, s3Key, status, uploadedAt }) => ({
-          type,
-          s3Key,
-          status,
-          uploadedAt,
-        })),
+        // Only type + s3Key are accepted; the server stamps status/uploadedAt.
+        kycDocuments: docs.map(({ type, s3Key }) => ({ type, s3Key })),
       });
       setStep(3);
     } catch (err) {
