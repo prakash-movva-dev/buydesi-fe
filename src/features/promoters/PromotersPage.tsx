@@ -65,7 +65,12 @@ export const PromotersPage = () => {
   const [newlyCreatedCode, setNewlyCreatedCode] = useState<string | null>(null);
 
   const onConfirmDelete = (id: string) => {
-    if (!window.confirm('Soft-delete this promoter? The coupon will be disabled but history is preserved.')) return;
+    if (
+      !window.confirm(
+        'Delete this promoter? Their coupon is disabled and the promoter is removed from the list. Past order history is preserved.',
+      )
+    )
+      return;
     deleteMut.mutate(id);
   };
 
@@ -140,6 +145,7 @@ export const PromotersPage = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
+                <TableHead>Contact</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Cluster</TableHead>
                 <TableHead>Linked user</TableHead>
@@ -153,6 +159,11 @@ export const PromotersPage = () => {
                 return (
                   <TableRow key={id}>
                     <TableCell className="font-medium">{p.name}</TableCell>
+                    <TableCell className="text-xs">
+                      {p.mobile && <div>{p.mobile}</div>}
+                      {p.email && <div className="text-muted-foreground">{p.email}</div>}
+                      {!p.mobile && !p.email && <span className="text-muted-foreground">—</span>}
+                    </TableCell>
                     <TableCell>
                       <Badge variant={p.active ? 'success' : 'muted'}>
                         {p.active ? 'Active' : 'Inactive'}
@@ -193,7 +204,7 @@ export const PromotersPage = () => {
               })}
               {(data?.items.length ?? 0) === 0 && (
                 <TableRow>
-                  <TableCell colSpan={6} className="py-12 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
                     No promoters yet.
                   </TableCell>
                 </TableRow>

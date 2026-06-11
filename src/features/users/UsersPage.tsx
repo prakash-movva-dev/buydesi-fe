@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Plus, ShieldOff, Users as UsersIcon } from 'lucide-react';
 import { ClusterPicker } from '@/components/pickers/ClusterPicker';
+import { useClustersList } from '@/features/clusters/api';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card, CardDescription, CardHeader } from '@/components/ui/Card';
@@ -86,6 +87,14 @@ export const UsersPage = () => {
   const { data, isLoading, isError, error } = useUsersList(query);
   const total = data?.meta.total ?? 0;
   const pageCount = total > 0 ? Math.ceil(total / PAGE_SIZE) : 1;
+
+  // Map cluster id → name so the table shows readable cluster names.
+  const { data: clustersData } = useClustersList({ page: 1, limit: 200 });
+  const clusterName = useMemo(() => {
+    const map = new Map<string, string>();
+    (clustersData?.items ?? []).forEach((c) => map.set(c.id, c.name));
+    return map;
+  }, [clustersData]);
 
   // Debounced text → URL `q` param → fed back into the query via memo.
   const [scrub, setScrub] = useState(searchParams.get('q') ?? '');
@@ -196,6 +205,7 @@ export const UsersPage = () => {
                 <TableHead>Status</TableHead>
                 <TableHead>Contact</TableHead>
                 <TableHead>Cluster</TableHead>
+                <TableHead>Last login</TableHead>
                 <TableHead>Created</TableHead>
                 <TableHead className="w-px" />
               </TableRow>
@@ -220,8 +230,11 @@ export const UsersPage = () => {
                     {u.email && <div>{u.email}</div>}
                     {u.mobile && <div className="text-muted-foreground">{u.mobile}</div>}
                   </TableCell>
-                  <TableCell className="font-mono text-xs">
-                    {u.clusterId ? u.clusterId.slice(-10) : '—'}
+                  <TableCell className="text-xs">
+                    {u.clusterId ? (clusterName.get(u.clusterId) ?? u.clusterId.slice(-10)) : '—'}
+                  </TableCell>
+                  <TableCell className="text-xs">
+                    {u.lastLoginAt ? formatDate(u.lastLoginAt) : '—'}
                   </TableCell>
                   <TableCell className="text-xs">{formatDate(u.createdAt)}</TableCell>
                   <TableCell>
@@ -233,7 +246,7 @@ export const UsersPage = () => {
               ))}
               {visible.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
                     No users match the current filter.
                   </TableCell>
                 </TableRow>

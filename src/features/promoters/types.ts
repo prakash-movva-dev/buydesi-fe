@@ -5,6 +5,8 @@ export interface Promoter {
   id?: string;
   userId: string | null;
   name: string;
+  mobile?: string | null;
+  email?: string | null;
   clusterId: string | null;
   couponId: string;
   active: boolean;
@@ -44,6 +46,8 @@ export interface PromotersListMeta {
 
 export interface CreatePromoterInput {
   name: string;
+  mobile?: string;
+  email?: string;
   userId?: string;
   clusterId?: string;
   discountType: 'percent' | 'flat';

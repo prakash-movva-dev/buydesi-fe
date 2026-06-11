@@ -17,6 +17,7 @@ export interface SafeUser {
   category?: string;
   emailVerifiedAt: string | null;
   mobileVerifiedAt: string | null;
+  lastLoginAt?: string | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -23,6 +23,8 @@ export const PromoterFormDialog = ({ open, editing, onClose, onCreated }: Props)
   const updateMut = useUpdatePromoter();
 
   const [name, setName] = useState('');
+  const [mobile, setMobile] = useState('');
+  const [email, setEmail] = useState('');
   const [userId, setUserId] = useState('');
   const [clusterId, setClusterId] = useState('');
   const [discountType, setDiscountType] = useState<'percent' | 'flat'>('percent');
@@ -38,9 +40,13 @@ export const PromoterFormDialog = ({ open, editing, onClose, onCreated }: Props)
     setError(null);
     if (editing) {
       setName(editing.name);
+      setMobile(editing.mobile ?? '');
+      setEmail(editing.email ?? '');
       setActive(editing.active);
     } else {
       setName('');
+      setMobile('');
+      setEmail('');
       setUserId('');
       setClusterId('');
       setDiscountType('percent');
@@ -74,8 +80,18 @@ export const PromoterFormDialog = ({ open, editing, onClose, onCreated }: Props)
           setError('Percent discount must be ≤ 100');
           return;
         }
+        if (mobile.trim() && !/^[6-9]\d{9}$/.test(mobile.trim())) {
+          setError('Mobile must be a valid 10-digit number');
+          return;
+        }
+        if (email.trim() && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())) {
+          setError('Enter a valid email address');
+          return;
+        }
         const result = await createMut.mutateAsync({
           name: name.trim(),
+          mobile: mobile.trim() || undefined,
+          email: email.trim() || undefined,
           userId: userId.trim() || undefined,
           clusterId: clusterId.trim() || undefined,
           discountType,
@@ -141,6 +157,29 @@ export const PromoterFormDialog = ({ open, editing, onClose, onCreated }: Props)
           </div>
         ) : (
           <>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="prom-mobile">Mobile</Label>
+                <Input
+                  id="prom-mobile"
+                  value={mobile}
+                  onChange={(e) => setMobile(e.target.value)}
+                  maxLength={10}
+                  placeholder="10-digit number"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="prom-email">Email</Label>
+                <Input
+                  id="prom-email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="name@example.com"
+                />
+              </div>
+            </div>
+
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label>Linked user (optional)</Label>

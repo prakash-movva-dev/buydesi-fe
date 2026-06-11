@@ -233,6 +233,14 @@ export const ReportsPage = () => {
               label="Support tickets resolved"
               value={String(result.support.ticketsResolved)}
             />
+            <MetricCard label="Sellers" value={String(result.sellers)} />
+            <MetricCard label="Live listings" value={String(result.listings)} />
+            <MetricCard
+              label="Avg delivery time"
+              value={
+                result.avgDeliveryHours != null ? `${result.avgDeliveryHours} hrs` : '—'
+              }
+            />
             <Card>
               <CardHeader className="pb-2">
                 <CardDescription>Net payout per order (avg)</CardDescription>
@@ -244,6 +252,34 @@ export const ReportsPage = () => {
               </CardHeader>
             </Card>
           </div>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Top products sold</CardTitle>
+              <CardDescription>
+                Best-selling products in this window — what actually moved, not just order count.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {result.topProducts.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No sales in this period.</p>
+              ) : (
+                <ul className="divide-y divide-border text-sm">
+                  {result.topProducts.map((p, i) => (
+                    <li key={p.productId} className="flex items-center justify-between py-2">
+                      <span className="flex items-center gap-2">
+                        <span className="text-muted-foreground">{i + 1}.</span>
+                        {p.name}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {p.units} units · {formatInr(p.revenueInr)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
         </>
       )}
 

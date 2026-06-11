@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
+import { INDIA_STATES, districtsForState } from '@/utils/india-geo';
 import { ApiError, UserRole } from '@/types/api';
 import { useCreateCluster, useUpdateCluster } from './api';
 import type {
@@ -133,15 +134,38 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="cl-state">State *</Label>
-            <Input id="cl-state" value={state} onChange={(e) => setState(e.target.value)} />
+            <Select
+              id="cl-state"
+              value={state}
+              onChange={(e) => {
+                setState(e.target.value);
+                // Clear the district when the state changes so it can't be stale.
+                setDistrict('');
+              }}
+            >
+              <option value="">Select a state…</option>
+              {INDIA_STATES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </Select>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="cl-district">District *</Label>
             <Input
               id="cl-district"
+              list="cl-district-options"
               value={district}
               onChange={(e) => setDistrict(e.target.value)}
+              placeholder={state ? 'Pick or type a district…' : 'Select a state first'}
+              disabled={!state}
             />
+            <datalist id="cl-district-options">
+              {districtsForState(state).map((d) => (
+                <option key={d} value={d} />
+              ))}
+            </datalist>
           </div>
         </div>
 
