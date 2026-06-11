@@ -21,6 +21,7 @@ const fetchOrdersList = async (q: OrdersListQuery): Promise<OrdersListResult> =>
   const params = new URLSearchParams();
   if (q.status) params.set('status', q.status);
   if (q.clusterId) params.set('clusterId', q.clusterId);
+  if (q.problem) params.set('problem', '1');
   params.set('page', String(q.page));
   params.set('limit', String(q.limit));
   const { data, meta } = await fetchEnvelope<SafeOrder[]>(`/orders?${params.toString()}`);

@@ -1,9 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { useAuth } from '@/lib/auth';
+import { UserRole } from '@/types/api';
+import { DirectRegisterSellerDialog } from './DirectRegisterSellerDialog';
 import {
   Table,
   TableBody,
@@ -48,6 +51,13 @@ export const SellersListPage = () => {
   const total = data?.meta.total ?? 0;
   const pageCount = total > 0 ? Math.ceil(total / PAGE_SIZE) : 1;
 
+  const { user } = useAuth();
+  const canDirectRegister =
+    user?.role === UserRole.SUPER_ADMIN ||
+    user?.role === UserRole.SUB_SUPER_ADMIN ||
+    user?.role === UserRole.REGIONAL_ADMIN;
+  const [registerOpen, setRegisterOpen] = useState(false);
+
   // The backend doesn't expose a name/pincode search on this endpoint yet;
   // filter client-side so the operator can scrub the current page.
   const [scrub, setScrub] = useState('');
@@ -85,7 +95,15 @@ export const SellersListPage = () => {
             Onboarding queue and existing accounts. KYC and storefront review.
           </p>
         </div>
+        {canDirectRegister && (
+          <Button onClick={() => setRegisterOpen(true)}>
+            <UserPlus className="h-4 w-4" />
+            Direct register seller
+          </Button>
+        )}
       </div>
+
+      <DirectRegisterSellerDialog open={registerOpen} onClose={() => setRegisterOpen(false)} />
 
       <ScopedAdminBanner />
 

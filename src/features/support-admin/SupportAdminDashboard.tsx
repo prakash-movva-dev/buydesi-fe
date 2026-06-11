@@ -176,7 +176,13 @@ export const SupportAdminDashboard = () => {
             label="My open tickets"
             count={mineCount}
             loading={myOpen.isLoading}
-            onClick={() => navigate(`/admin/support?assignedTo=${user?.id}&status=OPEN`)}
+            onClick={() =>
+              navigate(
+                user?.id
+                  ? `/admin/support?assignedTo=${user.id}&status=OPEN`
+                  : '/admin/support?status=OPEN',
+              )
+            }
           />
           <ActionTile
             icon={Inbox}

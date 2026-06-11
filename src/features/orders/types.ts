@@ -92,6 +92,8 @@ export interface SafeOrder {
 export interface OrdersListQuery {
   status?: OrderStatus;
   clusterId?: string;
+  /** Problem-orders view: cancelled/returned or has an open support ticket. */
+  problem?: boolean;
   page: number;
   limit: number;
 }

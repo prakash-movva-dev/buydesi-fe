@@ -202,3 +202,24 @@ export const useReactivateSeller = () => {
     onSuccess: (_, vars) => invalidateSellers(qc, vars.id),
   });
 };
+
+// Story 3.1 — admin directly registers an active seller (no OTP/approval queue).
+export interface AdminRegisterSellerInput {
+  name: string;
+  email?: string;
+  mobile?: string;
+  password: string;
+  farmName: string;
+  address: { line1: string; line2?: string; city: string; state: string; pincode: string };
+  categoryIds: string[];
+  clusterId?: string;
+}
+
+export const useAdminRegisterSeller = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: AdminRegisterSellerInput) =>
+      api.post<SafeSellerProfile>('/admin/sellers/register', input),
+    onSuccess: () => qc.invalidateQueries({ queryKey: sellerKeys.all }),
+  });
+};

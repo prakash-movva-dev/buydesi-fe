@@ -37,15 +37,17 @@ export const OrdersListPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const status = (searchParams.get('status') as OrderStatus | null) ?? '';
+  const problem = searchParams.get('problem') === '1';
   const page = Math.max(1, Number(searchParams.get('page') ?? 1));
 
   const query = useMemo<OrdersListQuery>(
     () => ({
-      status: status || undefined,
+      status: problem ? undefined : status || undefined,
+      problem: problem || undefined,
       page,
       limit: PAGE_SIZE,
     }),
-    [status, page],
+    [status, problem, page],
   );
 
   const { data, isLoading, isError, error } = useOrdersList(query);
@@ -91,10 +93,19 @@ export const OrdersListPage = () => {
       <ScopedAdminBanner />
 
       <div className="flex flex-wrap items-center gap-3">
+        <Button
+          variant={problem ? 'primary' : 'outline'}
+          size="sm"
+          onClick={() => setParam({ problem: problem ? null : '1', status: null })}
+          title="Cancelled / returned orders, or orders with an open support ticket"
+        >
+          {problem ? 'Problem orders ✓' : 'Problem orders'}
+        </Button>
         <Select
           value={status}
           onChange={(e) => setParam({ status: e.target.value })}
           className="w-48"
+          disabled={problem}
         >
           {STATUS_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>

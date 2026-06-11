@@ -212,7 +212,9 @@ export const ReviewsPage = () => {
                     </TableCell>
                     <TableCell className="text-xs">
                       <Badge variant="muted">{r.targetType}</Badge>
-                      <div className="mt-0.5 font-mono">{r.targetId.slice(-10)}</div>
+                      <div className="mt-0.5 font-medium">
+                        {r.targetName ?? <span className="font-mono">{r.targetId.slice(-10)}</span>}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-0.5">

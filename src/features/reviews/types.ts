@@ -7,6 +7,8 @@ export interface Review {
   raterId: string;
   targetType: ReviewTargetType;
   targetId: string;
+  /** Product name / seller farm name, resolved by the admin list endpoint. */
+  targetName?: string | null;
   orderId: string;
   rating: number;
   text: string | null;
