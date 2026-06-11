@@ -66,7 +66,8 @@ export interface SellerRegisterInput {
   address: SellerAddress;
   pincode: string;
   categoryIds: string[];
-  kycDocuments: KycDocument[];
+  // Only type + s3Key are sent on register; the server stamps status/uploadedAt.
+  kycDocuments: Pick<KycDocument, 'type' | 's3Key'>[];
 }
 
 export const useSellerRegister = () => {

@@ -153,6 +153,12 @@ export const DashboardPage = () => {
             tone="warning"
           />
           <MetricCard
+            label="Buyers"
+            value={loading ? null : o?.buyers ?? 0}
+            secondary={loading ? null : `${o?.grievances ?? 0} open grievances`}
+            tone="info"
+          />
+          <MetricCard
             label="Escrow held"
             value={loading ? null : o?.escrow.held ?? 0}
             secondary={

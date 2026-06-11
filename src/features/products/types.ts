@@ -66,3 +66,15 @@ export interface ProductsListMeta {
   page: number;
   limit: number;
 }
+
+/** Result of GET /products/:id/quality-check. */
+export interface ProductQualityCheck {
+  restrictedTermsFound: string[];
+  checklist: {
+    hasImage: boolean;
+    descriptionOk: boolean;
+    pricingOk: boolean;
+    nameOk: boolean;
+    inStock: boolean;
+  };
+}

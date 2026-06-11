@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, fetchEnvelope } from '@/lib/api';
 import type {
   DuplicateCandidate,
+  ProductQualityCheck,
   ProductStatus,
   ProductsListMeta,
   ProductsListQuery,
@@ -13,6 +14,7 @@ export const productKeys = {
   list: (q: ProductsListQuery) => ['products', 'list', q] as const,
   detail: (id: string) => ['products', 'detail', id] as const,
   duplicates: (id: string) => ['products', 'duplicates', id] as const,
+  qualityCheck: (id: string) => ['products', 'quality-check', id] as const,
 };
 
 interface ProductsListResult {
@@ -60,6 +62,13 @@ export const useProductDuplicates = (id: string | undefined) =>
   useQuery({
     queryKey: id ? productKeys.duplicates(id) : ['products', 'duplicates', 'none'],
     queryFn: () => api.get<DuplicateCandidate[]>(`/products/${id}/duplicates`),
+    enabled: Boolean(id),
+  });
+
+export const useProductQualityCheck = (id: string | undefined) =>
+  useQuery({
+    queryKey: id ? productKeys.qualityCheck(id) : ['products', 'quality-check', 'none'],
+    queryFn: () => api.get<ProductQualityCheck>(`/products/${id}/quality-check`),
     enabled: Boolean(id),
   });
 

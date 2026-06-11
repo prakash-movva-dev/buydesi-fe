@@ -27,10 +27,11 @@ import {
   useKycUploadUrl,
   useSellerMe,
   useSellerRegister,
-  type SellerRegisterInput,
 } from '@/features/seller/profile/api';
+import type { KycDocument } from '@/features/sellers/types';
 
-type Doc = SellerRegisterInput['kycDocuments'][number] & { fileName?: string };
+// Local doc carries the full KYC shape for display; only type+s3Key are submitted.
+type Doc = KycDocument & { fileName?: string };
 
 const DOC_TYPES = [
   { value: 'pan', label: 'PAN' },

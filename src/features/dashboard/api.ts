@@ -7,9 +7,11 @@ export interface DashboardOverview {
   period: DashboardPeriod;
   range: { from: string; to: string };
   sellers: { total: number; pendingApproval: number; approved: number };
+  buyers: number;
   orders: { total: number; placed: number; cancelled: number; revenueInr: number };
   payouts: { pending: number; paid: number };
   support: { open: number; escalated: number };
+  grievances: number;
   escrow: { held: number; released: number };
   scope: { clusterId: string | null };
 }

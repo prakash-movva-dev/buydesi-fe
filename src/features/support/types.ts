@@ -29,12 +29,15 @@ export interface SupportTicketEvent {
 
 export type SupportMessageAuthorRole = 'BUYER' | 'SELLER' | 'STAFF';
 
+export type SupportMessageChannel = 'in_app' | 'email' | 'call';
+
 export interface SupportTicketMessage {
   _id?: string;
   body: string;
   authorId: string;
   authorRole: SupportMessageAuthorRole;
   internal: boolean;
+  channel?: SupportMessageChannel;
   at: string;
 }
 

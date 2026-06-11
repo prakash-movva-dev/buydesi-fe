@@ -18,6 +18,8 @@ import { ProductsListPage } from '@/features/products/ProductsListPage';
 import { StockMonitorPage } from '@/features/products/StockMonitorPage';
 import { PromotersPage } from '@/features/promoters/PromotersPage';
 import { PromotionsPage } from '@/features/promotions/PromotionsPage';
+import { QualityMonitorPage } from '@/features/quality-monitor/QualityMonitorPage';
+import { RegionsPage } from '@/features/regions/RegionsPage';
 import { ReportsPage } from '@/features/reports/ReportsPage';
 import { PromoterDashboard } from '@/features/promoter/dashboard/PromoterDashboard';
 import { PromoterProfilePage } from '@/features/promoter/profile/PromoterProfilePage';
@@ -150,6 +152,7 @@ const router = createBrowserRouter([
               { path: '/admin/orders/:id', element: <OrderDetailPage /> },
               { path: '/admin/support', element: <TicketsListPage /> },
               { path: '/admin/support/:id', element: <TicketDetailPage /> },
+              { path: '/admin/quality-monitor', element: <QualityMonitorPage /> },
               { path: '/admin/delivery', element: <DeliveryPage /> },
             ],
           },
@@ -172,6 +175,7 @@ const router = createBrowserRouter([
               { path: '/admin/activity-log', element: <ActivityLogPage /> },
               { path: '/admin/trade', element: <TradeSettingsPage /> },
               { path: '/admin/escalation', element: <EscalationPanelPage /> },
+              { path: '/admin/regions', element: <RegionsPage /> },
             ],
           },
           {

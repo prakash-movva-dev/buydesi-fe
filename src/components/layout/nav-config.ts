@@ -15,6 +15,7 @@ import {
   Receipt,
   ReceiptText,
   ScrollText,
+  ShieldAlert,
   ShieldCheck,
   ShoppingBag,
   ShoppingCart,
@@ -241,6 +242,12 @@ export const navSections: NavSection[] = [
         roles: SUPPORT_TIER,
       },
       {
+        label: 'Quality Monitor',
+        path: '/admin/quality-monitor',
+        icon: ShieldAlert,
+        roles: SUPPORT_TIER,
+      },
+      {
         label: 'Delivery',
         path: '/admin/delivery',
         icon: Truck,
@@ -279,6 +286,12 @@ export const navSections: NavSection[] = [
       { label: 'Promoters', path: '/admin/promoters', icon: Gift, roles: OPS_ADMINS },
       { label: 'Promotions', path: '/admin/promotions', icon: Megaphone, roles: OPS_ADMINS },
       { label: 'Clusters', path: '/admin/clusters', icon: Map, roles: OPS_ADMINS },
+      {
+        label: 'Regions',
+        path: '/admin/regions',
+        icon: Map,
+        roles: [UserRole.SUPER_ADMIN, UserRole.SUB_SUPER_ADMIN],
+      },
     ],
   },
   {

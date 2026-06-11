@@ -35,7 +35,12 @@ import {
 import { useCategoriesList } from '@/features/categories/api';
 import { formatDate, formatDateTime, formatInr } from '@/lib/format';
 import { ApiError } from '@/types/api';
-import { useProduct, useProductDuplicates, useSetProductStatus } from './api';
+import {
+  useProduct,
+  useProductDuplicates,
+  useProductQualityCheck,
+  useSetProductStatus,
+} from './api';
 import { ProductStatusBadge } from './status-badge';
 import { StatusReviewDialog, type StatusAction } from './StatusReviewDialog';
 import type { DuplicateCandidate, ProductStatus } from './types';
@@ -253,6 +258,8 @@ export const ProductDetailPage = () => {
         </CardContent>
       </Card>
 
+      <QualityChecklist productId={product.id} />
+
       <DuplicateCheck
         productId={product.id}
         categoryName={categoryName}
@@ -305,6 +312,69 @@ export const ProductDetailPage = () => {
         }}
       />
     </div>
+  );
+};
+
+const checklistLabels: Record<string, string> = {
+  hasImage: 'At least one product image',
+  descriptionOk: 'Description is detailed (30+ characters)',
+  pricingOk: 'A standard or organic price is set',
+  nameOk: 'Name length is valid (3–120 characters)',
+  inStock: 'Product is in stock',
+};
+
+const checklistOrder = ['nameOk', 'descriptionOk', 'pricingOk', 'hasImage', 'inStock'] as const;
+
+const QualityChecklist = ({ productId }: { productId: string }) => {
+  const { data, isLoading, isError, error } = useProductQualityCheck(productId);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Quality checklist</CardTitle>
+        <CardDescription>
+          Listing-completeness checks and restricted-item screening to run before approving.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isLoading && <Skeleton className="h-40 w-full" />}
+        {isError && (
+          <p className="text-sm text-destructive">
+            {error instanceof Error ? error.message : 'Failed to run quality check'}
+          </p>
+        )}
+        {!isLoading && !isError && data && (
+          <>
+            {data.restrictedTermsFound.length > 0 && (
+              <div className="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                <span>
+                  Restricted terms detected: {data.restrictedTermsFound.join(', ')}. Review this
+                  listing carefully before approving.
+                </span>
+              </div>
+            )}
+            <ul className="space-y-2 text-sm">
+              {checklistOrder.map((key) => {
+                const ok = data.checklist[key];
+                return (
+                  <li key={key} className="flex items-center gap-2">
+                    {ok ? (
+                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                    ) : (
+                      <XCircle className="h-4 w-4 shrink-0 text-destructive" />
+                    )}
+                    <span className={ok ? '' : 'text-muted-foreground'}>
+                      {checklistLabels[key]}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 

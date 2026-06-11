@@ -1,12 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, fetchEnvelope } from '@/lib/api';
 import type {
+  SupportCategory,
+  SupportMessageChannel,
   SupportResolutionAction,
   SupportTicket,
   TicketDetailResponse,
   TicketsListMeta,
   TicketsListQuery,
 } from './types';
+
+export interface CreateTicketPayload {
+  category: SupportCategory;
+  subject: string;
+  description: string;
+  orderId?: string;
+  attachments?: string[];
+}
 
 export const ticketKeys = {
   all: ['tickets'] as const,
@@ -56,6 +66,15 @@ export const useTicket = (id: string | undefined) =>
 const invalidate = (qc: ReturnType<typeof useQueryClient>, id: string) => {
   qc.invalidateQueries({ queryKey: ticketKeys.all });
   qc.invalidateQueries({ queryKey: ticketKeys.detail(id) });
+};
+
+export const useCreateTicket = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CreateTicketPayload) =>
+      api.post<SupportTicket>('/support/tickets', payload),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ticketKeys.all }),
+  });
 };
 
 export const useClaimTicket = () => {
@@ -117,6 +136,16 @@ export const useScheduleReversePickup = () => {
   });
 };
 
+/** Super-tier override of a prior decision (story 1.17). */
+export const useOverrideTicket = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status, reason }: { id: string; status: string; reason: string }) =>
+      api.put<SupportTicket>(`/support/tickets/${id}/override`, { status, reason }),
+    onSuccess: (_, v) => invalidate(qc, v.id),
+  });
+};
+
 export const usePostTicketMessage = () => {
   const qc = useQueryClient();
   return useMutation({
@@ -124,12 +153,18 @@ export const usePostTicketMessage = () => {
       id,
       body,
       internal,
+      channel,
     }: {
       id: string;
       body: string;
       internal: boolean;
+      channel?: SupportMessageChannel;
     }) =>
-      api.post<SupportTicket>(`/support/tickets/${id}/messages`, { body, internal }),
+      api.post<SupportTicket>(`/support/tickets/${id}/messages`, {
+        body,
+        internal,
+        channel,
+      }),
     onSuccess: (_, v) => invalidate(qc, v.id),
   });
 };

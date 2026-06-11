@@ -10,7 +10,9 @@ import {
   FileText,
   Hand,
   Lock,
+  Mail,
   MessageSquare,
+  Phone,
   Send,
   Truck,
 } from 'lucide-react';
@@ -23,6 +25,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/Card';
+import { Dialog } from '@/components/ui/Dialog';
+import { Label } from '@/components/ui/Label';
+import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Textarea } from '@/components/ui/Textarea';
 import { useOrder } from '@/features/orders/api';
@@ -34,7 +39,12 @@ import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/cn';
 import { formatDateTime, formatInr } from '@/lib/format';
 import { ADMIN_ROLES, ApiError, UserRole } from '@/types/api';
-import { useScheduleReversePickup, useTicket, usePostTicketMessage } from './api';
+import {
+  useOverrideTicket,
+  useScheduleReversePickup,
+  useTicket,
+  usePostTicketMessage,
+} from './api';
 import {
   ClaimDialog,
   EscalateDialog,
@@ -46,7 +56,11 @@ import {
   TicketLevelBadge,
   TicketStatusBadge,
 } from './status-badge';
-import type { SupportTicket, SupportTicketMessage } from './types';
+import type {
+  SupportMessageChannel,
+  SupportTicket,
+  SupportTicketMessage,
+} from './types';
 
 const REFUND_ROLES = new Set<string>([
   UserRole.SUPER_ADMIN,
@@ -70,11 +84,18 @@ export const TicketDetailPage = () => {
   const { user } = useAuth();
   const { data, isLoading, isError, error } = useTicket(id);
   const reversePickup = useScheduleReversePickup();
+  const override = useOverrideTicket();
+  const isSuperTier =
+    user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.SUB_SUPER_ADMIN;
 
   const [claimOpen, setClaimOpen] = useState(false);
   const [resolveOpen, setResolveOpen] = useState(false);
   const [escalateOpen, setEscalateOpen] = useState(false);
   const [refundOpen, setRefundOpen] = useState(false);
+  const [overrideOpen, setOverrideOpen] = useState(false);
+  const [ovrStatus, setOvrStatus] = useState('OPEN');
+  const [ovrReason, setOvrReason] = useState('');
+  const [ovrErr, setOvrErr] = useState<string | null>(null);
 
   if (isLoading) {
     return (
@@ -164,8 +185,81 @@ export const TicketDetailPage = () => {
               Reverse pickup
             </Button>
           )}
+          {isSuperTier && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setOvrStatus(ticket.status);
+                setOvrReason('');
+                setOvrErr(null);
+                setOverrideOpen(true);
+              }}
+            >
+              <Lock className="h-4 w-4" />
+              Override
+            </Button>
+          )}
         </div>
       </div>
+
+      <Dialog
+        open={overrideOpen}
+        onClose={() => setOverrideOpen(false)}
+        title="Override ticket decision"
+        description="Force a new status with a mandatory reason. The previous handler and the customer are notified, and the change is logged."
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setOverrideOpen(false)} disabled={override.isPending}>
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                if (ovrReason.trim().length < 3) {
+                  setOvrErr('A reason is required.');
+                  return;
+                }
+                try {
+                  await override.mutateAsync({
+                    id: ticket.id,
+                    status: ovrStatus,
+                    reason: ovrReason.trim(),
+                  });
+                  setOverrideOpen(false);
+                } catch (err) {
+                  setOvrErr(err instanceof ApiError ? err.message : 'Override failed');
+                }
+              }}
+              disabled={override.isPending}
+            >
+              {override.isPending ? 'Overriding…' : 'Apply override'}
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="ovr-status">New status</Label>
+            <Select id="ovr-status" value={ovrStatus} onChange={(e) => setOvrStatus(e.target.value)}>
+              <option value="OPEN">Open (reopen)</option>
+              <option value="IN_PROGRESS">In progress</option>
+              <option value="ESCALATED">Escalated</option>
+              <option value="RESOLVED">Resolved</option>
+              <option value="CLOSED">Closed</option>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="ovr-reason">Reason *</Label>
+            <Textarea
+              id="ovr-reason"
+              rows={3}
+              value={ovrReason}
+              onChange={(e) => setOvrReason(e.target.value)}
+              placeholder="Why is this decision being overridden?"
+            />
+          </div>
+          {ovrErr && <p className="text-sm text-destructive">{ovrErr}</p>}
+        </div>
+      </Dialog>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="space-y-6 lg:col-span-2">
@@ -349,6 +443,7 @@ const ConversationCard = ({
 
   const [body, setBody] = useState('');
   const [internal, setInternal] = useState(false);
+  const [channel, setChannel] = useState<SupportMessageChannel>('in_app');
   const [error, setError] = useState<string | null>(null);
 
   const messages = useMemo(
@@ -359,6 +454,10 @@ const ConversationCard = ({
     [ticket.messages],
   );
 
+  const isInternal = internalAllowed && internal;
+  // Internal notes never email the customer — force the in-app channel.
+  const effectiveChannel: SupportMessageChannel = isInternal ? 'in_app' : channel;
+
   const submit = async () => {
     if (!body.trim()) return;
     setError(null);
@@ -366,10 +465,12 @@ const ConversationCard = ({
       await post.mutateAsync({
         id: ticket.id,
         body: body.trim(),
-        internal: internalAllowed && internal,
+        internal: isInternal,
+        channel: effectiveChannel,
       });
       setBody('');
       setInternal(false);
+      setChannel('in_app');
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Failed to post message');
     }
@@ -406,11 +507,15 @@ const ConversationCard = ({
               onChange={(e) => setBody(e.target.value)}
               rows={3}
               placeholder={
-                internal
+                isInternal
                   ? 'Internal note — visible to staff only…'
-                  : 'Reply to the customer…'
+                  : effectiveChannel === 'email'
+                    ? 'Reply — also emailed to the customer…'
+                    : effectiveChannel === 'call'
+                      ? 'Call-log note — what was discussed on the call…'
+                      : 'Reply to the customer…'
               }
-              className={cn(internal && 'bg-amber-50')}
+              className={cn(isInternal && 'bg-amber-50')}
             />
             <div className="flex flex-wrap items-center gap-3">
               {internalAllowed && (
@@ -427,18 +532,44 @@ const ConversationCard = ({
                   </span>
                 </label>
               )}
+              {!isInternal && (
+                <label className="flex items-center gap-2 text-sm">
+                  <span className="text-muted-foreground">Channel</span>
+                  <Select
+                    value={channel}
+                    onChange={(e) =>
+                      setChannel(e.target.value as SupportMessageChannel)
+                    }
+                    className="h-9 w-auto"
+                  >
+                    <option value="in_app">In-app reply</option>
+                    <option value="email">Send as email</option>
+                    <option value="call">Log a call</option>
+                  </Select>
+                </label>
+              )}
               <Button
                 size="sm"
                 onClick={submit}
                 disabled={post.isPending || !body.trim()}
                 className="ml-auto"
               >
-                <Send className="h-4 w-4" />
+                {effectiveChannel === 'email' ? (
+                  <Mail className="h-4 w-4" />
+                ) : effectiveChannel === 'call' ? (
+                  <Phone className="h-4 w-4" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
                 {post.isPending
                   ? 'Posting…'
-                  : internal
+                  : isInternal
                     ? 'Post internal note'
-                    : 'Send reply'}
+                    : effectiveChannel === 'email'
+                      ? 'Send as email'
+                      : effectiveChannel === 'call'
+                        ? 'Log call'
+                        : 'Send reply'}
               </Button>
             </div>
             {error && <p className="text-sm text-destructive">{error}</p>}
@@ -483,6 +614,18 @@ const MessageBubble = ({ message }: { message: SupportTicketMessage }) => {
         <Badge variant={isStaff ? 'info' : 'muted'}>
           {isStaff ? 'Support' : message.authorRole === 'SELLER' ? 'Seller' : 'Buyer'}
         </Badge>
+        {message.channel === 'email' && (
+          <Badge variant="muted">
+            <Mail className="mr-1 h-3 w-3" />
+            email
+          </Badge>
+        )}
+        {message.channel === 'call' && (
+          <Badge variant="muted">
+            <Phone className="mr-1 h-3 w-3" />
+            call
+          </Badge>
+        )}
         <span className="text-xs text-muted-foreground">{formatDateTime(message.at)}</span>
       </div>
       <p className="whitespace-pre-wrap text-sm">{message.body}</p>
