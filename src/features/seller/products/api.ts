@@ -1,7 +1,38 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { api, fetchEnvelope } from '@/lib/api';
 import { productKeys } from '@/features/products/api';
-import type { SafeProduct } from '@/features/products/types';
+import type {
+  ProductsListMeta,
+  ProductsListQuery,
+  SafeProduct,
+} from '@/features/products/types';
+
+/** Seller's own catalogue (all statuses) — the backend forces sellerId to self. */
+export const useMyProducts = (q: ProductsListQuery) =>
+  useQuery({
+    queryKey: ['products', 'mine', q],
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (q.status) params.set('status', q.status);
+      if (q.category) params.set('category', q.category);
+      if (q.q) params.set('q', q.q);
+      if (q.sort) params.set('sort', q.sort);
+      params.set('page', String(q.page));
+      params.set('limit', String(q.limit));
+      const { data, meta } = await fetchEnvelope<SafeProduct[]>(
+        `/products/mine?${params.toString()}`,
+      );
+      return {
+        items: data,
+        meta:
+          (meta as ProductsListMeta | undefined) ?? {
+            total: data.length,
+            page: q.page,
+            limit: q.limit,
+          },
+      };
+    },
+  });
 
 export interface ProductPricing {
   standard?: number;

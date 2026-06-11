@@ -14,13 +14,11 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/Table';
-import { useProductsList } from '@/features/products/api';
 import { ProductStatusBadge } from '@/features/products/status-badge';
 import { BulkUploadDialog } from '@/features/products/BulkUploadDialog';
 import { formatDate, formatInr } from '@/lib/format';
-import { useAuth } from '@/lib/auth';
 import type { ProductStatus, ProductsListQuery } from '@/features/products/types';
-import { useDeleteProduct } from './api';
+import { useDeleteProduct, useMyProducts } from './api';
 
 const STATUS_OPTIONS: Array<{ value: '' | ProductStatus; label: string }> = [
   { value: '', label: 'All statuses' },
@@ -41,7 +39,6 @@ const lowestPrice = (p: { pricing: { standard?: number; organic?: number; premiu
 
 export const MyProductsPage = () => {
   const navigate = useNavigate();
-  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const status = (searchParams.get('status') as ProductStatus | null) ?? '';
@@ -54,14 +51,13 @@ export const MyProductsPage = () => {
       status: status || undefined,
       category: category || undefined,
       q: q || undefined,
-      sellerId: user?.id,
       page,
       limit: PAGE_SIZE,
     }),
-    [status, category, q, page, user?.id],
+    [status, category, q, page],
   );
 
-  const { data, isLoading } = useProductsList(query);
+  const { data, isLoading } = useMyProducts(query);
   const remove = useDeleteProduct();
   const total = data?.meta.total ?? 0;
   const pageCount = total > 0 ? Math.ceil(total / PAGE_SIZE) : 1;
