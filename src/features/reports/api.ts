@@ -10,7 +10,7 @@ interface ReportRange {
   clusterId?: string;
 }
 
-const BASE = (import.meta.env.VITE_API_BASE_URL ?? 'http://buydesi-alb-1497579380.ap-south-1.elb.amazonaws.com/api/v1', 'http://localhost:4000/api/v1').replace(
+const BASE = (import.meta.env.VITE_API_BASE_URL ?? 'https://api.buydesionline.com/api/v1', 'https://api.buydesionline.com/api/v1').replace(
   /\/+$/,
   '',
 );

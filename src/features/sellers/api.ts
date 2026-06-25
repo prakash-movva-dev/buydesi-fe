@@ -9,7 +9,7 @@ import type {
   SellersListQuery,
 } from './types';
 
-const BASE = (import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000/api/v1').replace(
+const BASE = (import.meta.env.VITE_API_BASE_URL ?? 'https://api.buydesionline.com/api/v1').replace(
   /\/+$/,
   '',
 );
