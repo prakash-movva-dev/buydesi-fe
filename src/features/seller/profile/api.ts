@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '@/lib/api';
 import type {
+  KycDocType,
   KycDocument,
   PayoutPreference,
   SafeSellerProfile,
@@ -31,7 +32,7 @@ export const useSellerMe = (enabled = true) =>
 // ─── KYC upload ────────────────────────────────────────────────────────────
 
 export interface KycUploadUrlInput {
-  type: 'pan' | 'aadhaar' | 'fssai' | 'gst' | 'other';
+  type: KycDocType;
   contentType: string;
   ext?: string;
 }
@@ -61,6 +62,40 @@ export const useStorefrontAssetUploadUrl = () =>
 
 // ─── Register / resubmit ───────────────────────────────────────────────────
 
+export type BusinessType =
+  | 'individual'
+  | 'proprietorship'
+  | 'partnership'
+  | 'pvt_ltd'
+  | 'llp'
+  | 'fpo_cooperative'
+  | 'other';
+
+export interface SellerBusinessProfile {
+  ownsBrand?: boolean;
+  expectedMonthlyListings?: '1-10' | '11-50' | '51-200' | '200+';
+  averagePriceInr?: number;
+  fulfillmentPreference?: 'delhivery_pickup' | 'self_drop';
+}
+
+export interface SellerBankDetails {
+  accountNumber: string;
+  ifsc: string;
+  accountHolderName: string;
+  bankName: string;
+  accountType?: 'current' | 'savings';
+}
+
+export interface SellerAgreement {
+  acceptedPolicies: true;
+  authorizedToBind: true;
+  dataConsent: true;
+  backgroundCheck: true;
+  feeTerms: true;
+  legalName: string;
+  signedAt: string;
+}
+
 export interface SellerRegisterInput {
   farmName: string;
   address: SellerAddress;
@@ -68,6 +103,18 @@ export interface SellerRegisterInput {
   categoryIds: string[];
   // Only type + s3Key are sent on register; the server stamps status/uploadedAt.
   kycDocuments: Pick<KycDocument, 'type' | 's3Key'>[];
+  // ─── 7-step wizard fields ───
+  businessType?: BusinessType;
+  gstNumber?: string;
+  businessProfile?: SellerBusinessProfile;
+  bankDetails?: SellerBankDetails;
+  displayName?: string;
+  storeLanguage?: string;
+  supportEmail?: string;
+  logo?: string;
+  description?: string;
+  returnsAddress?: { pincode: string; line: string };
+  agreement: SellerAgreement;
 }
 
 export const useSellerRegister = () => {

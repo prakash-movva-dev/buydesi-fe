@@ -1,7 +1,14 @@
 // Mirrors backend `src/modules/sellers/sellers.types.ts` — SafeSellerProfile.
 
 export type SellerStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'INFO_REQUESTED';
-export type KycDocType = 'pan' | 'aadhaar' | 'fssai' | 'gst' | 'other';
+export type KycDocType =
+  | 'pan'
+  | 'aadhaar'
+  | 'passport'
+  | 'fssai'
+  | 'gst'
+  | 'bank_proof'
+  | 'other';
 export type KycDocStatus = 'pending' | 'approved' | 'rejected';
 export type PayoutPreference = 'daily' | 'weekly' | 'on_demand';
 export type DisciplinaryActionType = 'warning' | 'suspension' | 'reactivation';
