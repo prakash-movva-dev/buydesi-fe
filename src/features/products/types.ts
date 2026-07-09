@@ -30,6 +30,24 @@ export interface SafeProduct {
   approvalNotes: string | null;
   approvedAt: string | null;
   duplicateOfId?: string | null;
+  // Extended listing attributes.
+  highlights?: string[];
+  brand?: string | null;
+  sku?: string | null;
+  tags?: string[];
+  womenEntrepreneur?: boolean;
+  youthEmpowerment?: boolean;
+  organicCertified?: boolean;
+  organicCertification?: string | null;
+  minOrderQty?: number;
+  maxOrderQty?: number | null;
+  codAvailable?: boolean;
+  returnEligible?: boolean;
+  hsnCode?: string | null;
+  harvestDate?: string | null;
+  shelfLifeDays?: number | null;
+  packagingType?: string | null;
+  videoUrl?: string | null;
   createdAt: string;
   updatedAt: string;
 }

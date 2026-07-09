@@ -48,7 +48,7 @@ export interface NavSection {
 const ALL_ADMINS = [
   UserRole.SUPER_ADMIN,
   UserRole.SUB_SUPER_ADMIN,
-  UserRole.REGIONAL_ADMIN,
+  UserRole.CLUSTER_ADMIN,
   UserRole.CATEGORY_ADMIN,
   UserRole.SUPPORT_ADMIN,
 ] as const;
@@ -56,20 +56,45 @@ const ALL_ADMINS = [
 const OPS_ADMINS = [
   UserRole.SUPER_ADMIN,
   UserRole.SUB_SUPER_ADMIN,
-  UserRole.REGIONAL_ADMIN,
+  UserRole.CLUSTER_ADMIN,
 ] as const;
 
 const SUPPORT_TIER = [
   UserRole.SUPER_ADMIN,
   UserRole.SUB_SUPER_ADMIN,
-  UserRole.REGIONAL_ADMIN,
+  UserRole.CLUSTER_ADMIN,
   UserRole.SUPPORT_ADMIN,
 ] as const;
 
 const CATALOG_ADMINS = [
   UserRole.SUPER_ADMIN,
   UserRole.SUB_SUPER_ADMIN,
+  UserRole.CLUSTER_ADMIN,
+  UserRole.CATEGORY_ADMIN,
+] as const;
+
+// Regional Admin = supply/ops oversight across a region (multiple clusters).
+// Sees supply/ops pages but NOT money, promotions, or settings.
+const SUPPLY_OPS_TIER = [
+  UserRole.SUPER_ADMIN,
+  UserRole.SUB_SUPER_ADMIN,
   UserRole.REGIONAL_ADMIN,
+  UserRole.CLUSTER_ADMIN,
+] as const;
+
+const SUPPLY_OPS_WITH_SUPPORT = [
+  UserRole.SUPER_ADMIN,
+  UserRole.SUB_SUPER_ADMIN,
+  UserRole.REGIONAL_ADMIN,
+  UserRole.CLUSTER_ADMIN,
+  UserRole.SUPPORT_ADMIN,
+] as const;
+
+const SUPPLY_OPS_CATALOG = [
+  UserRole.SUPER_ADMIN,
+  UserRole.SUB_SUPER_ADMIN,
+  UserRole.REGIONAL_ADMIN,
+  UserRole.CLUSTER_ADMIN,
   UserRole.CATEGORY_ADMIN,
 ] as const;
 
@@ -203,25 +228,25 @@ export const navSections: NavSection[] = [
         label: 'Sellers',
         path: '/admin/sellers',
         icon: UserCheck,
-        roles: SUPPORT_TIER,
+        roles: SUPPLY_OPS_WITH_SUPPORT,
       },
       {
         label: 'Seller performance',
         path: '/admin/sellers/performance',
         icon: TrendingUp,
-        roles: OPS_ADMINS,
+        roles: SUPPLY_OPS_TIER,
       },
       {
         label: 'Products',
         path: '/admin/products',
         icon: Box,
-        roles: CATALOG_ADMINS,
+        roles: SUPPLY_OPS_CATALOG,
       },
       {
         label: 'Stock monitor',
         path: '/admin/stock-monitor',
         icon: PackageSearch,
-        roles: CATALOG_ADMINS,
+        roles: SUPPLY_OPS_CATALOG,
       },
       {
         label: 'Categories',
@@ -233,7 +258,7 @@ export const navSections: NavSection[] = [
         label: 'Orders',
         path: '/admin/orders',
         icon: ClipboardList,
-        roles: SUPPORT_TIER,
+        roles: SUPPLY_OPS_WITH_SUPPORT,
       },
       {
         label: 'Support tickets',
@@ -255,6 +280,7 @@ export const navSections: NavSection[] = [
           UserRole.SUPER_ADMIN,
           UserRole.SUB_SUPER_ADMIN,
           UserRole.REGIONAL_ADMIN,
+          UserRole.CLUSTER_ADMIN,
           UserRole.SUPPORT_ADMIN,
         ],
       },
@@ -262,7 +288,14 @@ export const navSections: NavSection[] = [
         label: 'Reviews',
         path: '/admin/reviews',
         icon: Star,
-        roles: ALL_ADMINS,
+        roles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.SUB_SUPER_ADMIN,
+          UserRole.REGIONAL_ADMIN,
+          UserRole.CLUSTER_ADMIN,
+          UserRole.CATEGORY_ADMIN,
+          UserRole.SUPPORT_ADMIN,
+        ],
       },
     ],
   },
@@ -290,14 +323,14 @@ export const navSections: NavSection[] = [
         label: 'Regions',
         path: '/admin/regions',
         icon: Map,
-        roles: [UserRole.SUPER_ADMIN, UserRole.SUB_SUPER_ADMIN],
+        roles: [UserRole.SUPER_ADMIN, UserRole.SUB_SUPER_ADMIN, UserRole.REGIONAL_ADMIN],
       },
     ],
   },
   {
     label: 'Insights',
     items: [
-      { label: 'Reports', path: '/admin/reports', icon: BarChart3, roles: OPS_ADMINS },
+      { label: 'Reports', path: '/admin/reports', icon: BarChart3, roles: SUPPLY_OPS_TIER },
       {
         label: 'Activity log',
         path: '/admin/activity-log',

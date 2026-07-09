@@ -14,7 +14,11 @@ export interface Promoter {
   createdAt: string;
   updatedAt: string;
   /** Set by the create endpoint on the first response only. */
-  couponCode?: string;
+  couponCode?: string | null;
+  /** Discount terms entered at creation — hydrated from the linked coupon in the list payload. */
+  discountType?: 'percent' | 'flat' | null;
+  discountValue?: number | null;
+  maxDiscountInr?: number | null;
 }
 
 export interface PromoterDashboard {

@@ -1,74 +1,50 @@
 import { useMemo, useState } from 'react';
-import {
-  ArrowDown,
-  ArrowUp,
-  ChevronDown,
-  ChevronRight,
-  FolderTree,
-  Pencil,
-  Plus,
-} from 'lucide-react';
+import { ArrowDown, ArrowUp, FolderTree, Pencil, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Skeleton } from '@/components/ui/Skeleton';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/Table';
 import { ScopedAdminBanner } from '@/features/scoped-admin/ScopedAdminBanner';
 import { useAuth } from '@/lib/auth';
-import { cn } from '@/lib/cn';
 import { UserRole } from '@/types/api';
 import { useCategoriesList, useReorderCategories } from './api';
 import { CategoryFormDialog } from './CategoryFormDialog';
 import type { SafeCategory } from './types';
 
-interface TreeNode {
-  cat: SafeCategory;
-  children: TreeNode[];
-}
-
-const buildTree = (categories: SafeCategory[]): TreeNode[] => {
-  const byParent = new Map<string | null, SafeCategory[]>();
-  for (const c of categories) {
-    const key = c.parentId;
-    const list = byParent.get(key) ?? [];
-    list.push(c);
-    byParent.set(key, list);
-  }
-  for (const list of byParent.values()) {
-    list.sort((a, b) => a.displayOrder - b.displayOrder || a.name.localeCompare(b.name));
-  }
-  const build = (parentId: string | null): TreeNode[] =>
-    (byParent.get(parentId) ?? []).map((cat) => ({ cat, children: build(cat.id) }));
-  return build(null);
-};
-
 export const CategoriesPage = () => {
   const { user } = useAuth();
   const { data, isLoading, isError, error } = useCategoriesList();
-  const all = data ?? [];
 
-  const tree = useMemo(() => buildTree(all), [all]);
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  // Flat list — the taxonomy has no sub-categories. Sort by display order.
+  const categories = useMemo(
+    () =>
+      [...(data ?? [])].sort(
+        (a, b) => a.displayOrder - b.displayOrder || a.name.localeCompare(b.name),
+      ),
+    [data],
+  );
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<SafeCategory | null>(null);
-  const [defaultParentId, setDefaultParentId] = useState<string | null>(null);
 
-  const openCreate = (parentId: string | null) => {
+  const openCreate = () => {
     setEditing(null);
-    setDefaultParentId(parentId);
     setDialogOpen(true);
   };
-
   const openEdit = (cat: SafeCategory) => {
     setEditing(cat);
-    setDefaultParentId(null);
     setDialogOpen(true);
   };
 
   const isSuper = user?.role === UserRole.SUPER_ADMIN;
-  // Category admins create subcategories under their assigned category;
-  // Super admins create anything. Sub-super follows the same backend rule
-  // as super (top-level), so we let them try and backend enforces.
-  const canCreateTopLevel = isSuper || user?.role === UserRole.SUB_SUPER_ADMIN;
+  const canCreate = isSuper || user?.role === UserRole.SUB_SUPER_ADMIN;
   const canReorder =
     isSuper ||
     user?.role === UserRole.SUB_SUPER_ADMIN ||
@@ -76,12 +52,12 @@ export const CategoriesPage = () => {
 
   const reorderMut = useReorderCategories();
 
-  // Move a node up/down among its siblings by renormalising the group's
-  // displayOrder to its new array positions, then persisting in one call.
-  const moveSibling = (siblings: TreeNode[], index: number, dir: -1 | 1) => {
+  // Move a category up/down by renormalising the whole list's displayOrder to
+  // its new positions, then persisting in one call.
+  const move = (index: number, dir: -1 | 1) => {
     const target = index + dir;
-    if (target < 0 || target >= siblings.length) return;
-    const ordered = siblings.map((s) => s.cat);
+    if (target < 0 || target >= categories.length) return;
+    const ordered = [...categories];
     const [moved] = ordered.splice(index, 1);
     ordered.splice(target, 0, moved);
     reorderMut.mutate(ordered.map((cat, i) => ({ id: cat.id, displayOrder: i })));
@@ -97,10 +73,10 @@ export const CategoriesPage = () => {
             products unless overridden.
           </p>
         </div>
-        {canCreateTopLevel && (
-          <Button onClick={() => openCreate(null)}>
+        {canCreate && (
+          <Button onClick={openCreate}>
             <Plus className="h-4 w-4" />
-            New top-level category
+            New category
           </Button>
         )}
       </div>
@@ -123,32 +99,78 @@ export const CategoriesPage = () => {
 
       {!isLoading && !isError && (
         <div className="rounded-lg border border-border bg-card">
-          {tree.length === 0 ? (
+          {categories.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
               <FolderTree className="h-6 w-6" />
               No categories yet. Create one to get started.
             </div>
           ) : (
-            <ul className="divide-y divide-border">
-              {tree.map((node, index) => (
-                <CategoryRow
-                  key={node.cat.id}
-                  node={node}
-                  siblings={tree}
-                  index={index}
-                  depth={0}
-                  expanded={expanded}
-                  onToggle={(id) =>
-                    setExpanded((prev) => ({ ...prev, [id]: !prev[id] }))
-                  }
-                  onEdit={openEdit}
-                  onAddChild={openCreate}
-                  canReorder={canReorder}
-                  onMove={moveSibling}
-                  reordering={reorderMut.isPending}
-                />
-              ))}
-            </ul>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Slug</TableHead>
+                  <TableHead className="text-right">Default commission</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="w-px" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {categories.map((cat, index) => (
+                  <TableRow key={cat.id}>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-2">
+                        {cat.name}
+                        {cat.adminId && (
+                          <Badge variant="info" title={`Admin: ${cat.adminId}`}>
+                            Admin assigned
+                          </Badge>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">{cat.slug}</TableCell>
+                    <TableCell className="text-right">{cat.defaultCommissionRate}%</TableCell>
+                    <TableCell>
+                      <Badge variant={cat.status === 'active' ? 'success' : 'muted'}>
+                        {cat.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-end gap-1">
+                        {canReorder && (
+                          <>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={index === 0 || reorderMut.isPending}
+                              onClick={() => move(index, -1)}
+                              aria-label="Move up"
+                              title="Move up"
+                            >
+                              <ArrowUp className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              disabled={index === categories.length - 1 || reorderMut.isPending}
+                              onClick={() => move(index, 1)}
+                              aria-label="Move down"
+                              title="Move down"
+                            >
+                              <ArrowDown className="h-4 w-4" />
+                            </Button>
+                          </>
+                        )}
+                        <Button variant="ghost" size="sm" onClick={() => openEdit(cat)}>
+                          <Pencil className="h-4 w-4" />
+                          Edit
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           )}
         </div>
       )}
@@ -157,136 +179,7 @@ export const CategoriesPage = () => {
         open={dialogOpen}
         onClose={() => setDialogOpen(false)}
         editing={editing}
-        defaultParentId={defaultParentId}
-        allCategories={all}
       />
     </div>
-  );
-};
-
-interface CategoryRowProps {
-  node: TreeNode;
-  siblings: TreeNode[];
-  index: number;
-  depth: number;
-  expanded: Record<string, boolean>;
-  onToggle: (id: string) => void;
-  onEdit: (c: SafeCategory) => void;
-  onAddChild: (parentId: string) => void;
-  canReorder: boolean;
-  onMove: (siblings: TreeNode[], index: number, dir: -1 | 1) => void;
-  reordering: boolean;
-}
-
-const CategoryRow = ({
-  node,
-  siblings,
-  index,
-  depth,
-  expanded,
-  onToggle,
-  onEdit,
-  onAddChild,
-  canReorder,
-  onMove,
-  reordering,
-}: CategoryRowProps) => {
-  const hasChildren = node.children.length > 0;
-  const isOpen = expanded[node.cat.id] ?? depth === 0; // expand top-level by default
-  return (
-    <li>
-      <div
-        className={cn(
-          'flex items-center gap-2 px-4 py-3 hover:bg-secondary/30',
-          depth > 0 && 'pl-[calc(1rem+1.5rem*var(--depth,0))]',
-        )}
-        style={{ ['--depth' as never]: depth }}
-      >
-        <button
-          type="button"
-          onClick={() => onToggle(node.cat.id)}
-          className={cn(
-            'flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent',
-            !hasChildren && 'invisible',
-          )}
-          aria-label={isOpen ? 'Collapse' : 'Expand'}
-        >
-          {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-        </button>
-
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="font-medium">{node.cat.name}</span>
-            <Badge variant={node.cat.status === 'active' ? 'success' : 'muted'}>
-              {node.cat.status}
-            </Badge>
-            {node.cat.adminId && (
-              <Badge variant="info" title={`Admin: ${node.cat.adminId}`}>
-                Admin assigned
-              </Badge>
-            )}
-          </div>
-          <div className="mt-0.5 text-xs text-muted-foreground">
-            slug: {node.cat.slug} · default commission {node.cat.defaultCommissionRate}% · order{' '}
-            {node.cat.displayOrder}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1">
-          {canReorder && (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={index === 0 || reordering}
-                onClick={() => onMove(siblings, index, -1)}
-                aria-label="Move up"
-                title="Move up"
-              >
-                <ArrowUp className="h-4 w-4" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                disabled={index === siblings.length - 1 || reordering}
-                onClick={() => onMove(siblings, index, 1)}
-                aria-label="Move down"
-                title="Move down"
-              >
-                <ArrowDown className="h-4 w-4" />
-              </Button>
-            </>
-          )}
-          <Button variant="ghost" size="sm" onClick={() => onAddChild(node.cat.id)}>
-            <Plus className="h-4 w-4" />
-            Sub-category
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => onEdit(node.cat)}>
-            <Pencil className="h-4 w-4" />
-            Edit
-          </Button>
-        </div>
-      </div>
-      {hasChildren && isOpen && (
-        <ul className="divide-y divide-border border-t border-border bg-secondary/10">
-          {node.children.map((child, childIndex) => (
-            <CategoryRow
-              key={child.cat.id}
-              node={child}
-              siblings={node.children}
-              index={childIndex}
-              depth={depth + 1}
-              expanded={expanded}
-              onToggle={onToggle}
-              onEdit={onEdit}
-              onAddChild={onAddChild}
-              canReorder={canReorder}
-              onMove={onMove}
-              reordering={reordering}
-            />
-          ))}
-        </ul>
-      )}
-    </li>
   );
 };

@@ -65,7 +65,7 @@ import type {
 const REFUND_ROLES = new Set<string>([
   UserRole.SUPER_ADMIN,
   UserRole.SUB_SUPER_ADMIN,
-  UserRole.REGIONAL_ADMIN,
+  UserRole.CLUSTER_ADMIN,
 ]);
 
 const slaPill = (dueAt: string, fulfilledAt: string | null) => {

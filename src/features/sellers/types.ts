@@ -42,12 +42,35 @@ export interface Storefront {
   description?: string;
   practices: string[];
   certifications: string[];
+  displayName?: string;
+  language?: string;
+  supportEmail?: string;
+  returnsAddress?: { pincode: string; line: string } | null;
+}
+
+export type BusinessType =
+  | 'individual'
+  | 'proprietorship'
+  | 'partnership'
+  | 'pvt_ltd'
+  | 'llp'
+  | 'fpo_cooperative'
+  | 'other';
+
+export interface SellerBusinessProfile {
+  ownsBrand?: boolean;
+  expectedMonthlyListings?: string;
+  averagePriceInr?: number;
+  fulfillmentPreference?: 'delhivery_pickup' | 'self_drop';
 }
 
 export interface SafeSellerProfile {
   id: string;
   userId: string;
   farmName: string;
+  businessType?: BusinessType;
+  gstNumber?: string;
+  businessProfile?: SellerBusinessProfile;
   address: SellerAddress;
   pincode: string;
   clusterId: string | null;

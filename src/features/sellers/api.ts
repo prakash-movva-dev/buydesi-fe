@@ -59,6 +59,18 @@ export const useSeller = (id: string | undefined) =>
     enabled: Boolean(id),
   });
 
+/** Short-lived signed URL to view a seller's KYC document inline. */
+export const useKycViewUrl = (sellerId: string, s3Key: string) =>
+  useQuery({
+    queryKey: ['sellers', 'kyc-url', sellerId, s3Key],
+    queryFn: () =>
+      api.get<{ url: string }>(
+        `/admin/sellers/${sellerId}/kyc-url?s3Key=${encodeURIComponent(s3Key)}`,
+      ),
+    staleTime: 4 * 60 * 1000,
+    enabled: Boolean(sellerId && s3Key),
+  });
+
 // ─── CA-1: Seller performance ───────────────────────────────────────────────
 
 const buildPerformanceParams = (

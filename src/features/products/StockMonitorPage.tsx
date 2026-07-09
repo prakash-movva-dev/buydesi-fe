@@ -35,6 +35,30 @@ import {
 import { ProductStatusBadge } from './status-badge';
 import type { ProductsListQuery, SafeProduct, StockState } from './types';
 
+/**
+ * Product thumbnail with a graceful fallback. Some legacy images are stored as
+ * bare keys that don't resolve to a URL; rather than render the browser's
+ * broken-image glyph, we fall back to a neutral placeholder box.
+ */
+const ProductThumb = ({ src, alt }: { src?: string; alt: string }) => {
+  const [broken, setBroken] = useState(false);
+  if (!src || broken) {
+    return (
+      <div className="flex h-10 w-10 items-center justify-center rounded-md border border-border bg-secondary text-muted-foreground">
+        <ImageIcon className="h-4 w-4" />
+      </div>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt={alt}
+      onError={() => setBroken(true)}
+      className="h-10 w-10 rounded-md border border-border object-cover"
+    />
+  );
+};
+
 const STOCK_OPTIONS: Array<{ value: '' | StockState; label: string }> = [
   { value: '', label: 'All stock levels' },
   { value: 'low', label: 'Low stock' },
@@ -56,7 +80,7 @@ export const StockMonitorPage = () => {
   const canScopeCluster =
     user?.role === UserRole.SUPER_ADMIN ||
     user?.role === UserRole.SUB_SUPER_ADMIN ||
-    user?.role === UserRole.REGIONAL_ADMIN;
+    user?.role === UserRole.CLUSTER_ADMIN;
 
   const [searchParams, setSearchParams] = useSearchParams();
   const stockState = (searchParams.get('stockState') as StockState | null) ?? '';
@@ -240,17 +264,7 @@ export const StockMonitorPage = () => {
                     )}
                   >
                     <TableCell>
-                      {product.images[0] ? (
-                        <img
-                          src={product.images[0]}
-                          alt={product.name}
-                          className="h-10 w-10 rounded-md border border-border object-cover"
-                        />
-                      ) : (
-                        <div className="flex h-10 w-10 items-center justify-center rounded-md border border-border bg-secondary text-muted-foreground">
-                          <ImageIcon className="h-4 w-4" />
-                        </div>
-                      )}
+                      <ProductThumb src={product.images[0]} alt={product.name} />
                     </TableCell>
                     <TableCell
                       className="cursor-pointer font-medium"

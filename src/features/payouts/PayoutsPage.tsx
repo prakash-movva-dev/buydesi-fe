@@ -197,7 +197,14 @@ export const PayoutsPage = () => {
                           <ChevronDown className="h-4 w-4 text-muted-foreground" />
                         )}
                       </TableCell>
-                      <TableCell className="font-mono text-xs">{p.sellerId.slice(-10)}</TableCell>
+                      <TableCell>
+                        <div className="font-medium">{p.sellerName ?? '—'}</div>
+                        {(p.sellerMobile || p.sellerEmail) && (
+                          <div className="text-xs text-muted-foreground">
+                            {p.sellerMobile ?? p.sellerEmail}
+                          </div>
+                        )}
+                      </TableCell>
                       <TableCell className="capitalize">{p.schedule.replace('_', ' ')}</TableCell>
                       <TableCell>
                         <Badge variant={statusVariant[p.status]}>{p.status}</Badge>
@@ -292,7 +299,7 @@ const PayoutDetail = ({ payout }: { payout: import('./types').Payout }) => (
             {payout.lineItems.map((li, i) => (
               <TableRow key={`${li.orderId}-${li.orderItemId}-${i}`}>
                 <TableCell className="font-medium">{li.productName}</TableCell>
-                <TableCell className="font-mono text-xs">{li.orderId.slice(-8)}</TableCell>
+                <TableCell className="text-xs">{li.orderNumber ?? '—'}</TableCell>
                 <TableCell className="text-right">{formatInr(li.grossInr)}</TableCell>
                 <TableCell className="text-right">{li.commissionRatePercent}%</TableCell>
                 <TableCell>

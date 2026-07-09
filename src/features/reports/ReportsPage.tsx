@@ -204,12 +204,17 @@ export const ReportsPage = () => {
 
       {result && (
         <>
-          <div className="text-sm text-muted-foreground">
-            {result.range.from.slice(0, 10)} → {result.range.to.slice(0, 10)}
-            {result.scope.clusterId && (
-              <>
-                {' '}· cluster <span className="font-mono">{result.scope.clusterId.slice(-10)}</span>
-              </>
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            <span>
+              {result.range.from.slice(0, 10)} → {result.range.to.slice(0, 10)}
+            </span>
+            <span>·</span>
+            {result.scope.clusterName ? (
+              <span className="font-medium text-foreground">
+                Cluster: {result.scope.clusterName}
+              </span>
+            ) : (
+              <span>All clusters (platform-wide)</span>
             )}
           </div>
 

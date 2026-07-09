@@ -16,5 +16,5 @@ export interface ReportTotals {
   listings: number;
   avgDeliveryHours: number | null;
   topProducts: ReportTopProduct[];
-  scope: { clusterId: string | null };
+  scope: { clusterId: string | null; clusterName: string | null };
 }

@@ -65,14 +65,14 @@ import { ProtectedRoute } from './ProtectedRoute';
 const SELLER_REVIEW_ROLES = [
   UserRole.SUPER_ADMIN,
   UserRole.SUB_SUPER_ADMIN,
-  UserRole.REGIONAL_ADMIN,
+  UserRole.CLUSTER_ADMIN,
   UserRole.SUPPORT_ADMIN,
 ] as const;
 
 const CATALOG_ADMIN_ROLES = [
   UserRole.SUPER_ADMIN,
   UserRole.SUB_SUPER_ADMIN,
-  UserRole.REGIONAL_ADMIN,
+  UserRole.CLUSTER_ADMIN,
   UserRole.CATEGORY_ADMIN,
 ] as const;
 
@@ -85,14 +85,14 @@ const CATEGORY_MGMT_ROLES = [
 const SUPPORT_ROLES = [
   UserRole.SUPER_ADMIN,
   UserRole.SUB_SUPER_ADMIN,
-  UserRole.REGIONAL_ADMIN,
+  UserRole.CLUSTER_ADMIN,
   UserRole.SUPPORT_ADMIN,
 ] as const;
 
 const OPS_ADMIN_ROLES = [
   UserRole.SUPER_ADMIN,
   UserRole.SUB_SUPER_ADMIN,
-  UserRole.REGIONAL_ADMIN,
+  UserRole.CLUSTER_ADMIN,
 ] as const;
 
 const SUPER_TIER = [UserRole.SUPER_ADMIN, UserRole.SUB_SUPER_ADMIN] as const;
@@ -102,7 +102,7 @@ const SUPER_ONLY = [UserRole.SUPER_ADMIN] as const;
 const ALL_ADMINS = [
   UserRole.SUPER_ADMIN,
   UserRole.SUB_SUPER_ADMIN,
-  UserRole.REGIONAL_ADMIN,
+  UserRole.CLUSTER_ADMIN,
   UserRole.CATEGORY_ADMIN,
   UserRole.SUPPORT_ADMIN,
 ] as const;

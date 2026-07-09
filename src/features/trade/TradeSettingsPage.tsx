@@ -330,7 +330,7 @@ const ListingReviewPanel = () => {
   const canReview =
     user?.role === UserRole.SUPER_ADMIN ||
     user?.role === UserRole.SUB_SUPER_ADMIN ||
-    user?.role === UserRole.REGIONAL_ADMIN;
+    user?.role === UserRole.CLUSTER_ADMIN;
 
   const [status, setStatus] = useState<'' | TradeListingStatus>('PENDING');
   const [page, setPage] = useState(1);

@@ -23,6 +23,7 @@ const ROLE_OPTIONS = [
   { value: 'SUPER_ADMIN', label: 'Super Admin' },
   { value: 'SUB_SUPER_ADMIN', label: 'Sub-Super Admin' },
   { value: 'REGIONAL_ADMIN', label: 'Regional Admin' },
+  { value: 'CLUSTER_ADMIN', label: 'Cluster Admin' },
   { value: 'CATEGORY_ADMIN', label: 'Category Admin' },
   { value: 'SUPPORT_ADMIN', label: 'Support Admin' },
 ];

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { ImageUploadField } from '@/components/ImageUploadField';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { ClusterPicker } from '@/components/pickers/ClusterPicker';
 import { ProductPicker } from '@/components/pickers/ProductPicker';
@@ -256,12 +257,12 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
         {type === 'banner' && (
           <div className="space-y-3">
             <div className="space-y-1.5">
-              <Label htmlFor="p-img">Image URL</Label>
-              <Input
-                id="p-img"
+              <Label>Banner image</Label>
+              <ImageUploadField
                 value={imageUrl}
-                onChange={(e) => setImageUrl(e.target.value)}
-                placeholder="https://…"
+                onChange={setImageUrl}
+                kind="promotion"
+                variant="wide"
               />
             </div>
             <div className="space-y-1.5">

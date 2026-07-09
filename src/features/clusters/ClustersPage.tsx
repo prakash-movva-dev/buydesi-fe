@@ -78,7 +78,7 @@ export const ClustersPage = () => {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Clusters</h1>
           <p className="text-muted-foreground">
-            Geographic operating units. Each cluster has its own Regional Admin, pin codes
+            Geographic operating units. Each cluster has its own Cluster Admin, pin codes
             served, and default trade-transport mode.
           </p>
         </div>
@@ -133,7 +133,7 @@ export const ClustersPage = () => {
                 <TableHead className="text-right">Pin codes</TableHead>
                 <TableHead className="text-right">Active categories</TableHead>
                 <TableHead>Transport default</TableHead>
-                <TableHead>Regional admin</TableHead>
+                <TableHead>Cluster admin</TableHead>
                 <TableHead className="w-px" />
                 {isSuper && <TableHead className="w-px" />}
               </TableRow>

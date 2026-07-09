@@ -84,8 +84,10 @@ export const QualityMonitorPage = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Product / seller</TableHead>
+                <TableHead>Reviewer</TableHead>
                 <TableHead>Rating</TableHead>
                 <TableHead>Comment</TableHead>
+                <TableHead>Order</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead className="w-px" />
               </TableRow>
@@ -98,10 +100,11 @@ export const QualityMonitorPage = () => {
                     <TableCell className="text-xs">
                       <Badge variant="muted">{r.targetType}</Badge>
                       <div className="mt-0.5 font-medium">
-                        {r.targetName ?? (
-                          <span className="font-mono">{r.targetId.slice(-10)}</span>
-                        )}
+                        {r.targetName ?? '—'}
                       </div>
+                    </TableCell>
+                    <TableCell className="text-xs font-medium">
+                      {r.raterName ?? 'Anonymous'}
                     </TableCell>
                     <TableCell>
                       <StarRating rating={r.rating} />
@@ -112,6 +115,13 @@ export const QualityMonitorPage = () => {
                     >
                       {r.text ?? (
                         <span className="text-muted-foreground">— rating only —</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {r.orderNumber ? (
+                        <span className="font-mono">{r.orderNumber}</span>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
                       )}
                     </TableCell>
                     <TableCell className="text-xs">
@@ -133,7 +143,7 @@ export const QualityMonitorPage = () => {
               {reviews.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={5}
+                    colSpan={7}
                     className="py-12 text-center text-sm text-muted-foreground"
                   >
                     No low-rated reviews. Quality is looking good.
@@ -164,9 +174,13 @@ const CreateTicketDialog = ({ review, onClose }: CreateTicketDialogProps) => {
   const targetName = review?.targetName ?? 'product';
   const defaultSubject = review ? `Quality issue: ${targetName}` : '';
   const defaultDescription = review
-    ? `Buyer left a ${review.rating}-star review.${
-        review.text ? `\n\nReview: "${review.text}"` : ''
-      }`
+    ? [
+        `${review.raterName ?? 'A buyer'} left a ${review.rating}-star review on ${targetName}.`,
+        review.orderNumber ? `Order: ${review.orderNumber}.` : null,
+        review.text ? `\nReview: "${review.text}"` : null,
+      ]
+        .filter(Boolean)
+        .join('\n')
     : '';
 
   const [subject, setSubject] = useState(defaultSubject);
@@ -270,9 +284,12 @@ const CreateTicketDialog = ({ review, onClose }: CreateTicketDialogProps) => {
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <Badge variant="muted">category: product_quality</Badge>
-            {review.orderId && (
+            {review.raterName && (
+              <Badge variant="muted">reviewer: {review.raterName}</Badge>
+            )}
+            {review.orderNumber && (
               <Badge variant="muted">
-                order: <span className="font-mono">{review.orderId.slice(-10)}</span>
+                order: <span className="font-mono">{review.orderNumber}</span>
               </Badge>
             )}
           </div>

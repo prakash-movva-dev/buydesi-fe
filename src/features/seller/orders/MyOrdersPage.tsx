@@ -104,6 +104,7 @@ export const MyOrdersPage = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Order</TableHead>
+                <TableHead>Customer</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Payment</TableHead>
                 <TableHead className="text-right">My items</TableHead>
@@ -125,7 +126,13 @@ export const MyOrdersPage = () => {
                     <TableCell className="font-medium">
                       {o.orderNumber}
                       <div className="text-xs text-muted-foreground">
-                        buyer {o.buyerId.slice(-6)}
+                        {o.items.length} item{o.items.length === 1 ? '' : 's'} in order
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-medium">{o.shippingAddress.name}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {o.shippingAddress.phone} · {o.shippingAddress.city}
                       </div>
                     </TableCell>
                     <TableCell>
@@ -157,7 +164,7 @@ export const MyOrdersPage = () => {
               })}
               {visible.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
                     No orders here.
                   </TableCell>
                 </TableRow>

@@ -134,6 +134,7 @@ export const CashTransactionsPage = () => {
                 <TableHead className="text-right">Amount</TableHead>
                 <TableHead>Reason</TableHead>
                 <TableHead>Seller</TableHead>
+                <TableHead>Cluster</TableHead>
                 <TableHead>Trade order</TableHead>
                 <TableHead>Submitted</TableHead>
                 <TableHead className="w-px" />
@@ -150,10 +151,16 @@ export const CashTransactionsPage = () => {
                   <TableCell className="max-w-xs truncate text-xs" title={c.reason}>
                     {c.reason}
                   </TableCell>
-                  <TableCell className="font-mono text-xs">{c.sellerId.slice(-8)}</TableCell>
-                  <TableCell className="font-mono text-xs">
-                    {c.tradeOrderId ? c.tradeOrderId.slice(-8) : '—'}
+                  <TableCell>
+                    <div className="font-medium">{c.sellerName ?? '—'}</div>
+                    {(c.sellerMobile || c.sellerEmail) && (
+                      <div className="text-xs text-muted-foreground">
+                        {c.sellerMobile ?? c.sellerEmail}
+                      </div>
+                    )}
                   </TableCell>
+                  <TableCell className="text-xs">{c.clusterName ?? '—'}</TableCell>
+                  <TableCell className="text-xs">{c.tradeOrderLabel ?? '—'}</TableCell>
                   <TableCell className="text-xs">{formatDate(c.createdAt)}</TableCell>
                   <TableCell className="space-x-1 whitespace-nowrap">
                     {c.status === 'PENDING' && (
@@ -183,7 +190,7 @@ export const CashTransactionsPage = () => {
               ))}
               {(data?.items.length ?? 0) === 0 && (
                 <TableRow>
-                  <TableCell colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={9} className="py-12 text-center text-sm text-muted-foreground">
                     No cash entries match the current filter.
                   </TableCell>
                 </TableRow>

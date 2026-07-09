@@ -26,10 +26,16 @@ import { formatInr } from '@/lib/format';
 import { useSellerAnalytics, useSellerMe } from '@/features/seller/profile/api';
 import { useMyWallet } from '@/features/seller/wallet/api';
 
-const monthAgoIso = () => {
-  const d = new Date();
-  d.setDate(d.getDate() - 30);
-  return d.toISOString();
+// Day-rounded range so the analytics query key is STABLE across renders.
+// Using raw `new Date()` millisecond timestamps made the key change every
+// render → react-query refetched in an infinite loop.
+const analyticsRange = () => {
+  const to = new Date();
+  to.setHours(23, 59, 59, 0);
+  const from = new Date();
+  from.setDate(from.getDate() - 30);
+  from.setHours(0, 0, 0, 0);
+  return { from: from.toISOString(), to: to.toISOString(), granularity: 'daily' as const };
 };
 
 export const SellerDashboard = () => {
@@ -38,11 +44,10 @@ export const SellerDashboard = () => {
   const { data: me } = useSellerMe();
 
   const wallet = useMyWallet();
-  const analytics = useSellerAnalytics({
-    from: monthAgoIso(),
-    to: new Date().toISOString(),
-    granularity: 'daily',
-  });
+  // Freeze the range for the component's lifetime — a fresh object each render
+  // would change the query key and retrigger the fetch endlessly.
+  const range = useMemo(() => analyticsRange(), []);
+  const analytics = useSellerAnalytics(range);
   const pendingOrders = useOrdersList({ status: 'PLACED', page: 1, limit: 50 });
   const packedOrders = useOrdersList({ status: 'PACKED', page: 1, limit: 50 });
   const lowStock = useProductsList({

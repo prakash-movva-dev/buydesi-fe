@@ -29,7 +29,7 @@ import { formatDate } from '@/lib/format';
 import { UserRole } from '@/types/api';
 import { useCommissionRates, useResolveCommission } from './api';
 import { CommissionRateDialog } from './CommissionRateDialog';
-import type { CommissionRate, CommissionScope } from './types';
+import type { CommissionRate, CommissionScope, ResolvedSource } from './types';
 
 const SCOPE_OPTIONS: Array<{ value: '' | CommissionScope; label: string }> = [
   { value: '', label: 'All scopes' },
@@ -42,6 +42,13 @@ const scopeVariant: Record<CommissionScope, 'info' | 'warning' | 'success'> = {
   category: 'info',
   product: 'warning',
   seller: 'success',
+};
+
+const SOURCE_LABEL: Record<ResolvedSource, string> = {
+  seller: 'Seller override',
+  product: 'Product override',
+  category: 'Category rule',
+  category_default: 'Category default',
 };
 
 export const CommissionPage = () => {
@@ -154,7 +161,7 @@ export const CommissionPage = () => {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Target id</TableHead>
+                        <TableHead>Applies to</TableHead>
                         <TableHead className="text-right">Rate</TableHead>
                         <TableHead>Active</TableHead>
                         <TableHead>From</TableHead>
@@ -166,8 +173,11 @@ export const CommissionPage = () => {
                     <TableBody>
                       {grouped[s].map((r) => (
                         <TableRow key={r.id}>
-                          <TableCell className="font-mono text-xs">
-                            {r.categoryId ?? r.productId ?? r.sellerId ?? '—'}
+                          <TableCell>
+                            <span className="font-medium">{r.targetName}</span>
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              {r.targetType}
+                            </span>
                           </TableCell>
                           <TableCell className="text-right font-medium">
                             {r.ratePercent}%
@@ -266,10 +276,7 @@ const ResolveTool = () => {
           <div className="rounded-md border border-border bg-secondary/30 p-3">
             <p className="text-2xl font-semibold">{result.data.ratePercent}%</p>
             <p className="mt-1 text-sm text-muted-foreground">
-              Source: <Badge variant="muted">{result.data.source}</Badge>
-              {result.data.rateId && (
-                <span className="ml-2 font-mono text-xs">{result.data.rateId}</span>
-              )}
+              Matched rule: <Badge variant="muted">{SOURCE_LABEL[result.data.source]}</Badge>
             </p>
           </div>
         )}

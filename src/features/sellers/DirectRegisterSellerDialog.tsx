@@ -7,7 +7,14 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Select } from '@/components/ui/Select';
 import { useAuth } from '@/lib/auth';
+import {
+  validateEmail,
+  validateMobile,
+  validateName,
+  validatePincode,
+} from '@/lib/validation';
 import { INDIA_STATES, districtsForState } from '@/utils/india-geo';
+import { useCluster } from '@/features/clusters/api';
 import { ApiError, UserRole } from '@/types/api';
 import { useAdminRegisterSeller } from './api';
 
@@ -15,6 +22,9 @@ interface Props {
   open: boolean;
   onClose: () => void;
 }
+
+const FieldError = ({ show, message }: { show: boolean; message: string | null }) =>
+  show && message ? <p className="text-xs text-destructive">{message}</p> : null;
 
 /**
  * Story 3.1 — Cluster/Regional/Super admin registers a seller directly. Creates
@@ -39,10 +49,16 @@ export const DirectRegisterSellerDialog = ({ open, onClose }: Props) => {
   const [categoryIds, setCategoryIds] = useState<string[]>([]);
   const [clusterId, setClusterId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showErrors, setShowErrors] = useState(false);
+
+  // Full cluster record for the selected cluster — used to check that the
+  // entered PIN code / state fall inside the cluster's region (issue US-CA.3).
+  const { data: selectedCluster } = useCluster(clusterId ?? undefined);
 
   useEffect(() => {
     if (!open) return;
     setError(null);
+    setShowErrors(false);
     setName('');
     setMobile('');
     setEmail('');
@@ -57,18 +73,56 @@ export const DirectRegisterSellerDialog = ({ open, onClose }: Props) => {
     setClusterId(null);
   }, [open]);
 
+  // ── Field-level validation (issue US-CA.1) ───────────────────────────────
+  const nameError = validateName(name);
+  const mobileError = validateMobile(mobile);
+  const emailError = validateEmail(email);
+  const contactError =
+    !email.trim() && !mobile.trim() ? 'Provide an email or mobile.' : null;
+  const passwordError = password.length < 8 ? 'Password must be at least 8 characters.' : null;
+  const farmNameError = farmName.trim().length < 2 ? 'Farm name is required.' : null;
+  const line1Error = line1.trim().length < 2 ? 'Street address is required.' : null;
+  const cityError = city.trim().length < 2 ? 'City / district is required.' : null;
+  const stateError = !state ? 'State is required.' : null;
+  const pincodeError = validatePincode(pincode);
+  const categoryError = categoryIds.length === 0 ? 'Select at least one produce category.' : null;
+
+  // ── Cluster / region mismatch (issue US-CA.3) ────────────────────────────
+  // Block when the entered PIN code is not in the selected cluster's list, or
+  // the state does not match. Only meaningful once we have a 6-digit PIN.
+  let clusterMismatchError: string | null = null;
+  if (selectedCluster && /^\d{6}$/.test(pincode.trim())) {
+    const pinInCluster = selectedCluster.pinCodes.includes(pincode.trim());
+    const stateMatches =
+      !state || selectedCluster.state.toLowerCase() === state.trim().toLowerCase();
+    if (!pinInCluster) {
+      clusterMismatchError = `PIN ${pincode.trim()} is not part of cluster "${selectedCluster.name}" (${selectedCluster.district}, ${selectedCluster.state}). Choose a matching cluster or correct the address.`;
+    } else if (!stateMatches) {
+      clusterMismatchError = `State "${state}" does not match cluster "${selectedCluster.name}" (${selectedCluster.state}).`;
+    }
+  }
+
+  const isValid =
+    !nameError &&
+    !contactError &&
+    !mobileError &&
+    !emailError &&
+    !passwordError &&
+    !farmNameError &&
+    !line1Error &&
+    !cityError &&
+    !stateError &&
+    !pincodeError &&
+    !categoryError &&
+    !clusterMismatchError;
+
   const submit = async () => {
     setError(null);
-    if (name.trim().length < 2) return setError('Name is required.');
-    if (!email.trim() && !mobile.trim()) return setError('Provide an email or mobile.');
-    if (mobile.trim() && !/^[6-9]\d{9}$/.test(mobile.trim()))
-      return setError('Mobile must be a valid 10-digit number.');
-    if (password.length < 8) return setError('Password must be at least 8 characters.');
-    if (farmName.trim().length < 2) return setError('Farm name is required.');
-    if (line1.trim().length < 2 || city.trim().length < 2 || !state)
-      return setError('Street, city and state are required.');
-    if (!/^\d{6}$/.test(pincode)) return setError('PIN code must be 6 digits.');
-    if (categoryIds.length === 0) return setError('Select at least one produce category.');
+    if (!isValid) {
+      setShowErrors(true);
+      setError('Please fix the highlighted fields before submitting.');
+      return;
+    }
 
     try {
       await register.mutateAsync({
@@ -104,7 +158,14 @@ export const DirectRegisterSellerDialog = ({ open, onClose }: Props) => {
           <Button variant="outline" onClick={onClose} disabled={register.isPending}>
             Cancel
           </Button>
-          <Button onClick={submit} disabled={register.isPending}>
+          <Button
+            onClick={submit}
+            disabled={
+              register.isPending ||
+              Boolean(clusterMismatchError) ||
+              (showErrors && !isValid)
+            }
+          >
             {register.isPending ? 'Registering…' : 'Register seller'}
           </Button>
         </>
@@ -116,10 +177,12 @@ export const DirectRegisterSellerDialog = ({ open, onClose }: Props) => {
           <div className="space-y-1.5">
             <Label htmlFor="ds-name">Full name *</Label>
             <Input id="ds-name" value={name} onChange={(e) => setName(e.target.value)} />
+            <FieldError show={showErrors} message={nameError} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="ds-farm">Farm name *</Label>
             <Input id="ds-farm" value={farmName} onChange={(e) => setFarmName(e.target.value)} />
+            <FieldError show={showErrors} message={farmNameError} />
           </div>
         </div>
 
@@ -130,9 +193,11 @@ export const DirectRegisterSellerDialog = ({ open, onClose }: Props) => {
               id="ds-mobile"
               value={mobile}
               onChange={(e) => setMobile(e.target.value)}
-              maxLength={10}
+              inputMode="numeric"
+              maxLength={13}
               placeholder="10-digit"
             />
+            <FieldError show={showErrors} message={mobileError ?? contactError} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="ds-email">Email</Label>
@@ -142,6 +207,7 @@ export const DirectRegisterSellerDialog = ({ open, onClose }: Props) => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
+            <FieldError show={showErrors} message={emailError} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="ds-pass">Temp password *</Label>
@@ -152,12 +218,14 @@ export const DirectRegisterSellerDialog = ({ open, onClose }: Props) => {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="≥ 8 chars"
             />
+            <FieldError show={showErrors} message={passwordError} />
           </div>
         </div>
 
         <div className="space-y-1.5">
           <Label htmlFor="ds-line1">Street address *</Label>
           <Input id="ds-line1" value={line1} onChange={(e) => setLine1(e.target.value)} />
+          <FieldError show={showErrors} message={line1Error} />
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="ds-line2">Address line 2 (optional)</Label>
@@ -182,6 +250,7 @@ export const DirectRegisterSellerDialog = ({ open, onClose }: Props) => {
                 </option>
               ))}
             </Select>
+            <FieldError show={showErrors} message={stateError} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="ds-city">City / District *</Label>
@@ -198,6 +267,7 @@ export const DirectRegisterSellerDialog = ({ open, onClose }: Props) => {
                 <option key={d} value={d} />
               ))}
             </datalist>
+            <FieldError show={showErrors} message={cityError} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="ds-pin">PIN code *</Label>
@@ -205,21 +275,29 @@ export const DirectRegisterSellerDialog = ({ open, onClose }: Props) => {
               id="ds-pin"
               value={pincode}
               onChange={(e) => setPincode(e.target.value)}
+              inputMode="numeric"
               maxLength={6}
               placeholder="6 digits"
             />
+            <FieldError show={showErrors} message={pincodeError} />
           </div>
         </div>
 
         <div className="space-y-1.5">
           <Label>Produce categories *</Label>
           <CategoryPicker multi values={categoryIds} onChange={setCategoryIds} />
+          <FieldError show={showErrors} message={categoryError} />
         </div>
 
         {isSuperTier && (
           <div className="space-y-1.5">
             <Label>Cluster (optional — defaults from PIN code)</Label>
             <ClusterPicker value={clusterId} onChange={setClusterId} placeholder="Auto from PIN…" />
+            {clusterMismatchError && (
+              <p className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs text-destructive">
+                {clusterMismatchError}
+              </p>
+            )}
           </div>
         )}
 

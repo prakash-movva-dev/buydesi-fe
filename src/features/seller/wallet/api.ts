@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, fetchEnvelope } from '@/lib/api';
 import type {
-  CashEntry,
   CashListQuery,
+  MyCashEntry,
   WalletSnapshot,
   WalletTransaction,
   WalletTxListMeta,
@@ -67,7 +67,7 @@ export const useRequestWithdrawal = () => {
 export const useMyCashEntries = (q: CashListQuery) =>
   useQuery({
     queryKey: sellerWalletKeys.cash(q),
-    queryFn: () => api.get<CashEntry[]>('/wallet/cash-entries'),
+    queryFn: () => api.get<MyCashEntry[]>('/wallet/cash-entries'),
   });
 
 export const useCreateCashEntry = () => {
@@ -78,7 +78,7 @@ export const useCreateCashEntry = () => {
       amountInr: number;
       reason: string;
       tradeOrderId?: string;
-    }) => api.post<CashEntry>('/wallet/cash-entry', input),
+    }) => api.post<MyCashEntry>('/wallet/cash-entry', input),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['seller-wallet'] }),
   });
 };

@@ -65,13 +65,35 @@ export type CashEntryStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
 export interface CashEntry {
   id: string;
-  sellerId: string;
   type: CashEntryType;
   amountInr: number;
   reason: string;
-  tradeOrderId: string | null;
   status: CashEntryStatus;
-  reviewedBy: string | null;
+  /** Seller's business/farm name, falling back to their account name. */
+  sellerName: string | null;
+  sellerMobile: string | null;
+  sellerEmail: string | null;
+  clusterName: string | null;
+  /** Short human label like "#a1b2" for a linked trade order, else null. */
+  tradeOrderLabel: string | null;
+  reviewedAt: string | null;
+  reviewNotes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/**
+ * A seller's own cash entry (from `/wallet/cash-entries`). Unlike the
+ * admin-facing {@link CashEntry}, this is the raw document — the seller
+ * already knows who they are, so no enrichment is applied server-side.
+ */
+export interface MyCashEntry {
+  id: string;
+  type: CashEntryType;
+  amountInr: number;
+  reason: string;
+  status: CashEntryStatus;
+  tradeOrderId: string | null;
   reviewedAt: string | null;
   reviewNotes: string | null;
   createdAt: string;

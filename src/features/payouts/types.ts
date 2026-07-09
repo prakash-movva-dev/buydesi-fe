@@ -10,6 +10,8 @@ export interface PayoutLineItem {
   productId: string;
   categoryId: string;
   productName: string;
+  /** Human `BD-...` order number, or null if the order can't be resolved. */
+  orderNumber: string | null;
   grossInr: number;
   commissionRatePercent: number;
   commissionInr: number;
@@ -19,7 +21,10 @@ export interface PayoutLineItem {
 
 export interface Payout {
   id: string;
-  sellerId: string;
+  /** Seller's business/farm name, falling back to their account name. */
+  sellerName: string | null;
+  sellerMobile: string | null;
+  sellerEmail: string | null;
   schedule: PayoutSchedule;
   status: PayoutStatus;
   lineItems: PayoutLineItem[];
@@ -29,7 +34,6 @@ export interface Payout {
   netInr: number;
   orderCount: number;
   itemCount: number;
-  triggeredBy: string | null;
   notes: string | null;
   paidAt: string | null;
   createdAt: string;

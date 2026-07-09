@@ -7,9 +7,17 @@ export interface Review {
   raterId: string;
   targetType: ReviewTargetType;
   targetId: string;
-  /** Product name / seller farm name, resolved by the admin list endpoint. */
+  /**
+   * Product name / seller farm name, resolved by the admin list endpoint.
+   * Always present on the admin list (falls back to "Deleted product" /
+   * "Deleted seller" server-side) — never a raw ObjectId.
+   */
   targetName?: string | null;
+  /** Name of the buyer who wrote the review; "Anonymous" if unresolved. */
+  raterName?: string | null;
   orderId: string;
+  /** Human order number (BD-…) for the linked order, resolved server-side. */
+  orderNumber?: string | null;
   rating: number;
   text: string | null;
   status: ReviewStatus;

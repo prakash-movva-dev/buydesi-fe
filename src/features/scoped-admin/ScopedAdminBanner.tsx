@@ -15,7 +15,7 @@ import type { SafeCluster } from '@/features/clusters/types';
  */
 export const ScopedAdminBanner = () => {
   const { user } = useAuth();
-  const isRegional = user?.role === UserRole.REGIONAL_ADMIN;
+  const isRegional = user?.role === UserRole.CLUSTER_ADMIN;
   const isCategory = user?.role === UserRole.CATEGORY_ADMIN;
 
   const clusterQ = useQuery({

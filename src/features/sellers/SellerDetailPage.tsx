@@ -21,11 +21,14 @@ import {
   CardTitle,
 } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { useCategoriesList } from '@/features/categories/api';
+import { useClustersList } from '@/features/clusters/api';
 import { useAuth } from '@/lib/auth';
-import { formatDate, formatDateTime } from '@/lib/format';
+import { formatDate, formatDateTime, formatInr } from '@/lib/format';
 import { UserRole } from '@/types/api';
 import {
   useApproveSeller,
+  useKycViewUrl,
   useReactivateSeller,
   useRejectSeller,
   useRequestSellerInfo,
@@ -34,6 +37,7 @@ import {
   useToggleVerifiedBadge,
   useWarnSeller,
 } from './api';
+import type { KycDocument } from './types';
 import { DisciplinaryDialog, type DisciplinaryAction } from './DisciplinaryDialog';
 import { ReviewDialog, type ReviewAction } from './ReviewDialog';
 import { SellerStatusBadge } from './status-badge';
@@ -42,9 +46,26 @@ import type { DisciplinaryActionType } from './types';
 const docLabel: Record<string, string> = {
   pan: 'PAN',
   aadhaar: 'Aadhaar',
+  passport: 'Passport',
   fssai: 'FSSAI',
   gst: 'GST',
+  bank_proof: 'Bank proof',
   other: 'Other',
+};
+
+const businessTypeLabel: Record<string, string> = {
+  individual: 'Individual / Farmer',
+  proprietorship: 'Sole proprietorship',
+  partnership: 'Partnership',
+  pvt_ltd: 'Private Limited',
+  llp: 'LLP',
+  fpo_cooperative: 'FPO / Cooperative',
+  other: 'Other',
+};
+
+const fulfilmentLabel: Record<string, string> = {
+  delhivery_pickup: 'Delhivery pickup',
+  self_drop: 'Self-drop at centre',
 };
 
 const docStatusVariant = {
@@ -76,6 +97,12 @@ export const SellerDetailPage = () => {
   const [dialogAction, setDialogAction] = useState<ReviewAction | null>(null);
   const [disciplinaryAction, setDisciplinaryAction] = useState<DisciplinaryAction | null>(null);
 
+  // Resolve category + cluster ids to readable names.
+  const { data: categories } = useCategoriesList();
+  const { data: clustersData } = useClustersList({ page: 1, limit: 100 });
+  const categoryName = new Map((categories ?? []).map((c) => [c.id, c.name]));
+  const clusterName = new Map((clustersData?.items ?? []).map((c) => [c.id, c.name]));
+
   if (isLoading) {
     return (
       <div className="space-y-4">
@@ -98,7 +125,7 @@ export const SellerDetailPage = () => {
   const canDiscipline =
     user?.role === UserRole.SUPER_ADMIN ||
     user?.role === UserRole.SUB_SUPER_ADMIN ||
-    user?.role === UserRole.REGIONAL_ADMIN;
+    user?.role === UserRole.CLUSTER_ADMIN;
   const reviewable =
     seller.status === 'PENDING' || seller.status === 'INFO_REQUESTED' || seller.status === 'REJECTED';
 
@@ -193,14 +220,34 @@ export const SellerDetailPage = () => {
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Farm & address</CardTitle>
+            <CardTitle>Farm & business</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
             <div className="grid grid-cols-2 gap-4">
+              <Field
+                label="Business type"
+                value={
+                  seller.businessType ? (
+                    businessTypeLabel[seller.businessType] ?? seller.businessType
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )
+                }
+              />
+              <Field
+                label="GST number"
+                value={seller.gstNumber ?? <span className="text-muted-foreground">Not provided</span>}
+              />
               <Field label="Pincode" value={seller.pincode} />
               <Field
                 label="Cluster"
-                value={seller.clusterId ?? <span className="text-muted-foreground">Unassigned</span>}
+                value={
+                  seller.clusterId ? (
+                    clusterName.get(seller.clusterId) ?? seller.clusterId
+                  ) : (
+                    <span className="text-muted-foreground">Unassigned</span>
+                  )
+                }
               />
               <Field label="Payout preference" value={payoutLabel[seller.payoutPreference]} />
               <Field
@@ -233,11 +280,45 @@ export const SellerDetailPage = () => {
                 )}
                 {seller.categoryIds.map((cid) => (
                   <Badge key={cid} variant="muted">
-                    {cid}
+                    {categoryName.get(cid) ?? cid}
                   </Badge>
                 ))}
               </div>
             </div>
+            {seller.businessProfile && (
+              <div className="grid grid-cols-2 gap-4 border-t border-border pt-3">
+                <Field
+                  label="Owns a brand"
+                  value={
+                    seller.businessProfile.ownsBrand === undefined
+                      ? '—'
+                      : seller.businessProfile.ownsBrand
+                        ? 'Yes'
+                        : 'No'
+                  }
+                />
+                <Field
+                  label="Expected listings / mo"
+                  value={seller.businessProfile.expectedMonthlyListings ?? '—'}
+                />
+                <Field
+                  label="Avg product price"
+                  value={
+                    seller.businessProfile.averagePriceInr != null
+                      ? formatInr(seller.businessProfile.averagePriceInr)
+                      : '—'
+                  }
+                />
+                <Field
+                  label="Fulfilment"
+                  value={
+                    seller.businessProfile.fulfillmentPreference
+                      ? fulfilmentLabel[seller.businessProfile.fulfillmentPreference]
+                      : '—'
+                  }
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -266,40 +347,17 @@ export const SellerDetailPage = () => {
       <Card>
         <CardHeader>
           <CardTitle>KYC documents</CardTitle>
-          <CardDescription>
-            {seller.kycDocuments.length} document(s) uploaded. Open the S3 key in the bucket
-            console to view the file.
-          </CardDescription>
+          <CardDescription>{seller.kycDocuments.length} document(s) uploaded.</CardDescription>
         </CardHeader>
         <CardContent>
           {seller.kycDocuments.length === 0 ? (
             <p className="text-sm text-muted-foreground">No documents uploaded.</p>
           ) : (
-            <ul className="divide-y divide-border">
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {seller.kycDocuments.map((doc) => (
-                <li
-                  key={`${doc.type}-${doc.s3Key}`}
-                  className="flex items-start justify-between gap-4 py-3"
-                >
-                  <div className="flex items-start gap-3">
-                    <FileText className="mt-0.5 h-4 w-4 text-muted-foreground" />
-                    <div>
-                      <p className="font-medium">{docLabel[doc.type] ?? doc.type}</p>
-                      <p className="text-xs text-muted-foreground">{doc.s3Key}</p>
-                      {doc.notes && (
-                        <p className="mt-1 text-xs italic text-muted-foreground">{doc.notes}</p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={docStatusVariant[doc.status]}>{doc.status}</Badge>
-                    <span className="text-xs text-muted-foreground">
-                      {formatDate(doc.uploadedAt)}
-                    </span>
-                  </div>
-                </li>
+                <KycDocCard key={`${doc.type}-${doc.s3Key}`} sellerId={seller.id} doc={doc} />
               ))}
-            </ul>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -309,6 +367,28 @@ export const SellerDetailPage = () => {
           <CardTitle>Storefront</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
+          <div className="grid grid-cols-2 gap-4">
+            <Field
+              label="Display name"
+              value={seller.storefront.displayName ?? <span className="text-muted-foreground">—</span>}
+            />
+            <Field
+              label="Store language"
+              value={seller.storefront.language ?? <span className="text-muted-foreground">—</span>}
+            />
+            <Field
+              label="Support email"
+              value={seller.storefront.supportEmail ?? <span className="text-muted-foreground">—</span>}
+            />
+            <Field
+              label="Returns address"
+              value={
+                seller.storefront.returnsAddress
+                  ? `${seller.storefront.returnsAddress.line} — ${seller.storefront.returnsAddress.pincode}`
+                  : <span className="text-muted-foreground">—</span>
+              }
+            />
+          </div>
           <Field
             label="Description"
             value={
@@ -402,6 +482,46 @@ export const SellerDetailPage = () => {
         onClose={() => setDisciplinaryAction(null)}
         onSubmit={submitDisciplinary}
       />
+    </div>
+  );
+};
+
+const KycDocCard = ({ sellerId, doc }: { sellerId: string; doc: KycDocument }) => {
+  const { data, isLoading, isError } = useKycViewUrl(sellerId, doc.s3Key);
+  const url = data?.url;
+  const isImage = /\.(jpe?g|png|webp|gif)$/i.test(doc.s3Key);
+  return (
+    <div className="overflow-hidden rounded-md border border-border">
+      <div className="flex items-center justify-between gap-2 border-b border-border bg-secondary/30 px-3 py-2">
+        <span className="flex items-center gap-2 text-sm font-medium">
+          <FileText className="h-4 w-4 text-muted-foreground" />
+          {docLabel[doc.type] ?? doc.type}
+        </span>
+        <Badge variant={docStatusVariant[doc.status]}>{doc.status}</Badge>
+      </div>
+      <a
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        className="block bg-white"
+        onClick={(e) => !url && e.preventDefault()}
+      >
+        {isImage && url ? (
+          <img src={url} alt={doc.type} className="h-40 w-full bg-white object-contain" />
+        ) : (
+          <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
+            {isLoading ? 'Loading…' : isError ? 'Preview unavailable' : 'Open document ↗'}
+          </div>
+        )}
+      </a>
+      <div className="flex items-center justify-between px-3 py-2 text-xs text-muted-foreground">
+        <span>{formatDate(doc.uploadedAt)}</span>
+        {url && (
+          <a href={url} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+            Open full ↗
+          </a>
+        )}
+      </div>
     </div>
   );
 };

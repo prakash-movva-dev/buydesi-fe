@@ -17,6 +17,10 @@ export interface CommissionRate {
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Scope label, e.g. "Category", "Product", "Seller". */
+  targetType: string;
+  /** Resolved human name for the target entity (never an ObjectId). */
+  targetName: string;
 }
 
 export interface ResolvedCommission {

@@ -30,6 +30,7 @@ const ROLE_OPTIONS = [
   { value: 'SUPER_ADMIN', label: 'Super Admin' },
   { value: 'SUB_SUPER_ADMIN', label: 'Sub-Super Admin' },
   { value: 'REGIONAL_ADMIN', label: 'Regional Admin' },
+  { value: 'CLUSTER_ADMIN', label: 'Cluster Admin' },
   { value: 'CATEGORY_ADMIN', label: 'Category Admin' },
   { value: 'SUPPORT_ADMIN', label: 'Support Admin' },
   { value: 'SELLER', label: 'Seller' },
@@ -54,7 +55,7 @@ const roleVariant = (role: UserRole): 'info' | 'warning' | 'success' | 'muted' |
   if (role === UserRole.SUPER_ADMIN) return 'destructive';
   if (role === UserRole.SUB_SUPER_ADMIN) return 'warning';
   if (
-    role === UserRole.REGIONAL_ADMIN ||
+    role === UserRole.CLUSTER_ADMIN ||
     role === UserRole.CATEGORY_ADMIN ||
     role === UserRole.SUPPORT_ADMIN
   )
@@ -89,7 +90,7 @@ export const UsersPage = () => {
   const pageCount = total > 0 ? Math.ceil(total / PAGE_SIZE) : 1;
 
   // Map cluster id → name so the table shows readable cluster names.
-  const { data: clustersData } = useClustersList({ page: 1, limit: 200 });
+  const { data: clustersData } = useClustersList({ page: 1, limit: 100 });
   const clusterName = useMemo(() => {
     const map = new Map<string, string>();
     (clustersData?.items ?? []).forEach((c) => map.set(c.id, c.name));
@@ -129,7 +130,7 @@ export const UsersPage = () => {
   const canCreate =
     user?.role === UserRole.SUPER_ADMIN ||
     user?.role === UserRole.SUB_SUPER_ADMIN ||
-    user?.role === UserRole.REGIONAL_ADMIN;
+    user?.role === UserRole.CLUSTER_ADMIN;
 
   return (
     <div className="space-y-6">

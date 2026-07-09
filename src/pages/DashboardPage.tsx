@@ -45,7 +45,7 @@ export const DashboardPage = () => {
   // this component is the generic super-tier admin shell.
   if (user?.role === UserRole.SELLER) return <SellerDashboard />;
   if (user?.role === UserRole.PROMOTER) return <PromoterDashboard />;
-  if (user?.role === UserRole.REGIONAL_ADMIN) return <RegionalAdminDashboard />;
+  if (user?.role === UserRole.CLUSTER_ADMIN) return <RegionalAdminDashboard />;
   if (user?.role === UserRole.CATEGORY_ADMIN) return <CategoryAdminDashboard />;
   if (user?.role === UserRole.SUPPORT_ADMIN) return <SupportAdminDashboard />;
 

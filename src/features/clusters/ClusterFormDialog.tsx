@@ -182,9 +182,9 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label>Regional admin</Label>
+            <Label>Cluster admin</Label>
             <UserPicker
-              role={UserRole.REGIONAL_ADMIN}
+              role={UserRole.CLUSTER_ADMIN}
               value={adminId || null}
               onChange={(id) => setAdminId(id ?? '')}
               placeholder="Pick a regional admin…"

@@ -45,6 +45,22 @@ export const useOrder = (id: string | undefined) =>
     enabled: Boolean(id),
   });
 
+/** True when `v` looks like a Mongo ObjectId (24 hex chars). */
+export const isObjectId = (v: string): boolean => /^[a-f0-9]{24}$/i.test(v.trim());
+
+/**
+ * Resolve an order from a value pasted into the Quick Lookup box. Accepts either
+ * a Mongo ObjectId (returned as-is) or a human order number like
+ * `BD-MP6NN7XL-00CA7F`, which is looked up server-side. Returns the real order
+ * `id` so the caller can navigate to `/admin/orders/:id`.
+ */
+export const resolveOrderId = async (value: string): Promise<string> => {
+  const v = value.trim();
+  if (isObjectId(v)) return v;
+  const order = await api.get<SafeOrder>(`/orders/lookup?number=${encodeURIComponent(v)}`);
+  return order.id;
+};
+
 // ─── Mutations ────────────────────────────────────────────────────────────
 
 interface CancelVars {

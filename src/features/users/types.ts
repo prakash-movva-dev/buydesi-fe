@@ -38,6 +38,7 @@ export interface AdminCreateUserInput {
   password: string;
   role: UserRole;
   clusterId?: string;
+  regionId?: string;
   category?: string;
   zone?: string;
   preferredLanguage?: string;

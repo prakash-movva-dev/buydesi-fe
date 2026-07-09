@@ -6,6 +6,7 @@ import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Select } from '@/components/ui/Select';
+import { useAuth } from '@/lib/auth';
 import { ApiError, UserRole } from '@/types/api';
 import { useCreatePromoter, useUpdatePromoter } from './api';
 import type { Promoter } from './types';
@@ -19,6 +20,9 @@ interface Props {
 
 export const PromoterFormDialog = ({ open, editing, onClose, onCreated }: Props) => {
   const isEdit = Boolean(editing);
+  const { user } = useAuth();
+  // Cluster admins are pinned to their own cluster; super-tier admins must pick one.
+  const isRegional = user?.role === UserRole.CLUSTER_ADMIN;
   const createMut = useCreatePromoter();
   const updateMut = useUpdatePromoter();
 
@@ -48,7 +52,8 @@ export const PromoterFormDialog = ({ open, editing, onClose, onCreated }: Props)
       setMobile('');
       setEmail('');
       setUserId('');
-      setClusterId('');
+      // Cluster admins can only create in their own cluster — default + lock to it.
+      setClusterId(isRegional ? user?.clusterId ?? '' : '');
       setDiscountType('percent');
       setDiscountValue('5');
       setMax('');
@@ -56,7 +61,7 @@ export const PromoterFormDialog = ({ open, editing, onClose, onCreated }: Props)
       setExpiresAt('');
       setActive(true);
     }
-  }, [open, editing]);
+  }, [open, editing, isRegional, user?.clusterId]);
 
   const submit = async () => {
     setError(null);
@@ -71,6 +76,10 @@ export const PromoterFormDialog = ({ open, editing, onClose, onCreated }: Props)
           patch: { name: name.trim(), active },
         });
       } else {
+        if (!clusterId.trim()) {
+          setError('Cluster is required');
+          return;
+        }
         const dv = Number(discountValue);
         if (!Number.isFinite(dv) || dv <= 0) {
           setError('Discount value must be positive');
@@ -109,6 +118,9 @@ export const PromoterFormDialog = ({ open, editing, onClose, onCreated }: Props)
   };
 
   const submitting = createMut.isPending || updateMut.isPending;
+  // Cluster is required when creating (backend needs it for super-tier admins;
+  // regional admins are auto-locked to their own cluster).
+  const clusterMissing = !isEdit && !clusterId.trim();
 
   return (
     <Dialog
@@ -125,7 +137,7 @@ export const PromoterFormDialog = ({ open, editing, onClose, onCreated }: Props)
           <Button variant="outline" onClick={onClose} disabled={submitting}>
             Cancel
           </Button>
-          <Button onClick={submit} disabled={submitting}>
+          <Button onClick={submit} disabled={submitting || clusterMissing}>
             {submitting ? 'Saving…' : isEdit ? 'Save changes' : 'Create promoter'}
           </Button>
         </>
@@ -191,12 +203,22 @@ export const PromoterFormDialog = ({ open, editing, onClose, onCreated }: Props)
                 />
               </div>
               <div className="space-y-1.5">
-                <Label>Cluster (optional)</Label>
+                <Label>Cluster {isRegional ? '' : '*'}</Label>
                 <ClusterPicker
                   value={clusterId || null}
                   onChange={(id) => setClusterId(id ?? '')}
-                  placeholder="Defaults to your cluster"
+                  disabled={isRegional}
+                  placeholder={isRegional ? 'Your cluster' : 'Select a cluster…'}
                 />
+                {isRegional ? (
+                  <p className="text-xs text-muted-foreground">
+                    Promoters are created in your own cluster.
+                  </p>
+                ) : (
+                  !clusterId.trim() && (
+                    <p className="text-xs text-destructive">Cluster is required.</p>
+                  )
+                )}
               </div>
             </div>
 

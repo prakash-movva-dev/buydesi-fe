@@ -54,6 +54,24 @@ export interface CreateProductInput {
   images: string[];
   pricing: ProductPricing;
   stock: ProductStock;
+  // Extended listing attributes (all optional).
+  highlights?: string[];
+  brand?: string;
+  sku?: string;
+  tags?: string[];
+  womenEntrepreneur?: boolean;
+  youthEmpowerment?: boolean;
+  organicCertified?: boolean;
+  organicCertification?: string;
+  minOrderQty?: number;
+  maxOrderQty?: number;
+  codAvailable?: boolean;
+  returnEligible?: boolean;
+  hsnCode?: string;
+  harvestDate?: string;
+  shelfLifeDays?: number;
+  packagingType?: string;
+  videoUrl?: string;
 }
 
 export type UpdateProductInput = Partial<CreateProductInput>;
@@ -83,11 +101,20 @@ export const useDeleteProduct = () => {
   });
 };
 
+export interface ProductImagePresign {
+  url: string;
+  s3Key?: string;
+  key?: string;
+  bucket?: string;
+  expiresIn?: number;
+  headers?: Record<string, string>;
+  fields?: Record<string, string>;
+  /** Public HTTPS URL to store + render (public-read uploads bucket). */
+  publicUrl?: string;
+}
+
 export const useProductImageUploadUrl = () =>
   useMutation({
     mutationFn: (input: { contentType: string; ext?: string }) =>
-      api.post<{ url: string; fields?: Record<string, string>; key: string; expiresAt: string }>(
-        '/products/image-upload-url',
-        input,
-      ),
+      api.post<ProductImagePresign>('/products/image-upload-url', input),
   });

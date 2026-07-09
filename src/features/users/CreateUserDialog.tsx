@@ -6,7 +6,9 @@ import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Select } from '@/components/ui/Select';
+import { useRegionsList } from '@/features/regions/api';
 import { useAuth } from '@/lib/auth';
+import { validateEmail, validateMobile, validateName } from '@/lib/validation';
 import { ApiError, UserRole } from '@/types/api';
 import { useAdminCreateUser } from './api';
 
@@ -15,9 +17,13 @@ interface Props {
   onClose: () => void;
 }
 
+const FieldError = ({ show, message }: { show: boolean; message: string | null }) =>
+  show && message ? <p className="text-xs text-destructive">{message}</p> : null;
+
 const ROLE_OPTIONS: Array<{ value: UserRole; label: string; description: string }> = [
   { value: UserRole.SUB_SUPER_ADMIN, label: 'Sub-Super Admin', description: 'Near-super powers, no destructive actions.' },
-  { value: UserRole.REGIONAL_ADMIN, label: 'Regional Admin', description: 'Operations for one cluster.' },
+  { value: UserRole.REGIONAL_ADMIN, label: 'Regional Admin', description: 'Supply & operations across a region (multiple clusters).' },
+  { value: UserRole.CLUSTER_ADMIN, label: 'Cluster Admin', description: 'Operations for one cluster.' },
   { value: UserRole.CATEGORY_ADMIN, label: 'Category Admin', description: 'Catalog quality for one category branch.' },
   { value: UserRole.SUPPORT_ADMIN, label: 'Support Admin', description: 'Tickets, returns, refunds.' },
   { value: UserRole.SELLER, label: 'Seller', description: 'Onboarded farmer / vendor.' },
@@ -28,6 +34,7 @@ const ROLE_OPTIONS: Array<{ value: UserRole; label: string; description: string 
 const ADMIN_ROLES_FOR_SUPER: ReadonlyArray<UserRole> = [
   UserRole.SUB_SUPER_ADMIN,
   UserRole.REGIONAL_ADMIN,
+  UserRole.CLUSTER_ADMIN,
   UserRole.CATEGORY_ADMIN,
   UserRole.SUPPORT_ADMIN,
   UserRole.SELLER,
@@ -50,6 +57,7 @@ export const CreateUserDialog = ({ open, onClose }: Props) => {
   const roleChoices = ROLE_OPTIONS.filter((r) => allowedRoles.includes(r.value));
 
   const create = useAdminCreateUser();
+  const { data: regions } = useRegionsList();
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -57,19 +65,23 @@ export const CreateUserDialog = ({ open, onClose }: Props) => {
   const [password, setPassword] = useState('');
   const [role, setRole] = useState<UserRole>(allowedRoles[0]);
   const [clusterId, setClusterId] = useState<string | null>(null);
+  const [regionId, setRegionId] = useState<string | null>(null);
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [zone, setZone] = useState('');
   const [error, setError] = useState<string | null>(null);
+  const [showErrors, setShowErrors] = useState(false);
 
   useEffect(() => {
     if (!open) return;
     setError(null);
+    setShowErrors(false);
     setName('');
     setEmail('');
     setMobile('');
     setPassword('');
     setRole(allowedRoles[0]);
     setClusterId(null);
+    setRegionId(null);
     setCategoryId(null);
     setZone('');
   }, [open, allowedRoles]);
@@ -81,28 +93,47 @@ export const CreateUserDialog = ({ open, onClose }: Props) => {
   }, [open, isSuperTier, user?.clusterId]);
 
   const needsCluster =
-    role === UserRole.REGIONAL_ADMIN ||
+    role === UserRole.CLUSTER_ADMIN ||
     role === UserRole.SUPPORT_ADMIN ||
     role === UserRole.SELLER ||
     role === UserRole.PROMOTER;
+  const needsRegion = role === UserRole.REGIONAL_ADMIN;
   const needsCategory = role === UserRole.CATEGORY_ADMIN;
+
+  // Mirrors the backend's required-scope rules:
+  //   CLUSTER_ADMIN → clusterId, REGIONAL_ADMIN → regionId,
+  //   CATEGORY_ADMIN → category, SUPPORT_ADMIN → clusterId.
+  const clusterRequired =
+    role === UserRole.CLUSTER_ADMIN ||
+    role === UserRole.SUPPORT_ADMIN ||
+    role === UserRole.SELLER;
+
+  // ── Field-level validation (issue US-CA.1 / US-CA.23) ────────────────────
+  const nameError = validateName(name);
+  const mobileError = validateMobile(mobile);
+  const emailError = validateEmail(email);
+  const contactError =
+    !email.trim() && !mobile.trim() ? 'Provide an email or mobile.' : null;
+  const passwordError = password.length < 8 ? 'Password must be at least 8 characters.' : null;
+  const categoryError = needsCategory && !categoryId ? 'Pick the category this admin will own.' : null;
+  const clusterError = clusterRequired && !clusterId ? 'Pick the cluster this user belongs to.' : null;
+  const regionError = needsRegion && !regionId ? 'Pick the region this admin will oversee.' : null;
+
+  const isValid =
+    !nameError &&
+    !contactError &&
+    !mobileError &&
+    !emailError &&
+    !passwordError &&
+    !categoryError &&
+    !clusterError &&
+    !regionError;
 
   const submit = async () => {
     setError(null);
-    if (name.trim().length < 2) {
-      setError('Name is required (min 2 chars).');
-      return;
-    }
-    if (!email.trim() && !mobile.trim()) {
-      setError('Provide an email or mobile.');
-      return;
-    }
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters.');
-      return;
-    }
-    if (needsCategory && !categoryId) {
-      setError('Pick the category this admin will own.');
+    if (!isValid) {
+      setShowErrors(true);
+      setError('Please fix the highlighted fields before submitting.');
       return;
     }
     try {
@@ -112,8 +143,9 @@ export const CreateUserDialog = ({ open, onClose }: Props) => {
         mobile: mobile.trim() || undefined,
         password,
         role,
-        clusterId: clusterId ?? undefined,
-        category: categoryId ?? undefined,
+        clusterId: needsCluster ? (clusterId ?? undefined) : undefined,
+        regionId: needsRegion ? (regionId ?? undefined) : undefined,
+        category: needsCategory ? (categoryId ?? undefined) : undefined,
         zone: zone.trim() || undefined,
       });
       onClose();
@@ -135,7 +167,16 @@ export const CreateUserDialog = ({ open, onClose }: Props) => {
           <Button variant="outline" onClick={onClose} disabled={create.isPending}>
             Cancel
           </Button>
-          <Button onClick={submit} disabled={create.isPending}>
+          <Button
+            onClick={submit}
+            disabled={
+              create.isPending ||
+              (showErrors && !isValid) ||
+              Boolean(clusterError) ||
+              Boolean(regionError) ||
+              Boolean(categoryError)
+            }
+          >
             {create.isPending ? 'Creating…' : 'Create user'}
           </Button>
         </>
@@ -147,6 +188,7 @@ export const CreateUserDialog = ({ open, onClose }: Props) => {
           <div className="space-y-1.5">
             <Label htmlFor="cu-name">Name *</Label>
             <Input id="cu-name" value={name} onChange={(e) => setName(e.target.value)} />
+            <FieldError show={showErrors} message={nameError} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="cu-role">Role *</Label>
@@ -176,6 +218,7 @@ export const CreateUserDialog = ({ open, onClose }: Props) => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
+            <FieldError show={showErrors} message={emailError} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="cu-mobile">Mobile</Label>
@@ -183,8 +226,11 @@ export const CreateUserDialog = ({ open, onClose }: Props) => {
               id="cu-mobile"
               value={mobile}
               onChange={(e) => setMobile(e.target.value)}
+              inputMode="numeric"
+              maxLength={13}
               placeholder="+91…"
             />
+            <FieldError show={showErrors} message={mobileError ?? contactError} />
           </div>
         </div>
 
@@ -197,6 +243,7 @@ export const CreateUserDialog = ({ open, onClose }: Props) => {
             onChange={(e) => setPassword(e.target.value)}
             placeholder="At least 8 chars — share with the user securely"
           />
+          <FieldError show={showErrors} message={passwordError} />
           <p className="text-xs text-muted-foreground">
             We don't email this. Copy it from here and send via your team's secure channel.
             The user can change it from their profile after login.
@@ -206,9 +253,7 @@ export const CreateUserDialog = ({ open, onClose }: Props) => {
         <div className="grid gap-3 sm:grid-cols-2">
           {needsCluster && (
             <div className="space-y-1.5">
-              <Label>
-                Cluster {role === UserRole.REGIONAL_ADMIN || role === UserRole.SELLER ? '*' : ''}
-              </Label>
+              <Label>Cluster {clusterRequired ? '*' : ''}</Label>
               <ClusterPicker
                 value={clusterId}
                 onChange={setClusterId}
@@ -218,12 +263,33 @@ export const CreateUserDialog = ({ open, onClose }: Props) => {
               {!isSuperTier && (
                 <p className="text-xs text-muted-foreground">Pinned to your own cluster.</p>
               )}
+              <FieldError show={showErrors} message={clusterError} />
+            </div>
+          )}
+          {needsRegion && (
+            <div className="space-y-1.5">
+              <Label htmlFor="cu-region">Region *</Label>
+              <Select
+                id="cu-region"
+                value={regionId ?? ''}
+                onChange={(e) => setRegionId(e.target.value || null)}
+              >
+                <option value="">Pick a region…</option>
+                {(regions ?? []).map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name}
+                    {r.state ? ` — ${r.state}` : ''}
+                  </option>
+                ))}
+              </Select>
+              <FieldError show={showErrors} message={regionError} />
             </div>
           )}
           {needsCategory && (
             <div className="space-y-1.5">
               <Label>Category *</Label>
               <CategoryPicker value={categoryId} onChange={setCategoryId} />
+              <FieldError show={showErrors} message={categoryError} />
             </div>
           )}
           <div className="space-y-1.5">

@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   AlertCircle,
@@ -17,6 +17,7 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useDashboardOverview } from '@/features/dashboard/api';
+import { resolveOrderId } from '@/features/orders/api';
 import {
   readBoolean,
   readNumber,
@@ -25,6 +26,7 @@ import {
 import { useTicketsList } from '@/features/support/api';
 import { useAuth } from '@/lib/auth';
 import { formatDateTime } from '@/lib/format';
+import { ApiError } from '@/types/api';
 import type { SupportTicket } from '@/features/support/types';
 
 const inrFromPaise = (paise: number): string => `₹${(paise / 100).toLocaleString('en-IN')}`;
@@ -233,7 +235,7 @@ export const SupportAdminDashboard = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <OrderLookup onSubmit={(id) => navigate(`/admin/orders/${id.trim()}`)} />
+          <OrderLookup />
         </CardContent>
       </Card>
 
@@ -312,29 +314,62 @@ const ActionTile = ({ icon: Icon, label, count, loading, hint, onClick }: Action
   </button>
 );
 
-const OrderLookup = ({ onSubmit }: { onSubmit: (orderId: string) => void }) => (
-  <form
-    className="flex flex-wrap items-center gap-2"
-    onSubmit={(e) => {
-      e.preventDefault();
-      const v = (new FormData(e.currentTarget).get('orderId') as string) ?? '';
-      if (v.trim()) onSubmit(v);
-    }}
-  >
-    <div className="relative flex-1 min-w-[16rem]">
-      <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-      <input
-        name="orderId"
-        placeholder="Paste an order id or order number"
-        className="w-full rounded-md border border-input bg-background py-2 pl-8 pr-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-      />
+const OrderLookup = () => {
+  const navigate = useNavigate();
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async (raw: string) => {
+    const value = raw.trim();
+    if (!value) return;
+    setError(null);
+    setPending(true);
+    try {
+      // Accepts either a Mongo id or a human order number (e.g. BD-...). The
+      // number is resolved server-side to the real id before we navigate, so
+      // pasting an order number no longer routes to the ObjectId param validator.
+      const id = await resolveOrderId(value);
+      navigate(`/admin/orders/${id}`);
+    } catch (err) {
+      setError(
+        err instanceof ApiError && err.status === 404
+          ? `No order found for "${value}".`
+          : err instanceof Error
+            ? err.message
+            : 'Lookup failed.',
+      );
+    } finally {
+      setPending(false);
+    }
+  };
+
+  return (
+    <div className="space-y-2">
+      <form
+        className="flex flex-wrap items-center gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const v = (new FormData(e.currentTarget).get('orderId') as string) ?? '';
+          void submit(v);
+        }}
+      >
+        <div className="relative flex-1 min-w-[16rem]">
+          <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <input
+            name="orderId"
+            placeholder="Paste an order id or order number"
+            className="w-full rounded-md border border-input bg-background py-2 pl-8 pr-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          />
+        </div>
+        <Button type="submit" variant="outline" size="sm" disabled={pending}>
+          {pending ? 'Opening…' : 'Open'}
+          <ArrowRight className="h-4 w-4" />
+        </Button>
+      </form>
+      {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
-    <Button type="submit" variant="outline" size="sm">
-      Open
-      <ArrowRight className="h-4 w-4" />
-    </Button>
-  </form>
-);
+  );
+};
 
 const RecentSupportActivity = () => {
   // Lightweight: use the latest escalated tickets as "recent significant

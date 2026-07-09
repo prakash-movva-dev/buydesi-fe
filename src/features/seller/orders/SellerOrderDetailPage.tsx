@@ -86,7 +86,7 @@ export const SellerOrderDetailPage = () => {
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{order.orderNumber}</h1>
           <p className="text-sm text-muted-foreground">
-            placed {formatDateTime(order.createdAt)} · buyer {order.buyerId}
+            placed {formatDateTime(order.createdAt)} · {order.shippingAddress.name}
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <OrderStatusBadge status={order.status} />
@@ -187,7 +187,12 @@ export const SellerOrderDetailPage = () => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Shipping</CardTitle>
+          <CardTitle>Customer & delivery</CardTitle>
+          <CardDescription>
+            {order.payment.mode === 'COD'
+              ? 'Cash on Delivery — collected by the courier on delivery.'
+              : 'Prepaid — payment already captured in escrow.'}
+          </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
           <p className="font-medium">

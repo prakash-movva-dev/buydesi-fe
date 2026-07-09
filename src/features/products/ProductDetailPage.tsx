@@ -225,6 +225,8 @@ export const ProductDetailPage = () => {
         </Card>
       </div>
 
+      <ListingDetails product={product} />
+
       <Card>
         <CardHeader>
           <CardTitle>Images</CardTitle>
@@ -249,6 +251,17 @@ export const ProductDetailPage = () => {
                   <img
                     src={src}
                     alt={`${product.name} image ${i + 1}`}
+                    onError={(e) => {
+                      // Legacy bare-key images won't resolve — hide the broken
+                      // glyph and show a neutral placeholder background instead.
+                      const img = e.currentTarget;
+                      img.style.visibility = 'hidden';
+                      img.parentElement?.classList.add(
+                        'flex',
+                        'items-center',
+                        'justify-center',
+                      );
+                    }}
                     className="aspect-square w-full object-cover transition group-hover:scale-105"
                   />
                 </a>
@@ -312,6 +325,95 @@ export const ProductDetailPage = () => {
         }}
       />
     </div>
+  );
+};
+
+const ListingDetails = ({ product }: { product: import('./types').SafeProduct }) => {
+  const badges = [
+    product.womenEntrepreneur && { label: 'Women entrepreneur', variant: 'info' as const },
+    product.youthEmpowerment && { label: 'Youth empowerment', variant: 'info' as const },
+    product.organicCertified && { label: 'Organic certified', variant: 'success' as const },
+  ].filter(Boolean) as Array<{ label: string; variant: 'info' | 'success' }>;
+
+  const rows: Array<[string, React.ReactNode]> = [
+    ['Cash on Delivery', product.codAvailable === false ? 'Not available' : 'Available'],
+    ['Returns', product.returnEligible === false ? 'Not eligible' : 'Eligible'],
+    [
+      'Order quantity',
+      `min ${product.minOrderQty ?? 1}${product.maxOrderQty ? ` · max ${product.maxOrderQty}` : ''}`,
+    ],
+    ['Brand', product.brand || '—'],
+    ['SKU', product.sku || '—'],
+    ['HSN code', product.hsnCode || '—'],
+    ['Packaging', product.packagingType || '—'],
+    ['Harvest / packed', product.harvestDate ? formatDate(product.harvestDate) : '—'],
+    ['Shelf life', product.shelfLifeDays ? `${product.shelfLifeDays} days` : '—'],
+    [
+      'Organic cert.',
+      product.organicCertified ? product.organicCertification || 'Yes' : '—',
+    ],
+  ];
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Listing details</CardTitle>
+        <CardDescription>Seller-provided attributes buyers see on the storefront.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4 text-sm">
+        {badges.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {badges.map((b) => (
+              <Badge key={b.label} variant={b.variant}>
+                {b.label}
+              </Badge>
+            ))}
+          </div>
+        )}
+        <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+          {rows.map(([label, value]) => (
+            <div key={label} className="flex items-center justify-between gap-3 border-b border-border/60 pb-1.5">
+              <dt className="text-muted-foreground">{label}</dt>
+              <dd className="text-right font-medium">{value}</dd>
+            </div>
+          ))}
+        </dl>
+        {product.highlights && product.highlights.length > 0 && (
+          <div>
+            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Highlights
+            </p>
+            <ul className="list-inside list-disc space-y-0.5">
+              {product.highlights.map((h) => (
+                <li key={h}>{h}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+        {product.tags && product.tags.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Tags
+            </span>
+            {product.tags.map((t) => (
+              <span key={t} className="rounded bg-secondary px-2 py-0.5 text-xs">
+                {t}
+              </span>
+            ))}
+          </div>
+        )}
+        {product.videoUrl && (
+          <a
+            href={product.videoUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 text-primary underline underline-offset-2"
+          >
+            <ExternalLink className="h-3.5 w-3.5" /> Product video
+          </a>
+        )}
+      </CardContent>
+    </Card>
   );
 };
 

@@ -2,7 +2,10 @@
 export const UserRole = {
   SUPER_ADMIN: 'SUPER_ADMIN',
   SUB_SUPER_ADMIN: 'SUB_SUPER_ADMIN',
+  // Regional Admin — Supply & Operations across multiple clusters in a region.
   REGIONAL_ADMIN: 'REGIONAL_ADMIN',
+  // Cluster Admin ("Admin") — the single operational authority of one cluster.
+  CLUSTER_ADMIN: 'CLUSTER_ADMIN',
   CATEGORY_ADMIN: 'CATEGORY_ADMIN',
   SUPPORT_ADMIN: 'SUPPORT_ADMIN',
   SELLER: 'SELLER',
@@ -16,6 +19,7 @@ export const ADMIN_ROLES: ReadonlySet<UserRole> = new Set([
   UserRole.SUPER_ADMIN,
   UserRole.SUB_SUPER_ADMIN,
   UserRole.REGIONAL_ADMIN,
+  UserRole.CLUSTER_ADMIN,
   UserRole.CATEGORY_ADMIN,
   UserRole.SUPPORT_ADMIN,
 ]);

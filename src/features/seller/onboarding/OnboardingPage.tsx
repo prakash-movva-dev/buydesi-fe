@@ -1,6 +1,17 @@
 import { useEffect, useMemo, useState, type ChangeEvent, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CheckCircle2, ChevronLeft, ChevronRight, FileUp, Sprout, Trash2 } from 'lucide-react';
+import {
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+  FileText,
+  FileUp,
+  Hourglass,
+  MapPin,
+  Sprout,
+  Store,
+  Trash2,
+} from 'lucide-react';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -315,6 +326,9 @@ export const SellerOnboardingPage = () => {
     }
   };
 
+  const ifscInvalid = Boolean(form.ifsc) && !/^[A-Z]{4}0[A-Z0-9]{6}$/.test(form.ifsc.toUpperCase());
+  const accountNumInvalid = Boolean(form.accountNumber) && !/^\d{9,18}$/.test(form.accountNumber);
+
   if (profile && profile.status === 'APPROVED') {
     return (
       <Card>
@@ -331,10 +345,64 @@ export const SellerOnboardingPage = () => {
     );
   }
 
+  // Submitted and awaiting review — show a clean status screen, not the form.
+  if (profile && profile.status === 'PENDING') {
+    return (
+      <div className="mx-auto max-w-2xl space-y-6">
+        <Card className="overflow-hidden">
+          <div className="flex items-start gap-4 border-b border-border bg-amber-50 p-6">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+              <Hourglass className="h-6 w-6" />
+            </div>
+            <div>
+              <h1 className="text-xl font-semibold tracking-tight">Application under review</h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Thanks{profile.farmName ? `, ${profile.farmName}` : ''}! We've received your
+                details and an admin is reviewing your KYC — usually within 24 hours. You'll get a
+                notification the moment it's approved.
+              </p>
+            </div>
+          </div>
+          <CardContent className="space-y-4 pt-6">
+            <p className="text-sm font-medium text-muted-foreground">What you submitted</p>
+            <dl className="grid gap-4 sm:grid-cols-2">
+              <SummaryRow icon={Store} label="Business" value={profile.farmName} />
+              <SummaryRow
+                icon={MapPin}
+                label="Location"
+                value={[profile.address?.city, profile.address?.state].filter(Boolean).join(', ') || '—'}
+              />
+              <SummaryRow
+                icon={Sprout}
+                label="Categories"
+                value={`${profile.categoryIds?.length ?? 0} selected`}
+              />
+              <SummaryRow
+                icon={FileText}
+                label="Documents"
+                value={`${profile.kycDocuments?.length ?? 0} uploaded`}
+              />
+            </dl>
+            <div className="rounded-md border border-border bg-secondary/30 p-3 text-xs text-muted-foreground">
+              Product listing and payouts unlock once your account is approved. We'll email and
+              notify you here.
+            </div>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Button onClick={() => navigate('/')}>Go to dashboard</Button>
+              <Button variant="outline" onClick={() => navigate('/seller/support')}>
+                Contact support
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   const submitted = step >= STEPS.length;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="w-full space-y-6">
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
           <Sprout className="h-6 w-6 text-primary" />
@@ -634,6 +702,9 @@ export const SellerOnboardingPage = () => {
                   </Field>
                   <Field label="Account number *">
                     <Input value={form.accountNumber} onChange={(e) => set('accountNumber', e.target.value)} />
+                    {accountNumInvalid && (
+                      <p className="text-xs text-destructive">Account number must be 9–18 digits.</p>
+                    )}
                   </Field>
                   <Field label="Re-enter account number *">
                     <Input
@@ -646,8 +717,17 @@ export const SellerOnboardingPage = () => {
                       value={form.ifsc}
                       onChange={(e) => set('ifsc', e.target.value.toUpperCase())}
                       maxLength={11}
-                      placeholder="SBIN0001234"
+                      placeholder="ICIC0006515"
                     />
+                    {ifscInvalid ? (
+                      <p className="text-xs text-destructive">
+                        Invalid IFSC. Format: 4 letters + “0” + 6 characters (e.g. ICIC0006515).
+                      </p>
+                    ) : (
+                      <p className="text-xs text-muted-foreground">
+                        11 characters — 4 bank letters, then 0, then the branch code.
+                      </p>
+                    )}
                   </Field>
                   <Field label="Account type *">
                     <Select value={form.accountType} onChange={(e) => set('accountType', e.target.value)}>
@@ -773,10 +853,15 @@ export const SellerOnboardingPage = () => {
             {error && <p className="text-sm text-destructive">{error}</p>}
 
             {/* Nav */}
-            <div className="flex justify-between border-t border-border pt-4">
+            <div className="flex items-center justify-between gap-4 border-t border-border pt-4">
               <Button variant="outline" onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0}>
                 <ChevronLeft className="h-4 w-4" /> Back
               </Button>
+              {!stepValid[step] && (
+                <span className="text-xs text-muted-foreground">
+                  Complete the required fields (*) to continue.
+                </span>
+              )}
               {step < STEPS.length - 1 ? (
                 <Button onClick={() => setStep((s) => s + 1)} disabled={!stepValid[step]}>
                   Save and continue <ChevronRight className="h-4 w-4" />
@@ -798,5 +883,25 @@ const Field = ({ label, children }: { label: string; children: ReactNode }) => (
   <div className="space-y-1.5">
     <Label>{label}</Label>
     {children}
+  </div>
+);
+
+const SummaryRow = ({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Store;
+  label: string;
+  value: string;
+}) => (
+  <div className="flex items-center gap-3 rounded-md border border-border p-3">
+    <div className="flex h-9 w-9 items-center justify-center rounded-md bg-secondary text-muted-foreground">
+      <Icon className="h-4 w-4" />
+    </div>
+    <div className="min-w-0">
+      <dt className="text-xs text-muted-foreground">{label}</dt>
+      <dd className="truncate text-sm font-medium">{value}</dd>
+    </div>
   </div>
 );

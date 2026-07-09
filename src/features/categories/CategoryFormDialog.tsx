@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { ImageUploadField } from '@/components/ImageUploadField';
 import { UserPicker } from '@/components/pickers/UserPicker';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
@@ -16,16 +17,11 @@ interface CategoryFormDialogProps {
   onClose: () => void;
   /** If supplied, the dialog edits this category; otherwise it creates a new one. */
   editing?: SafeCategory | null;
-  /** Pre-selected parent for the "new sub-category" affordance. */
-  defaultParentId?: string | null;
-  /** All categories — used to populate the parent dropdown. */
-  allCategories: SafeCategory[];
 }
 
 interface FormState {
   name: string;
   slug: string;
-  parentId: string;
   defaultCommissionRate: string;
   iconUrl: string;
   displayOrder: string;
@@ -36,7 +32,6 @@ interface FormState {
 const emptyForm: FormState = {
   name: '',
   slug: '',
-  parentId: '',
   defaultCommissionRate: '0',
   iconUrl: '',
   displayOrder: '0',
@@ -44,13 +39,7 @@ const emptyForm: FormState = {
   adminId: '',
 };
 
-export const CategoryFormDialog = ({
-  open,
-  onClose,
-  editing,
-  defaultParentId,
-  allCategories,
-}: CategoryFormDialogProps) => {
+export const CategoryFormDialog = ({ open, onClose, editing }: CategoryFormDialogProps) => {
   const { user } = useAuth();
   const isSuper = user?.role === UserRole.SUPER_ADMIN;
 
@@ -67,7 +56,6 @@ export const CategoryFormDialog = ({
       setForm({
         name: editing.name,
         slug: editing.slug,
-        parentId: editing.parentId ?? '',
         defaultCommissionRate: String(editing.defaultCommissionRate),
         iconUrl: editing.iconUrl ?? '',
         displayOrder: String(editing.displayOrder),
@@ -75,22 +63,9 @@ export const CategoryFormDialog = ({
         adminId: editing.adminId ?? '',
       });
     } else {
-      setForm({ ...emptyForm, parentId: defaultParentId ?? '' });
+      setForm(emptyForm);
     }
-  }, [open, editing, defaultParentId]);
-
-  // Filter parents: exclude self and any descendants to keep the tree acyclic.
-  const parentOptions = allCategories.filter((c) => {
-    if (!editing) return true;
-    if (c.id === editing.id) return false;
-    // Quick descendant check — walk up from candidate; if we hit editing.id it's a descendant.
-    let cursor: SafeCategory | undefined = c;
-    for (let i = 0; i < 10 && cursor?.parentId; i++) {
-      if (cursor.parentId === editing.id) return false;
-      cursor = allCategories.find((x) => x.id === cursor!.parentId);
-    }
-    return true;
-  });
+  }, [open, editing]);
 
   const submitting = createMut.isPending || updateMut.isPending;
   const submitLabel = editing ? 'Save changes' : 'Create category';
@@ -116,7 +91,6 @@ export const CategoryFormDialog = ({
           patch: {
             name: form.name.trim(),
             slug: form.slug.trim() || undefined,
-            parentId: form.parentId || null,
             defaultCommissionRate: rate,
             iconUrl: form.iconUrl.trim() || undefined,
             displayOrder: order,
@@ -128,7 +102,6 @@ export const CategoryFormDialog = ({
         await createMut.mutateAsync({
           name: form.name.trim(),
           slug: form.slug.trim() || undefined,
-          parentId: form.parentId || null,
           defaultCommissionRate: rate,
           iconUrl: form.iconUrl.trim() || undefined,
           displayOrder: order,
@@ -149,7 +122,7 @@ export const CategoryFormDialog = ({
       description={
         editing
           ? 'Updates take effect immediately and are logged in the activity log.'
-          : 'Top-level categories require Super Admin. Category Admins can only create subcategories under their assigned branch.'
+          : 'Create a catalogue category. Products inherit its default commission rate unless overridden.'
       }
     >
       <form onSubmit={onSubmit} className="space-y-4">
@@ -178,21 +151,6 @@ export const CategoryFormDialog = ({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
-            <Label htmlFor="cat-parent">Parent category</Label>
-            <Select
-              id="cat-parent"
-              value={form.parentId}
-              onChange={(e) => setForm({ ...form, parentId: e.target.value })}
-            >
-              <option value="">— Top-level —</option>
-              {parentOptions.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div className="space-y-1.5">
             <Label htmlFor="cat-commission">Default commission % *</Label>
             <Input
               id="cat-commission"
@@ -203,18 +161,6 @@ export const CategoryFormDialog = ({
               value={form.defaultCommissionRate}
               onChange={(e) => setForm({ ...form, defaultCommissionRate: e.target.value })}
               required
-            />
-          </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="cat-icon">Icon URL</Label>
-            <Input
-              id="cat-icon"
-              value={form.iconUrl}
-              onChange={(e) => setForm({ ...form, iconUrl: e.target.value })}
-              placeholder="https://…"
             />
           </div>
           <div className="space-y-1.5">
@@ -231,6 +177,15 @@ export const CategoryFormDialog = ({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-1.5">
+            <Label>Icon</Label>
+            <ImageUploadField
+              value={form.iconUrl}
+              onChange={(url) => setForm({ ...form, iconUrl: url })}
+              kind="category"
+              variant="square"
+            />
+          </div>
+          <div className="space-y-1.5">
             <Label htmlFor="cat-status">Status</Label>
             <Select
               id="cat-status"
@@ -241,6 +196,9 @@ export const CategoryFormDialog = ({
               <option value="inactive">Inactive</option>
             </Select>
           </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
           {isSuper && editing && (
             <div className="space-y-1.5">
               <Label htmlFor="cat-admin">Category admin</Label>

@@ -55,7 +55,7 @@ const triggerLabel: Record<EscrowAuditEntry['trigger'], string> = {
 const REFUND_ROLES = new Set<string>([
   UserRole.SUPER_ADMIN,
   UserRole.SUB_SUPER_ADMIN,
-  UserRole.REGIONAL_ADMIN,
+  UserRole.CLUSTER_ADMIN,
   UserRole.SUPPORT_ADMIN,
 ]);
 
@@ -89,14 +89,19 @@ export const OrderDetailPage = () => {
     );
   }
 
+  // Optional/array fields are guarded so the page renders for every order state
+  // (placed, cancelled, etc.) even when older/partial records omit them.
+  const items = order.items ?? [];
+  const statusHistory = order.statusHistory ?? [];
+
   const canRefund =
-    user && REFUND_ROLES.has(user.role) && order.payment.status === 'CAPTURED';
+    user && REFUND_ROLES.has(user.role) && order.payment?.status === 'CAPTURED';
   const canCancel =
     user &&
     [
       UserRole.SUPER_ADMIN,
       UserRole.SUB_SUPER_ADMIN,
-      UserRole.REGIONAL_ADMIN,
+      UserRole.CLUSTER_ADMIN,
     ].includes(user.role as never) &&
     order.status !== 'CANCELLED' &&
     order.status !== 'DELIVERED' &&
@@ -119,9 +124,9 @@ export const OrderDetailPage = () => {
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <OrderStatusBadge status={order.status} />
-            <PaymentStatusBadge status={order.payment.status} />
+            {order.payment?.status && <PaymentStatusBadge status={order.payment.status} />}
             <EscrowStatusBadge status={order.escrowStatus} />
-            <Badge variant="muted">{order.payment.mode}</Badge>
+            {order.payment?.mode && <Badge variant="muted">{order.payment.mode}</Badge>}
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -145,7 +150,7 @@ export const OrderDetailPage = () => {
           <CardHeader>
             <CardTitle>Items</CardTitle>
             <CardDescription>
-              {order.items.length} item(s) · {order.totalWeightGrams} g total
+              {items.length} item(s) · {order.totalWeightGrams} g total
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
@@ -161,7 +166,7 @@ export const OrderDetailPage = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {order.items.map((it, idx) => (
+                {items.map((it, idx) => (
                   <TableRow key={it.id ?? `${it.productId}-${idx}`}>
                     <TableCell className="font-medium">
                       <div>{it.name}</div>
@@ -211,16 +216,22 @@ export const OrderDetailPage = () => {
             <CardDescription>Snapshot taken when the order was placed.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <p className="font-medium">
-              {order.shippingAddress.name} · {order.shippingAddress.phone}
-            </p>
-            <p>
-              {order.shippingAddress.line1}
-              {order.shippingAddress.line2 ? `, ${order.shippingAddress.line2}` : ''}
-              <br />
-              {order.shippingAddress.city}, {order.shippingAddress.state} —{' '}
-              {order.shippingAddress.pincode}
-            </p>
+            {order.shippingAddress ? (
+              <>
+                <p className="font-medium">
+                  {order.shippingAddress.name} · {order.shippingAddress.phone}
+                </p>
+                <p>
+                  {order.shippingAddress.line1}
+                  {order.shippingAddress.line2 ? `, ${order.shippingAddress.line2}` : ''}
+                  <br />
+                  {order.shippingAddress.city}, {order.shippingAddress.state} —{' '}
+                  {order.shippingAddress.pincode}
+                </p>
+              </>
+            ) : (
+              <p className="text-muted-foreground">No shipping address on file.</p>
+            )}
             {order.delhiveryShipmentId && (
               <p className="pt-2 text-xs text-muted-foreground">
                 Shipment {order.delhiveryShipmentId} · {order.deliveryProvider}
@@ -251,13 +262,13 @@ export const OrderDetailPage = () => {
             <CardTitle>Payment</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
-            <Row label="Mode" value={order.payment.mode} />
-            <Row label="Status" value={order.payment.status} />
-            <Row label="Amount" value={formatInr(order.payment.amountInr)} />
-            {order.payment.razorpayOrderId && (
+            <Row label="Mode" value={order.payment?.mode ?? '—'} />
+            <Row label="Status" value={order.payment?.status ?? '—'} />
+            <Row label="Amount" value={formatInr(order.payment?.amountInr)} />
+            {order.payment?.razorpayOrderId && (
               <Row label="Razorpay order" value={order.payment.razorpayOrderId} mono />
             )}
-            {order.payment.razorpayPaymentId && (
+            {order.payment?.razorpayPaymentId && (
               <Row label="Razorpay payment" value={order.payment.razorpayPaymentId} mono />
             )}
           </CardContent>
@@ -270,7 +281,7 @@ export const OrderDetailPage = () => {
         </CardHeader>
         <CardContent>
           <ol className="space-y-3">
-            {order.statusHistory.map((entry, i) => (
+            {statusHistory.map((entry, i) => (
               <li key={i} className="flex items-start gap-3">
                 <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
                 <div className="flex-1">
@@ -342,7 +353,7 @@ export const OrderDetailPage = () => {
                           {e.actorId && (
                             <p className="text-xs text-muted-foreground">by {e.actorId}</p>
                           )}
-                          {Object.keys(e.metadata).length > 0 && (
+                          {e.metadata && Object.keys(e.metadata).length > 0 && (
                             <pre className="mt-1 whitespace-pre-wrap rounded-md bg-secondary/30 p-2 font-mono text-xs">
                               {JSON.stringify(e.metadata, null, 2)}
                             </pre>
@@ -381,7 +392,7 @@ export const OrderDetailPage = () => {
         </Card>
       )}
 
-      {order.items.length > 0 && (
+      {items.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
@@ -391,7 +402,7 @@ export const OrderDetailPage = () => {
           </CardHeader>
           <CardContent>
             <ul className="space-y-1 text-sm">
-              {Array.from(new Set(order.items.map((i) => i.sellerId))).map((sid) => (
+              {Array.from(new Set(items.map((i) => i.sellerId))).map((sid) => (
                 <li key={sid} className="font-mono text-xs">
                   {sid}
                 </li>

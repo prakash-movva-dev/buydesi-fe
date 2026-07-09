@@ -26,17 +26,6 @@ type CategoryPickerProps = (SingleProps | MultiProps) & {
   activeOnly?: boolean;
 };
 
-const buildBreadcrumb = (cat: SafeCategory, byId: Map<string, SafeCategory>): string => {
-  const chain: string[] = [cat.name];
-  let cursor: SafeCategory | undefined = cat;
-  for (let i = 0; i < 10 && cursor?.parentId; i++) {
-    cursor = byId.get(cursor.parentId);
-    if (!cursor) break;
-    chain.unshift(cursor.name);
-  }
-  return chain.join(' › ');
-};
-
 export const CategoryPicker = (props: CategoryPickerProps) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -45,23 +34,18 @@ export const CategoryPicker = (props: CategoryPickerProps) => {
     q: search || undefined,
   });
 
-  const byId = useMemo(() => {
-    const m = new Map<string, SafeCategory>();
-    (data ?? []).forEach((c) => m.set(c.id, c));
-    return m;
-  }, [data]);
-
+  // Flat taxonomy — one level, no sub-categories.
   const options = useMemo<PickerOption[]>(
     () =>
       (data ?? [])
-        .map((c) => ({
+        .map((c: SafeCategory) => ({
           id: c.id,
-          label: buildBreadcrumb(c, byId),
+          label: c.name,
           detail: `slug ${c.slug} · ${c.defaultCommissionRate}% default`,
           disabled: c.status !== 'active',
         }))
         .sort((a, b) => a.label.localeCompare(b.label)),
-    [data, byId],
+    [data],
   );
 
   if (props.multi) {

@@ -14,7 +14,7 @@ import {
   TableRow,
 } from '@/components/ui/Table';
 import { useAuth } from '@/lib/auth';
-import { formatDate } from '@/lib/format';
+import { formatDate, formatInr } from '@/lib/format';
 import { UserRole } from '@/types/api';
 import { useDeletePromoter, usePromotersList } from './api';
 import { PromoterFormDialog } from './PromoterFormDialog';
@@ -23,13 +23,22 @@ import type { Promoter, PromotersListQuery } from './types';
 
 const PAGE_SIZE = 25;
 
+/** Renders the discount terms entered at creation (from the linked coupon). */
+const formatDiscount = (p: Promoter): string => {
+  if (p.discountValue == null || !p.discountType) return '—';
+  const base = p.discountType === 'percent' ? `${p.discountValue}%` : formatInr(p.discountValue);
+  return p.maxDiscountInr != null && p.maxDiscountInr > 0
+    ? `${base} (max ${formatInr(p.maxDiscountInr)})`
+    : base;
+};
+
 export const PromotersPage = () => {
   const { user } = useAuth();
   const isSuper = user?.role === UserRole.SUPER_ADMIN;
   const canCreate =
     user?.role === UserRole.SUPER_ADMIN ||
     user?.role === UserRole.SUB_SUPER_ADMIN ||
-    user?.role === UserRole.REGIONAL_ADMIN;
+    user?.role === UserRole.CLUSTER_ADMIN;
 
   const [searchParams, setSearchParams] = useSearchParams();
   const activeParam = searchParams.get('active');
@@ -147,6 +156,7 @@ export const PromotersPage = () => {
                 <TableHead>Name</TableHead>
                 <TableHead>Contact</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Discount given</TableHead>
                 <TableHead>Cluster</TableHead>
                 <TableHead>Linked user</TableHead>
                 <TableHead>Created</TableHead>
@@ -169,6 +179,7 @@ export const PromotersPage = () => {
                         {p.active ? 'Active' : 'Inactive'}
                       </Badge>
                     </TableCell>
+                    <TableCell className="text-xs">{formatDiscount(p)}</TableCell>
                     <TableCell className="font-mono text-xs">
                       {p.clusterId ?? '—'}
                     </TableCell>
@@ -204,7 +215,7 @@ export const PromotersPage = () => {
               })}
               {(data?.items.length ?? 0) === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
+                  <TableCell colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
                     No promoters yet.
                   </TableCell>
                 </TableRow>

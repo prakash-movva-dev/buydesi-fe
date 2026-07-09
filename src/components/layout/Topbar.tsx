@@ -8,6 +8,7 @@ const roleLabel: Record<string, string> = {
   SUPER_ADMIN: 'Super Admin',
   SUB_SUPER_ADMIN: 'Sub-Super Admin',
   REGIONAL_ADMIN: 'Regional Admin',
+  CLUSTER_ADMIN: 'Cluster Admin',
   CATEGORY_ADMIN: 'Category Admin',
   SUPPORT_ADMIN: 'Support Admin',
   SELLER: 'Seller',

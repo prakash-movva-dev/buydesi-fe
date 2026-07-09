@@ -10,10 +10,9 @@ interface ReportRange {
   clusterId?: string;
 }
 
-const BASE = (import.meta.env.VITE_API_BASE_URL ?? 'https://api.buydesionline.com/api/v1', 'https://api.buydesionline.com/api/v1').replace(
-  /\/+$/,
-  '',
-);
+const BASE = (
+  import.meta.env.VITE_API_BASE_URL ?? 'https://api.buydesionline.com/api/v1'
+).replace(/\/+$/, '');
 
 const buildParams = (r: ReportRange & { format?: 'json' | 'csv' }): URLSearchParams => {
   const params = new URLSearchParams();

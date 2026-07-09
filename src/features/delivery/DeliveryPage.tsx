@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { ExternalLink, PackageSearch, Receipt, Truck } from 'lucide-react';
+import { ExternalLink, MapPin, PackageSearch, Receipt, Truck, User } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
@@ -13,6 +13,8 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { resolveOrderId, useOrder } from '@/features/orders/api';
+import { OrderStatusBadge } from '@/features/orders/status-badge';
 import { ScopedAdminBanner } from '@/features/scoped-admin/ScopedAdminBanner';
 import { formatDateTime, formatInr } from '@/lib/format';
 import { ApiError } from '@/types/api';
@@ -274,14 +276,42 @@ const RatePanel = () => {
 // ─── Create shipment ──────────────────────────────────────────────────────
 
 const CreateShipmentPanel = () => {
-  const [orderId, setOrderId] = useState('');
+  // What the admin types — a human order number (BD-…) or a raw order id.
+  const [orderRef, setOrderRef] = useState('');
+  // The resolved Mongo id, set once a lookup succeeds. Only this is sent to the
+  // carrier — it is never surfaced in the UI.
+  const [resolvedId, setResolvedId] = useState<string | null>(null);
+  const [lookupError, setLookupError] = useState<string | null>(null);
+  const [looking, setLooking] = useState(false);
+
+  const order = useOrder(resolvedId ?? undefined);
   const create = useCreateShipment();
 
-  const onSubmit = (e: FormEvent) => {
+  const lookup = async (e: FormEvent) => {
     e.preventDefault();
-    if (!orderId.trim()) return;
-    create.mutate(orderId.trim());
+    const ref = orderRef.trim();
+    if (!ref) return;
+    setLookupError(null);
+    setResolvedId(null);
+    setLooking(true);
+    try {
+      const id = await resolveOrderId(ref);
+      setResolvedId(id);
+    } catch (err) {
+      setLookupError(
+        err instanceof ApiError ? err.message : 'No order found for that number',
+      );
+    } finally {
+      setLooking(false);
+    }
   };
+
+  const dispatch = () => {
+    if (!resolvedId) return;
+    create.mutate(resolvedId);
+  };
+
+  const o = order.data;
 
   return (
     <Card>
@@ -291,33 +321,81 @@ const CreateShipmentPanel = () => {
           Push shipment to carrier
         </CardTitle>
         <CardDescription>
-          For an order in PACKED status with no shipment yet: hands the order to Delhivery and
-          stamps the shipment id + tracking URL onto it.
+          Look up an order by its number (BD-…), confirm the destination, then hand it to
+          Delhivery. Works for a PACKED order that has no shipment yet.
         </CardDescription>
       </CardHeader>
-      <CardContent>
-        <form onSubmit={onSubmit} className="flex flex-wrap items-end gap-3">
+      <CardContent className="space-y-4">
+        <form onSubmit={lookup} className="flex flex-wrap items-end gap-3">
           <div className="flex-1 space-y-1.5 min-w-[260px]">
-            <Label htmlFor="create-order">Order id</Label>
+            <Label htmlFor="create-order">Order number</Label>
             <Input
               id="create-order"
-              value={orderId}
-              onChange={(e) => setOrderId(e.target.value)}
-              placeholder="paste the Mongo order id"
+              value={orderRef}
+              onChange={(e) => {
+                setOrderRef(e.target.value);
+                setResolvedId(null);
+                setLookupError(null);
+              }}
+              placeholder="e.g. BD-MP6NN7XL-00CA7F"
             />
           </div>
-          <Button type="submit" disabled={create.isPending}>
-            {create.isPending ? 'Creating…' : 'Create shipment'}
+          <Button type="submit" variant="outline" disabled={looking || !orderRef.trim()}>
+            {looking ? 'Looking up…' : 'Look up order'}
           </Button>
         </form>
 
+        {lookupError && <p className="text-sm text-destructive">{lookupError}</p>}
+
+        {resolvedId && order.isLoading && <Skeleton className="h-28 w-full" />}
+
+        {o && (
+          <div className="space-y-3 rounded-md border border-border bg-secondary/30 p-4">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="font-mono text-sm font-semibold">{o.orderNumber}</span>
+              <OrderStatusBadge status={o.status} />
+              <Badge variant="muted">{o.payment.mode}</Badge>
+              {o.delhiveryShipmentId && (
+                <Badge variant="warning">Shipment already exists</Badge>
+              )}
+            </div>
+            <div className="grid gap-2 text-sm sm:grid-cols-2">
+              <div className="flex items-start gap-2">
+                <User className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                <div>
+                  <div className="font-medium">{o.shippingAddress.name}</div>
+                  <div className="text-xs text-muted-foreground">
+                    {o.shippingAddress.phone}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-start gap-2">
+                <MapPin className="mt-0.5 h-4 w-4 text-muted-foreground" />
+                <div className="text-xs text-muted-foreground">
+                  {o.shippingAddress.city}, {o.shippingAddress.state} —{' '}
+                  {o.shippingAddress.pincode}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center justify-between border-t border-border pt-3">
+              <span className="text-xs text-muted-foreground">
+                {o.items.length} item{o.items.length === 1 ? '' : 's'} ·{' '}
+                {formatInr(o.totalInr)}
+              </span>
+              <Button onClick={dispatch} disabled={create.isPending}>
+                {create.isPending ? 'Creating…' : 'Create shipment'}
+              </Button>
+            </div>
+          </div>
+        )}
+
         {create.error && (
-          <p className="mt-3 text-sm text-destructive">
+          <p className="text-sm text-destructive">
             {create.error instanceof ApiError ? create.error.message : 'Create failed'}
           </p>
         )}
         {create.data && (
-          <div className="mt-3 rounded-md bg-emerald-50 p-3 text-sm text-emerald-900">
+          <div className="rounded-md bg-emerald-50 p-3 text-sm text-emerald-900">
             Created shipment <span className="font-mono">{create.data.shipmentId}</span> · status{' '}
             {create.data.status}
             {create.data.trackingUrl && (

@@ -55,7 +55,7 @@ export const SellersListPage = () => {
   const canDirectRegister =
     user?.role === UserRole.SUPER_ADMIN ||
     user?.role === UserRole.SUB_SUPER_ADMIN ||
-    user?.role === UserRole.REGIONAL_ADMIN;
+    user?.role === UserRole.CLUSTER_ADMIN;
   const [registerOpen, setRegisterOpen] = useState(false);
 
   // The backend doesn't expose a name/pincode search on this endpoint yet;
