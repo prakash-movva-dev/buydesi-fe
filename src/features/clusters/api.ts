@@ -95,3 +95,22 @@ export const useUpdateCluster = () => {
     },
   });
 };
+
+// ─── Cluster delegated admins (Category + Support) — SOW 4.2 ─────────────────
+import type { SafeUser } from '@/types/api';
+
+export const useClusterAdmins = (id: string | undefined) =>
+  useQuery({
+    queryKey: ['clusters', 'admins', id],
+    queryFn: () => api.get<SafeUser[]>(`/clusters/${id}/admins`),
+    enabled: Boolean(id),
+  });
+
+export const useRemoveClusterAdmin = (id: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (userId: string) =>
+      api.delete<{ userId: string }>(`/clusters/${id}/admins/${userId}`),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['clusters', 'admins', id] }),
+  });
+};

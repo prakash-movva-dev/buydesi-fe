@@ -318,7 +318,12 @@ export const navSections: NavSection[] = [
     items: [
       { label: 'Promoters', path: '/admin/promoters', icon: Gift, roles: OPS_ADMINS },
       { label: 'Promotions', path: '/admin/promotions', icon: Megaphone, roles: OPS_ADMINS },
-      { label: 'Clusters', path: '/admin/clusters', icon: Map, roles: OPS_ADMINS },
+      {
+        label: 'Clusters',
+        path: '/admin/clusters',
+        icon: Map,
+        roles: [...OPS_ADMINS, UserRole.REGIONAL_ADMIN],
+      },
       {
         label: 'Regions',
         path: '/admin/regions',
