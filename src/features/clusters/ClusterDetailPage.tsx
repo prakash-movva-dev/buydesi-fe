@@ -16,8 +16,10 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
+import { UserPicker } from '@/components/pickers/UserPicker';
 import { useAdminCreateUser } from '@/features/users/api';
-import { formatInr } from '@/lib/format';
+import { useAuth } from '@/lib/auth';
+import { formatDate, formatInr } from '@/lib/format';
 import { ApiError, UserRole } from '@/types/api';
 import {
   useCluster,
@@ -25,8 +27,9 @@ import {
   useClusterPerformance,
   useClusterStats,
   useRemoveClusterAdmin,
+  useUpdateCluster,
 } from './api';
-import type { ClusterStatus } from './types';
+import type { ClusterStatus, SafeCluster } from './types';
 
 const statusVariant: Record<ClusterStatus, 'success' | 'warning' | 'muted'> = {
   active: 'success',
@@ -116,7 +119,9 @@ export const ClusterDetailPage = () => {
             </CardContent>
           </Card>
 
-          <ClusterAdminsCard clusterId={id ?? ''} />
+          <ClusterDetailsCard cluster={c} />
+
+          <ClusterAdminsCard cluster={c} />
 
           <Card>
             <CardHeader>
@@ -170,14 +175,64 @@ const Stat = ({ label, value }: { label: string; value: string }) => (
   </div>
 );
 
+const ClusterDetailsCard = ({ cluster }: { cluster: SafeCluster }) => {
+  const rows: Array<[string, string]> = [
+    ['Cluster code', cluster.code || '—'],
+    ['Launch date', cluster.launchDate ? formatDate(cluster.launchDate) : '—'],
+    ['Contact phone', cluster.contactPhone || '—'],
+    ['Contact email', cluster.contactEmail || '—'],
+    ['Pickup hub PIN', cluster.hubPincode || '—'],
+    ['Cash on Delivery', cluster.codAllowed ? 'Allowed' : 'Disabled'],
+    ['Min order value', cluster.minOrderValueInr != null ? formatInr(cluster.minOrderValueInr) : '—'],
+    ['PIN codes served', String(cluster.pinCodes.length)],
+  ];
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">Details</CardTitle>
+        <CardDescription>Cluster profile & operations.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
+          {rows.map(([label, value]) => (
+            <div key={label}>
+              <dt className="text-xs text-muted-foreground">{label}</dt>
+              <dd className="text-sm font-medium">{value}</dd>
+            </div>
+          ))}
+        </dl>
+        {cluster.hubAddress && (
+          <div>
+            <div className="text-xs text-muted-foreground">Pickup hub address</div>
+            <div className="text-sm">{cluster.hubAddress}</div>
+          </div>
+        )}
+        {cluster.description && (
+          <div>
+            <div className="text-xs text-muted-foreground">Description</div>
+            <p className="whitespace-pre-wrap text-sm">{cluster.description}</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
 // ─── Cluster delegated admins (Category + Support) — SOW 4.2 ─────────────────
 
 type NewAdminRole = 'CATEGORY_ADMIN' | 'SUPPORT_ADMIN';
 
-const ClusterAdminsCard = ({ clusterId }: { clusterId: string }) => {
+const ClusterAdminsCard = ({ cluster }: { cluster: SafeCluster }) => {
+  const clusterId = cluster.id;
+  const { user } = useAuth();
   const admins = useClusterAdmins(clusterId || undefined);
   const removeMut = useRemoveClusterAdmin(clusterId);
+  const updateCluster = useUpdateCluster();
   const [adding, setAdding] = useState<NewAdminRole | null>(null);
+
+  // Only super-tier can (re)assign the lead Cluster Admin (cluster mutations).
+  const canSetLead =
+    user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.SUB_SUPER_ADMIN;
 
   const rows = admins.data ?? [];
   const category = rows.filter((u) => u.role === UserRole.CATEGORY_ADMIN);
@@ -189,7 +244,7 @@ const ClusterAdminsCard = ({ clusterId }: { clusterId: string }) => {
         <div>
           <CardTitle className="text-base">Cluster admins</CardTitle>
           <CardDescription>
-            Category & Support admins appointed to this cluster. They report to the Cluster Admin.
+            The lead Cluster Admin, plus the Category & Support admins who report to them.
           </CardDescription>
         </div>
         <div className="flex gap-2">
@@ -204,6 +259,33 @@ const ClusterAdminsCard = ({ clusterId }: { clusterId: string }) => {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* Lead Cluster Admin */}
+        <div>
+          <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <ShieldCheck className="h-4 w-4 text-amber-600" />
+            Lead Cluster Admin
+          </div>
+          {canSetLead ? (
+            <UserPicker
+              role={UserRole.CLUSTER_ADMIN}
+              value={cluster.adminId}
+              onChange={(uid) =>
+                updateCluster.mutate({ id: clusterId, patch: { adminId: uid ?? null } })
+              }
+              placeholder="Assign the lead Cluster Admin…"
+            />
+          ) : cluster.adminId ? (
+            <p className="text-sm">Assigned.</p>
+          ) : (
+            <p className="text-sm text-muted-foreground">Not assigned yet.</p>
+          )}
+          {updateCluster.isError && (
+            <p className="mt-1 text-xs text-destructive">
+              {(updateCluster.error as Error)?.message ?? 'Failed to update'}
+            </p>
+          )}
+        </div>
+
         {admins.isLoading && <Skeleton className="h-16 w-full" />}
         {admins.isError && (
           <p className="text-sm text-destructive">
