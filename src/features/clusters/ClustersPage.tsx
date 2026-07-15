@@ -1,23 +1,22 @@
 import { useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Pencil, Plus } from 'lucide-react';
+import { Link as RouterLink, useSearchParams } from 'react-router-dom';
+import { Pencil, Plus } from 'lucide-react';
 import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
+import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
-import Typography from '@mui/material/Typography';
+import Table from '@mui/material/Table';
+import MenuItem from '@mui/material/MenuItem';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TextField from '@mui/material/TextField';
+import IconButton from '@mui/material/IconButton';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
-import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
 import { useAuth } from '@/lib/auth';
 import { UserRole } from '@/types/api';
 import { useClustersList } from './api';
@@ -37,31 +36,31 @@ const statusVariant: Record<ClusterStatus, 'success' | 'warning' | 'muted'> = {
   inactive: 'muted',
 };
 
-const PAGE_SIZE = 25;
+const DEFAULT_LIMIT = 25;
 
 export const ClustersPage = () => {
   const { user } = useAuth();
-  // Super & Sub-Super Admin can create/edit clusters (story 2.1 / 2.2).
   const isSuper =
     user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.SUB_SUPER_ADMIN;
   const [searchParams, setSearchParams] = useSearchParams();
   const status = (searchParams.get('status') as ClusterStatus | null) ?? '';
   const stateFilter = searchParams.get('state') ?? '';
   const page = Math.max(1, Number(searchParams.get('page') ?? 1));
+  const limit = Math.max(5, Number(searchParams.get('limit') ?? DEFAULT_LIMIT));
 
   const query = useMemo<ClustersListQuery>(
     () => ({
       status: status || undefined,
       state: stateFilter || undefined,
       page,
-      limit: PAGE_SIZE,
+      limit,
     }),
-    [status, stateFilter, page],
+    [status, stateFilter, page, limit],
   );
 
   const { data, isLoading, isError, error } = useClustersList(query);
   const total = data?.meta.total ?? 0;
-  const pageCount = total > 0 ? Math.ceil(total / PAGE_SIZE) : 1;
+  const items = data?.items ?? [];
 
   const setParam = (next: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams);
@@ -75,6 +74,18 @@ export const ClustersPage = () => {
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<SafeCluster | null>(null);
+
+  const head = [
+    { id: 'name', label: 'Name' },
+    { id: 'location', label: 'State / District' },
+    { id: 'status', label: 'Status' },
+    { id: 'pins', label: 'Pin codes', align: 'right' as const },
+    { id: 'cats', label: 'Active categories', align: 'right' as const },
+    { id: 'transport', label: 'Transport default' },
+    { id: 'admin', label: 'Cluster admin' },
+    { id: 'view', label: '' },
+    ...(isSuper ? [{ id: 'edit', label: '' }] : []),
+  ];
 
   return (
     <Stack spacing={3}>
@@ -96,145 +107,110 @@ export const ClustersPage = () => {
         }
       />
 
-      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
-        <Select
-          value={status}
-          onChange={(e) => setParam({ status: e.target.value })}
-          className="w-44"
+      <Card>
+        <Stack
+          direction="row"
+          spacing={2}
+          flexWrap="wrap"
+          alignItems="center"
+          sx={{ p: 2.5 }}
         >
-          {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-        <Input
-          value={stateFilter}
-          onChange={(e) => setParam({ state: e.target.value })}
-          placeholder="Filter by state"
-          className="w-56"
-        />
-      </Stack>
+          <TextField
+            select
+            label="Status"
+            value={status}
+            onChange={(e) => setParam({ status: e.target.value })}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 200 }}
+          >
+            {STATUS_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            label="State"
+            value={stateFilter}
+            onChange={(e) => setParam({ state: e.target.value })}
+            placeholder="Filter by state"
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 240 }}
+          />
+        </Stack>
 
-      {isLoading && <Skeleton className="h-40 w-full" />}
-      {isError && (
-        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
-          {error instanceof Error ? error.message : 'Failed to load clusters'}
-        </div>
-      )}
+        {isError && (
+          <Box sx={{ px: 2.5, pb: 2, color: 'error.main', typography: 'body2' }}>
+            {error instanceof Error ? error.message : 'Failed to load clusters'}
+          </Box>
+        )}
 
-      {!isLoading && !isError && (
-        <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>State / District</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Pin codes</TableHead>
-                <TableHead className="text-right">Active categories</TableHead>
-                <TableHead>Transport default</TableHead>
-                <TableHead>Cluster admin</TableHead>
-                <TableHead className="w-px" />
-                {isSuper && <TableHead className="w-px" />}
-              </TableRow>
-            </TableHeader>
+        <Scrollbar>
+          <Table sx={{ minWidth: 960 }}>
+            <TableHeadCustom headLabel={head} />
             <TableBody>
-              {(data?.items ?? []).map((c) => (
-                <TableRow key={c.id}>
-                  <TableCell className="font-medium">
-                    <Link to={`/admin/clusters/${c.id}`} className="hover:underline">
+              {items.map((c) => (
+                <TableRow key={c.id} hover>
+                  <TableCell sx={{ fontWeight: 600 }}>
+                    <Link component={RouterLink} to={`/admin/clusters/${c.id}`} color="inherit">
                       {c.name}
                     </Link>
                   </TableCell>
-                  <TableCell className="text-xs">
-                    <div>{c.state}</div>
-                    <div className="text-muted-foreground">{c.district}</div>
+                  <TableCell>
+                    <Box>{c.state}</Box>
+                    <Box sx={{ color: 'text.secondary', typography: 'caption' }}>{c.district}</Box>
                   </TableCell>
                   <TableCell>
                     <Badge variant={statusVariant[c.status]}>{c.status}</Badge>
                   </TableCell>
-                  <TableCell className="text-right">{c.pinCodes.length}</TableCell>
-                  <TableCell className="text-right">{c.activeCategories.length}</TableCell>
+                  <TableCell align="right">{c.pinCodes.length}</TableCell>
+                  <TableCell align="right">{c.activeCategories.length}</TableCell>
                   <TableCell>
                     <Badge variant="muted">{c.defaultTradeTransport}</Badge>
                   </TableCell>
-                  <TableCell className="font-mono text-xs">
+                  <TableCell sx={{ fontFamily: 'monospace', typography: 'caption' }}>
                     {c.adminId ? c.adminId.slice(-10) : '— unassigned'}
                   </TableCell>
                   <TableCell>
                     <Link
+                      component={RouterLink}
                       to={`/admin/clusters/${c.id}`}
-                      className="inline-flex h-8 items-center rounded-md px-3 text-sm font-medium text-primary hover:bg-accent hover:text-accent-foreground"
+                      variant="subtitle2"
                     >
                       View
                     </Link>
                   </TableCell>
                   {isSuper && (
-                    <TableCell>
-                      <Button
-                        size="sm"
-                        variant="ghost"
+                    <TableCell align="right">
+                      <IconButton
+                        size="small"
                         onClick={() => {
                           setEditing(c);
                           setDialogOpen(true);
                         }}
                       >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
+                        <Pencil className="h-4 w-4" />
+                      </IconButton>
                     </TableCell>
                   )}
                 </TableRow>
               ))}
-              {(data?.items.length ?? 0) === 0 && (
-                <TableRow>
-                  <TableCell colSpan={9} className="py-12 text-center text-sm text-muted-foreground">
-                    No clusters match the current filter.
-                  </TableCell>
-                </TableRow>
-              )}
+              <TableNoData notFound={!isLoading && items.length === 0} />
             </TableBody>
           </Table>
+        </Scrollbar>
 
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              {data?.items.length ?? 0} of {total} · page {page} / {pageCount}
-            </Typography>
-            <Stack direction="row" spacing={1}>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.max(1, page - 1)) })}
-                disabled={page <= 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Prev
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.min(pageCount, page + 1)) })}
-                disabled={page >= pageCount}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </Stack>
-          </Box>
-        </>
-      )}
+        <TablePaginationCustom
+          count={total}
+          page={page - 1}
+          rowsPerPage={limit}
+          rowsPerPageOptions={[10, 25, 50]}
+          onPageChange={(_e, newPage) => setParam({ page: String(newPage + 1) })}
+          onRowsPerPageChange={(e) => setParam({ limit: e.target.value, page: '1' })}
+        />
+      </Card>
 
-      <ClusterFormDialog
-        open={dialogOpen}
-        editing={editing}
-        onClose={() => setDialogOpen(false)}
-      />
+      <ClusterFormDialog open={dialogOpen} editing={editing} onClose={() => setDialogOpen(false)} />
     </Stack>
   );
 };
