@@ -9,8 +9,10 @@ import {
   Trash2,
   XCircle,
 } from 'lucide-react';
+import Stack from '@mui/material/Stack';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import {
   Card,
@@ -143,14 +145,11 @@ export const TradeSettingsPage = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Trade settings</h1>
-        <p className="text-muted-foreground">
-          Configuration for the inter-cluster B2B marketplace (Buy Desi Trade). These values
-          apply globally to every trade order placed across clusters.
-        </p>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Trade settings"
+        description="Configuration for the inter-cluster B2B marketplace (Buy Desi Trade). These values apply globally to every trade order placed across clusters."
+      />
 
       <Card>
         <CardHeader>
@@ -300,7 +299,7 @@ export const TradeSettingsPage = () => {
       </Card>
 
       <ListingReviewPanel />
-    </div>
+    </Stack>
   );
 };
 

@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { CheckCircle2, Copy, MessageCircle, Sparkles } from 'lucide-react';
+import Stack from '@mui/material/Stack';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
 import {
   Card,
   CardContent,
@@ -68,14 +70,11 @@ export const PromoterSharePage = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Share kit</h1>
-        <p className="text-muted-foreground">
-          Everything you need to spread your code — a QR for posters, message templates for
-          WhatsApp, and shortcuts to copy the link.
-        </p>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Share kit"
+        description="Everything you need to spread your code — a QR for posters, message templates for WhatsApp, and shortcuts to copy the link."
+      />
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
@@ -212,6 +211,6 @@ export const PromoterSharePage = () => {
           </ul>
         </CardContent>
       </Card>
-    </div>
+    </Stack>
   );
 };

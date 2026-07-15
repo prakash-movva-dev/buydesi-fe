@@ -12,8 +12,10 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-react';
+import Stack from '@mui/material/Stack';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
 import {
   Card,
   CardContent,
@@ -93,28 +95,23 @@ export const PromoterDashboard = () => {
     d.totalDiscountInr > 0 ? d.totalOrderValueInr / d.totalDiscountInr : null;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {`Hi, ${user?.name.split(' ')[0] ?? d.name}`}
-          </h1>
-          <p className="text-muted-foreground">
-            Your referral performance at a glance. Share your code to drive sign-ups and
-            checkouts on Buy Desi.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
-            <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-          <Button onClick={() => navigate('/promoter/share')}>
-            <Share2 className="h-4 w-4" />
-            Share kit
-          </Button>
-        </div>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title={`Hi, ${user?.name.split(' ')[0] ?? d.name}`}
+        description="Your referral performance at a glance. Share your code to drive sign-ups and checkouts on Buy Desi."
+        action={
+          <>
+            <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+              <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+            <Button onClick={() => navigate('/promoter/share')}>
+              <Share2 className="h-4 w-4" />
+              Share kit
+            </Button>
+          </>
+        }
+      />
 
       <Card>
         <CardHeader className="pb-3">
@@ -280,7 +277,7 @@ export const PromoterDashboard = () => {
           />
         </CardContent>
       </Card>
-    </div>
+    </Stack>
   );
 };
 
