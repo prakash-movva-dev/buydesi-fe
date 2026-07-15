@@ -1,5 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -105,11 +108,11 @@ export const SellerDetailPage = () => {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
+      <Stack spacing={2}>
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-40 w-full" />
         <Skeleton className="h-40 w-full" />
-      </div>
+      </Stack>
     );
   }
 
@@ -144,20 +147,20 @@ export const SellerDetailPage = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center gap-2">
+    <Stack spacing={3}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
         <Button variant="ghost" size="sm" onClick={() => navigate('/admin/sellers')}>
           <ArrowLeft className="h-4 w-4" />
           Back to sellers
         </Button>
-      </div>
+      </Box>
 
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{seller.farmName}</h1>
-          <p className="text-sm text-muted-foreground">
+          <Typography variant="h4" component="h1">{seller.farmName}</Typography>
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             ID {seller.id} · submitted {formatDate(seller.createdAt)}
-          </p>
+          </Typography>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <SellerStatusBadge status={seller.status} />
             {seller.verifiedBadge && (
@@ -169,7 +172,7 @@ export const SellerDetailPage = () => {
             {seller.isLive && <Badge variant="success">Live</Badge>}
           </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
           {reviewable && (
             <>
               <Button onClick={() => setDialogAction('approve')}>
@@ -214,10 +217,10 @@ export const SellerDetailPage = () => {
               </Button>
             </>
           )}
-        </div>
-      </div>
+        </Box>
+      </Box>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', lg: 'repeat(3, 1fr)' } }}>
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Farm & business</CardTitle>
@@ -342,7 +345,7 @@ export const SellerDetailPage = () => {
             />
           </CardContent>
         </Card>
-      </div>
+      </Box>
 
       <Card>
         <CardHeader>
@@ -353,11 +356,17 @@ export const SellerDetailPage = () => {
           {seller.kycDocuments.length === 0 ? (
             <p className="text-sm text-muted-foreground">No documents uploaded.</p>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 2,
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' },
+              }}
+            >
               {seller.kycDocuments.map((doc) => (
                 <KycDocCard key={`${doc.type}-${doc.s3Key}`} sellerId={seller.id} doc={doc} />
               ))}
-            </div>
+            </Box>
           )}
         </CardContent>
       </Card>
@@ -482,7 +491,7 @@ export const SellerDetailPage = () => {
         onClose={() => setDisciplinaryAction(null)}
         onSubmit={submitDisciplinary}
       />
-    </div>
+    </Stack>
   );
 };
 

@@ -1,7 +1,12 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { ArrowUpDown, Calendar, Download, Play } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { ClusterPicker } from '@/components/pickers/ClusterPicker';
 import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { StatCard } from '@/components/ui/StatCard';
 import {
   Card,
   CardContent,
@@ -126,15 +131,11 @@ export const ReportsPage = () => {
         : null;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Reports</h1>
-        <p className="text-muted-foreground">
-          Aggregated totals across orders, payouts and support volume for a chosen date range.
-          Cluster admins are auto-scoped to their cluster; super admin can pin to a specific
-          cluster or leave blank for platform-wide.
-        </p>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Reports"
+        description="Aggregated totals across orders, payouts and support volume for a chosen date range. Cluster admins are auto-scoped to their cluster; super admin can pin to a specific cluster or leave blank for platform-wide."
+      />
 
       <Card>
         <CardHeader>
@@ -195,56 +196,66 @@ export const ReportsPage = () => {
       </Card>
 
       {run.isPending && (
-        <div className="grid gap-4 sm:grid-cols-3">
+        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: 'repeat(3,1fr)' } }}>
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} className="h-32" />
           ))}
-        </div>
+        </Box>
       )}
 
       {result && (
         <>
-          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+          <Stack
+            direction="row"
+            spacing={1}
+            flexWrap="wrap"
+            alignItems="center"
+            sx={{ color: 'text.secondary', fontSize: 14 }}
+          >
             <span>
               {result.range.from.slice(0, 10)} → {result.range.to.slice(0, 10)}
             </span>
             <span>·</span>
             {result.scope.clusterName ? (
-              <span className="font-medium text-foreground">
+              <Typography component="span" variant="body2" sx={{ fontWeight: 600, color: 'text.primary' }}>
                 Cluster: {result.scope.clusterName}
-              </span>
+              </Typography>
             ) : (
               <span>All clusters (platform-wide)</span>
             )}
-          </div>
+          </Stack>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <MetricCard
+          <Box
+            sx={{
+              display: 'grid',
+              gap: 2,
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2,1fr)', lg: 'repeat(3,1fr)' },
+            }}
+          >
+            <StatCard
               label="Orders placed"
               value={String(result.orders.count)}
               secondary={`${result.orders.cancelledCount} cancelled`}
             />
-            <MetricCard label="GMV (₹)" value={formatInr(result.orders.gmvInr)} />
-            <MetricCard
+            <StatCard label="GMV (₹)" value={formatInr(result.orders.gmvInr)} />
+            <StatCard
               label="Payouts paid"
               value={String(result.payouts.count)}
               secondary={`Net ${formatInr(result.payouts.paidNetInr)}`}
             />
-            <MetricCard
+            <StatCard
               label="Support tickets opened"
               value={String(result.support.ticketsOpened)}
             />
-            <MetricCard
+            <StatCard
               label="Support tickets resolved"
               value={String(result.support.ticketsResolved)}
             />
-            <MetricCard label="Sellers" value={String(result.sellers)} />
-            <MetricCard label="Live listings" value={String(result.listings)} />
-            <MetricCard
+            <StatCard label="Sellers" value={String(result.sellers)} />
+            <StatCard label="Live listings" value={String(result.listings)} />
+            <StatCard
               label="Avg delivery time"
-              value={
-                result.avgDeliveryHours != null ? `${result.avgDeliveryHours} hrs` : '—'
-              }
+              value={result.avgDeliveryHours != null ? `${result.avgDeliveryHours} hrs` : '—'}
             />
             <Card>
               <CardHeader className="pb-2">
@@ -256,7 +267,7 @@ export const ReportsPage = () => {
                 </CardTitle>
               </CardHeader>
             </Card>
-          </div>
+          </Box>
 
           <Card>
             <CardHeader className="pb-3">
@@ -376,24 +387,6 @@ export const ReportsPage = () => {
           </CardContent>
         </Card>
       )}
-    </div>
+    </Stack>
   );
 };
-
-const MetricCard = ({
-  label,
-  value,
-  secondary,
-}: {
-  label: string;
-  value: string;
-  secondary?: string;
-}) => (
-  <Card>
-    <CardHeader className="pb-2">
-      <CardDescription>{label}</CardDescription>
-      <CardTitle className="text-3xl">{value}</CardTitle>
-      {secondary && <p className="text-xs text-muted-foreground">{secondary}</p>}
-    </CardHeader>
-  </Card>
-);

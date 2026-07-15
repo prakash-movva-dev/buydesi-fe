@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Download, Map, Pencil, Plus, Trash2 } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
@@ -11,8 +13,10 @@ import {
 } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { StatCard } from '@/components/ui/StatCard';
 import {
   Table,
   TableBody,
@@ -40,20 +44,6 @@ const defaultFrom = (): string => {
 };
 
 const defaultTo = (): string => new Date().toISOString().slice(0, 10);
-
-interface TotalCardProps {
-  label: string;
-  value: string;
-}
-
-const TotalCard = ({ label, value }: TotalCardProps) => (
-  <Card>
-    <CardContent className="p-4">
-      <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="mt-1 text-2xl font-semibold">{value}</p>
-    </CardContent>
-  </Card>
-);
 
 export const RegionsPage = () => {
   const { user } = useAuth();
@@ -100,28 +90,24 @@ export const RegionsPage = () => {
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Regions</h1>
-          <p className="text-muted-foreground">
-            A region groups multiple clusters for oversight and aggregated performance
-            reporting. Grouping clusters here does not change each cluster's operational
-            scoping.
-          </p>
-        </div>
-        {canManage && (
-          <Button
-            onClick={() => {
-              setEditing(null);
-              setDialogOpen(true);
-            }}
-          >
-            <Plus className="h-4 w-4" />
-            New region
-          </Button>
-        )}
-      </div>
+    <Stack spacing={4}>
+      <PageHeader
+        title="Regions"
+        description="A region groups multiple clusters for oversight and aggregated performance reporting. Grouping clusters here does not change each cluster's operational scoping."
+        action={
+          canManage ? (
+            <Button
+              onClick={() => {
+                setEditing(null);
+                setDialogOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              New region
+            </Button>
+          ) : undefined
+        }
+      />
 
       {isLoading && <Skeleton className="h-40 w-full" />}
       {isError && (
@@ -205,7 +191,7 @@ export const RegionsPage = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
-          <div className="flex flex-wrap items-end gap-3">
+          <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="flex-end">
             <div className="space-y-1.5">
               <Label htmlFor="perf-region">Region</Label>
               <Select
@@ -250,7 +236,7 @@ export const RegionsPage = () => {
               <Download className="h-4 w-4" />
               {downloading ? 'Preparing…' : 'Download CSV'}
             </Button>
-          </div>
+          </Stack>
 
           {downloadError && <p className="text-sm text-destructive">{downloadError}</p>}
 
@@ -269,19 +255,29 @@ export const RegionsPage = () => {
 
           {perfRegionId && perf.data && (
             <>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                <TotalCard label="Sellers" value={String(perf.data.totals.sellers)} />
-                <TotalCard
+              <Box
+                sx={{
+                  display: 'grid',
+                  gap: 1.5,
+                  gridTemplateColumns: {
+                    xs: '1fr',
+                    sm: 'repeat(2, 1fr)',
+                    lg: 'repeat(5, 1fr)',
+                  },
+                }}
+              >
+                <StatCard label="Sellers" value={String(perf.data.totals.sellers)} />
+                <StatCard
                   label="Live listings"
                   value={String(perf.data.totals.liveListings)}
                 />
-                <TotalCard label="Orders" value={String(perf.data.totals.orders)} />
-                <TotalCard label="Revenue" value={formatInr(perf.data.totals.revenueInr)} />
-                <TotalCard
+                <StatCard label="Orders" value={String(perf.data.totals.orders)} />
+                <StatCard label="Revenue" value={formatInr(perf.data.totals.revenueInr)} />
+                <StatCard
                   label="Open tickets"
                   value={String(perf.data.totals.openTickets)}
                 />
-              </div>
+              </Box>
 
               <Table>
                 <TableHeader>
@@ -331,6 +327,6 @@ export const RegionsPage = () => {
         editing={editing}
         onClose={() => setDialogOpen(false)}
       />
-    </div>
+    </Stack>
   );
 };

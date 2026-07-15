@@ -1,6 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle2, ShieldCheck, Sprout } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { Button } from '@/components/ui/Button';
 import {
   Card,
@@ -159,8 +162,8 @@ export const SellerRegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-secondary/40 p-4">
-      <div className="mx-auto max-w-xl space-y-6 py-8">
+    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', p: 2 }}>
+      <Stack spacing={3} sx={{ maxWidth: 576, mx: 'auto', py: 4 }}>
         <Link
           to="/login"
           className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
@@ -169,23 +172,31 @@ export const SellerRegisterPage = () => {
           Back to sign in
         </Link>
 
-        <div className="flex items-center gap-2">
+        <Stack direction="row" spacing={1} alignItems="center">
           <Sprout className="h-7 w-7 text-primary" />
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Become a Buy Desi seller</h1>
-            <p className="text-sm text-muted-foreground">
+          <Box>
+            <Typography variant="h5" component="h1">
+              Become a Buy Desi seller
+            </Typography>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               Free to join. Quick mobile verification, then a one-time KYC for approval.
-            </p>
-          </div>
-        </div>
+            </Typography>
+          </Box>
+        </Stack>
 
-        <ol className="flex items-center gap-3 text-sm">
+        <Stack
+          direction="row"
+          spacing={1.5}
+          alignItems="center"
+          component="ol"
+          sx={{ m: 0, p: 0, listStyle: 'none' }}
+        >
           <StepPill n={1} label="Sign up" active={step === 1} done={step > 1} />
-          <span className="h-px flex-1 bg-border" />
+          <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
           <StepPill n={2} label="Verify mobile" active={step === 2} done={step > 2} />
-          <span className="h-px flex-1 bg-border" />
+          <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
           <StepPill n={3} label="Continue" active={step === 3} done={false} />
-        </ol>
+        </Stack>
 
         {step === 1 && (
           <Card>
@@ -390,8 +401,8 @@ export const SellerRegisterPage = () => {
             </CardHeader>
           </Card>
         )}
-      </div>
-    </div>
+      </Stack>
+    </Box>
   );
 };
 
@@ -406,26 +417,41 @@ const StepPill = ({
   active: boolean;
   done: boolean;
 }) => (
-  <li
-    className={`flex items-center gap-2 rounded-full px-3 py-1 ${
-      done
-        ? 'bg-emerald-100 text-emerald-700'
+  <Stack
+    direction="row"
+    spacing={1}
+    alignItems="center"
+    component="li"
+    sx={{
+      borderRadius: 5,
+      px: 1.5,
+      py: 0.5,
+      fontSize: '0.875rem',
+      ...(done
+        ? { bgcolor: 'success.light', color: 'success.dark' }
         : active
-          ? 'bg-primary/10 text-primary'
-          : 'bg-secondary text-muted-foreground'
-    }`}
+          ? { bgcolor: 'action.selected', color: 'primary.main' }
+          : { bgcolor: 'action.hover', color: 'text.secondary' }),
+    }}
   >
-    <span
-      className={`flex h-5 w-5 items-center justify-center rounded-full text-xs ${
-        done
-          ? 'bg-emerald-600 text-white'
+    <Box
+      sx={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        height: 20,
+        width: 20,
+        borderRadius: '50%',
+        fontSize: '0.75rem',
+        ...(done
+          ? { bgcolor: 'success.main', color: 'common.white' }
           : active
-            ? 'bg-primary text-primary-foreground'
-            : 'bg-muted'
-      }`}
+            ? { bgcolor: 'primary.main', color: 'primary.contrastText' }
+            : { bgcolor: 'action.disabledBackground' }),
+      }}
     >
       {done ? '✓' : n}
-    </span>
+    </Box>
     {label}
-  </li>
+  </Stack>
 );

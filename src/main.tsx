@@ -3,6 +3,11 @@ import { createRoot } from 'react-dom/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/lib/auth';
 import { AppRouter } from '@/routes/router';
+import { ThemeProvider } from '@/theme/theme-provider';
+import { MotionLazy } from '@/components/animate/motion-lazy';
+import { Snackbar } from '@/components/snackbar';
+import { SettingsDrawer, defaultSettings, SettingsProvider } from '@/components/settings';
+import './global.css';
 import './index.css';
 
 const queryClient = new QueryClient({
@@ -23,7 +28,15 @@ createRoot(rootElement).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <AppRouter />
+        <SettingsProvider settings={defaultSettings}>
+          <ThemeProvider>
+            <MotionLazy>
+              <Snackbar />
+              <SettingsDrawer />
+              <AppRouter />
+            </MotionLazy>
+          </ThemeProvider>
+        </SettingsProvider>
       </AuthProvider>
     </QueryClientProvider>
   </StrictMode>,

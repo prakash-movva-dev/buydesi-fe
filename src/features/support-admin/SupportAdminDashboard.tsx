@@ -12,10 +12,15 @@ import {
   Truck,
   UserCheck,
 } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { StatCard } from '@/components/ui/StatCard';
 import { useDashboardOverview } from '@/features/dashboard/api';
 import { resolveOrderId } from '@/features/orders/api';
 import {
@@ -93,21 +98,24 @@ export const SupportAdminDashboard = () => {
   const overCap = mineCount > maxClaimed;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {`Hi, ${user?.name.split(' ')[0] ?? 'Support'}`}
-          </h1>
-          <p className="text-muted-foreground">
-            Your triage cockpit. Claim from the unassigned queue, work your own list, escalate
-            what you can't resolve.
-          </p>
-        </div>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title={`Hi, ${user?.name.split(' ')[0] ?? 'Support'}`}
+        description="Your triage cockpit. Claim from the unassigned queue, work your own list, escalate what you can't resolve."
+      />
 
       {/* Hero metrics */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <Box
+        sx={{
+          display: 'grid',
+          gap: 2,
+          gridTemplateColumns: {
+            xs: '1fr',
+            sm: 'repeat(2,1fr)',
+            lg: 'repeat(4,1fr)',
+          },
+        }}
+      >
         <Metric
           label="My open tickets"
           value={myOpen.isLoading ? null : mineCount}
@@ -140,7 +148,7 @@ export const SupportAdminDashboard = () => {
           secondary={`${escalatedCount} escalated open`}
           tone="info"
         />
-      </div>
+      </Box>
 
       {/* Authority & caps card */}
       <Card>
@@ -150,7 +158,14 @@ export const SupportAdminDashboard = () => {
             Configured by platform admins. Above these, escalate to a super admin.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-3 text-sm sm:grid-cols-3">
+        <CardContent>
+          <Box
+            sx={{
+              display: 'grid',
+              gap: 1.5,
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(3,1fr)' },
+            }}
+          >
           <AuthorityCell
             label="Per-refund cap"
             value={settingsLoading ? '…' : inrFromPaise(refundCapPaise)}
@@ -163,6 +178,7 @@ export const SupportAdminDashboard = () => {
             label="Cross-cluster claim"
             value={settingsLoading ? '…' : canCrossCluster ? 'Allowed' : 'Restricted to your cluster'}
           />
+          </Box>
         </CardContent>
       </Card>
 
@@ -172,7 +188,18 @@ export const SupportAdminDashboard = () => {
           <CardTitle>Needs attention</CardTitle>
           <CardDescription>Pre-filtered queues. The number is the live count.</CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <CardContent>
+          <Box
+            sx={{
+              display: 'grid',
+              gap: 1.5,
+              gridTemplateColumns: {
+                xs: '1fr',
+                sm: 'repeat(2,1fr)',
+                lg: 'repeat(3,1fr)',
+              },
+            }}
+          >
           <ActionTile
             icon={Headset}
             label="My open tickets"
@@ -223,6 +250,7 @@ export const SupportAdminDashboard = () => {
             hint="Look up seller for context"
             onClick={() => navigate('/admin/sellers')}
           />
+          </Box>
         </CardContent>
       </Card>
 
@@ -241,7 +269,7 @@ export const SupportAdminDashboard = () => {
 
       {/* Recent activity from the platform overview, scoped to support actions */}
       <RecentSupportActivity />
-    </div>
+    </Stack>
   );
 };
 
@@ -252,34 +280,31 @@ interface MetricProps {
   tone: 'info' | 'warning' | 'success' | 'destructive';
 }
 
-const toneClasses: Record<MetricProps['tone'], string> = {
-  info: 'text-blue-700',
-  warning: 'text-amber-700',
-  success: 'text-emerald-700',
-  destructive: 'text-destructive',
-};
-
 const Metric = ({ label, value, secondary, tone }: MetricProps) => (
-  <Card>
-    <CardHeader className="pb-2">
-      <CardDescription>{label}</CardDescription>
-      {value === null ? (
-        <Skeleton className="h-9 w-20" />
-      ) : (
-        <CardTitle className={`text-3xl ${toneClasses[tone]}`}>{value}</CardTitle>
-      )}
-      {secondary !== null && (
-        <p className="text-xs text-muted-foreground">{secondary}</p>
-      )}
-    </CardHeader>
-  </Card>
+  <StatCard
+    label={label}
+    value={value}
+    loading={value === null}
+    secondary={secondary}
+    tone={tone}
+  />
 );
 
 const AuthorityCell = ({ label, value }: { label: string; value: string }) => (
-  <div className="rounded-md border border-border bg-secondary/30 p-3">
-    <div className="text-xs text-muted-foreground">{label}</div>
-    <div className="mt-1 font-semibold">{value}</div>
-  </div>
+  <Box
+    sx={{
+      borderRadius: 1,
+      border: 1,
+      borderColor: 'divider',
+      bgcolor: 'action.hover',
+      p: 1.5,
+    }}
+  >
+    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+      {label}
+    </Typography>
+    <Typography sx={{ mt: 0.5, fontWeight: 600 }}>{value}</Typography>
+  </Box>
 );
 
 interface ActionTileProps {
@@ -344,30 +369,38 @@ const OrderLookup = () => {
   };
 
   return (
-    <div className="space-y-2">
-      <form
-        className="flex flex-wrap items-center gap-2"
+    <Stack spacing={1}>
+      <Stack
+        direction="row"
+        spacing={1}
+        flexWrap="wrap"
+        alignItems="center"
+        component="form"
         onSubmit={(e) => {
           e.preventDefault();
           const v = (new FormData(e.currentTarget).get('orderId') as string) ?? '';
           void submit(v);
         }}
       >
-        <div className="relative flex-1 min-w-[16rem]">
+        <Box sx={{ position: 'relative', flex: 1, minWidth: '16rem' }}>
           <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <input
             name="orderId"
             placeholder="Paste an order id or order number"
             className="w-full rounded-md border border-input bg-background py-2 pl-8 pr-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           />
-        </div>
+        </Box>
         <Button type="submit" variant="outline" size="sm" disabled={pending}>
           {pending ? 'Opening…' : 'Open'}
           <ArrowRight className="h-4 w-4" />
         </Button>
-      </form>
-      {error && <p className="text-sm text-destructive">{error}</p>}
-    </div>
+      </Stack>
+      {error && (
+        <Typography variant="body2" sx={{ color: 'error.main' }}>
+          {error}
+        </Typography>
+      )}
+    </Stack>
   );
 };
 

@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import Stack from '@mui/material/Stack';
 import { ChevronLeft, ChevronRight, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useAuth } from '@/lib/auth';
@@ -87,27 +89,27 @@ export const SellersListPage = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Sellers</h1>
-          <p className="text-muted-foreground">
-            Onboarding queue and existing accounts. KYC and storefront review.
-          </p>
-        </div>
-        {canDirectRegister && (
-          <Button onClick={() => setRegisterOpen(true)}>
-            <UserPlus className="h-4 w-4" />
-            Direct register seller
-          </Button>
-        )}
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Sellers"
+        description="Onboarding queue and existing accounts. KYC and storefront review."
+        action={
+          <>
+            {canDirectRegister && (
+              <Button onClick={() => setRegisterOpen(true)}>
+                <UserPlus className="h-4 w-4" />
+                Direct register seller
+              </Button>
+            )}
+          </>
+        }
+      />
 
       <DirectRegisterSellerDialog open={registerOpen} onClose={() => setRegisterOpen(false)} />
 
       <ScopedAdminBanner />
 
-      <div className="flex flex-wrap items-center gap-3">
+      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
         <Select
           value={status}
           onChange={(e) => setStatus(e.target.value as '' | SellerStatus)}
@@ -127,14 +129,14 @@ export const SellersListPage = () => {
           onChange={(e) => setScrub(e.target.value)}
           className="h-10 w-96 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
-      </div>
+      </Stack>
 
       {isLoading && (
-        <div className="space-y-2">
+        <Stack spacing={1}>
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-12 w-full" />
           ))}
-        </div>
+        </Stack>
       )}
 
       {isError && (
@@ -206,11 +208,16 @@ export const SellersListPage = () => {
             </TableBody>
           </Table>
 
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+            sx={{ fontSize: 14, color: 'text.secondary' }}
+          >
             <span>
               Showing {visible.length} of {total} · page {page} / {pageCount}
             </span>
-            <div className="flex gap-2">
+            <Stack direction="row" spacing={1}>
               <Button
                 variant="outline"
                 size="sm"
@@ -229,10 +236,10 @@ export const SellersListPage = () => {
                 Next
                 <ChevronRight className="h-4 w-4" />
               </Button>
-            </div>
-          </div>
+            </Stack>
+          </Stack>
         </>
       )}
-    </div>
+    </Stack>
   );
 };

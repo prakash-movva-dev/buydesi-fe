@@ -16,6 +16,9 @@ import {
   Send,
   Truck,
 } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
@@ -26,6 +29,7 @@ import {
   CardTitle,
 } from '@/components/ui/Card';
 import { Dialog } from '@/components/ui/Dialog';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Label } from '@/components/ui/Label';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -99,11 +103,11 @@ export const TicketDetailPage = () => {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
+      <Stack spacing={2}>
         <Skeleton className="h-8 w-72" />
         <Skeleton className="h-40 w-full" />
         <Skeleton className="h-64 w-full" />
-      </div>
+      </Stack>
     );
   }
 
@@ -123,84 +127,88 @@ export const TicketDetailPage = () => {
   const canSchedulePickup = isActive && Boolean(ticket.orderId);
 
   return (
-    <div className="space-y-6">
-      <Button variant="ghost" size="sm" onClick={() => navigate('/admin/support')}>
-        <ArrowLeft className="h-4 w-4" />
-        Back to tickets
-      </Button>
+    <Stack spacing={3}>
+      <Box>
+        <Button variant="ghost" size="sm" onClick={() => navigate('/admin/support')}>
+          <ArrowLeft className="h-4 w-4" />
+          Back to tickets
+        </Button>
+      </Box>
 
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{ticket.ticketNumber}</h1>
-          <p className="mt-1 text-base">{ticket.subject}</p>
-          <p className="text-sm text-muted-foreground">
-            raised {formatDateTime(ticket.createdAt)} by {ticket.raiserRole.toLowerCase()}{' '}
-            {ticket.raisedBy}
-          </p>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <TicketStatusBadge status={ticket.status} />
-            <TicketLevelBadge level={ticket.escalationLevel} />
-            <TicketCategoryBadge category={ticket.category} />
-            {isAssignedToMe && <Badge variant="info">Assigned to me</Badge>}
-            {data.sla.responseBreached && (
-              <Badge variant="destructive">response SLA breached</Badge>
-            )}
-            {data.sla.resolutionBreached && (
-              <Badge variant="destructive">resolution SLA breached</Badge>
-            )}
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {isActive && !ticket.assignedTo && (
-            <Button onClick={() => setClaimOpen(true)}>
-              <Hand className="h-4 w-4" />
-              Claim
-            </Button>
+      <Stack spacing={2}>
+        <PageHeader
+          title={ticket.ticketNumber}
+          action={
+            <>
+              {isActive && !ticket.assignedTo && (
+                <Button onClick={() => setClaimOpen(true)}>
+                  <Hand className="h-4 w-4" />
+                  Claim
+                </Button>
+              )}
+              {isActive && ticket.assignedTo && (
+                <Button onClick={() => setResolveOpen(true)}>
+                  <CheckCircle2 className="h-4 w-4" />
+                  Resolve
+                </Button>
+              )}
+              {isActive && ticket.escalationLevel !== 'super' && (
+                <Button variant="outline" onClick={() => setEscalateOpen(true)}>
+                  <ArrowUpFromLine className="h-4 w-4" />
+                  Escalate
+                </Button>
+              )}
+              {canRefund && ticket.orderId && (
+                <Button variant="outline" onClick={() => setRefundOpen(true)}>
+                  <CircleDollarSign className="h-4 w-4" />
+                  Force refund
+                </Button>
+              )}
+              {canSchedulePickup && (
+                <Button
+                  variant="outline"
+                  onClick={() => reversePickup.mutate({ id: ticket.id })}
+                  disabled={reversePickup.isPending}
+                >
+                  <Truck className="h-4 w-4" />
+                  Reverse pickup
+                </Button>
+              )}
+              {isSuperTier && (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setOvrStatus(ticket.status);
+                    setOvrReason('');
+                    setOvrErr(null);
+                    setOverrideOpen(true);
+                  }}
+                >
+                  <Lock className="h-4 w-4" />
+                  Override
+                </Button>
+              )}
+            </>
+          }
+        />
+        <Typography variant="body1">{ticket.subject}</Typography>
+        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+          raised {formatDateTime(ticket.createdAt)} by {ticket.raiserRole.toLowerCase()}{' '}
+          {ticket.raisedBy}
+        </Typography>
+        <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
+          <TicketStatusBadge status={ticket.status} />
+          <TicketLevelBadge level={ticket.escalationLevel} />
+          <TicketCategoryBadge category={ticket.category} />
+          {isAssignedToMe && <Badge variant="info">Assigned to me</Badge>}
+          {data.sla.responseBreached && (
+            <Badge variant="destructive">response SLA breached</Badge>
           )}
-          {isActive && ticket.assignedTo && (
-            <Button onClick={() => setResolveOpen(true)}>
-              <CheckCircle2 className="h-4 w-4" />
-              Resolve
-            </Button>
+          {data.sla.resolutionBreached && (
+            <Badge variant="destructive">resolution SLA breached</Badge>
           )}
-          {isActive && ticket.escalationLevel !== 'super' && (
-            <Button variant="outline" onClick={() => setEscalateOpen(true)}>
-              <ArrowUpFromLine className="h-4 w-4" />
-              Escalate
-            </Button>
-          )}
-          {canRefund && ticket.orderId && (
-            <Button variant="outline" onClick={() => setRefundOpen(true)}>
-              <CircleDollarSign className="h-4 w-4" />
-              Force refund
-            </Button>
-          )}
-          {canSchedulePickup && (
-            <Button
-              variant="outline"
-              onClick={() => reversePickup.mutate({ id: ticket.id })}
-              disabled={reversePickup.isPending}
-            >
-              <Truck className="h-4 w-4" />
-              Reverse pickup
-            </Button>
-          )}
-          {isSuperTier && (
-            <Button
-              variant="outline"
-              onClick={() => {
-                setOvrStatus(ticket.status);
-                setOvrReason('');
-                setOvrErr(null);
-                setOverrideOpen(true);
-              }}
-            >
-              <Lock className="h-4 w-4" />
-              Override
-            </Button>
-          )}
-        </div>
-      </div>
+        </Stack>
+      </Stack>
 
       <Dialog
         open={overrideOpen}
@@ -422,7 +430,7 @@ export const TicketDetailPage = () => {
         ticketId={ticket.id}
         onClose={() => setRefundOpen(false)}
       />
-    </div>
+    </Stack>
   );
 };
 

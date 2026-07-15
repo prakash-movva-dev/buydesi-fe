@@ -7,6 +7,9 @@ import {
   Truck,
   XCircle,
 } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
@@ -74,7 +77,7 @@ export const TradeOrderDetailPage = () => {
     (o.status === 'PLACED' || o.status === 'SELLER_CONFIRMED') && (isSeller || isBuyer);
 
   return (
-    <div className="space-y-6">
+    <Stack spacing={3}>
       <Button variant="ghost" size="sm" onClick={() => navigate('/seller/trade/orders')}>
         <ArrowLeft className="h-4 w-4" />
         Back to trade orders
@@ -82,11 +85,11 @@ export const TradeOrderDetailPage = () => {
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{o.productName}</h1>
-          <p className="text-sm text-muted-foreground">
+          <Typography variant="h4" component="h1">{o.productName}</Typography>
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             placed {formatDateTime(o.createdAt)} ·{' '}
             {isSeller ? 'I am the seller' : isBuyer ? 'I am the buyer' : 'observer'}
-          </p>
+          </Typography>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <Badge variant={statusVariant[o.status]}>{o.status}</Badge>
             <Badge variant="muted">{o.paymentMode}</Badge>
@@ -140,8 +143,15 @@ export const TradeOrderDetailPage = () => {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+      <Box
+        sx={{
+          display: 'grid',
+          gap: 3,
+          gridTemplateColumns: { xs: '1fr', lg: 'repeat(3,1fr)' },
+        }}
+      >
+        <Box sx={{ gridColumn: { lg: 'span 2' } }}>
+        <Card>
           <CardHeader>
             <CardTitle>Order</CardTitle>
           </CardHeader>
@@ -160,6 +170,7 @@ export const TradeOrderDetailPage = () => {
             <Row label="Total" value={formatInr(o.totalInr)} bold />
           </CardContent>
         </Card>
+        </Box>
 
         <Card>
           <CardHeader>
@@ -188,7 +199,7 @@ export const TradeOrderDetailPage = () => {
             )}
           </CardContent>
         </Card>
-      </div>
+      </Box>
 
       {o.cancellation && (
         <Card>
@@ -224,7 +235,7 @@ export const TradeOrderDetailPage = () => {
           await cancel.mutateAsync({ id: o.id ?? o._id, reason });
         }}
       />
-    </div>
+    </Stack>
   );
 };
 

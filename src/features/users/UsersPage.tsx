@@ -1,12 +1,15 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Plus, ShieldOff, Users as UsersIcon } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
 import { ClusterPicker } from '@/components/pickers/ClusterPicker';
 import { useClustersList } from '@/features/clusters/api';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card, CardDescription, CardHeader } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import { useAuth } from '@/lib/auth';
 import { CreateUserDialog } from './CreateUserDialog';
@@ -133,23 +136,19 @@ export const UsersPage = () => {
     user?.role === UserRole.CLUSTER_ADMIN;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Users</h1>
-          <p className="text-muted-foreground">
-            All accounts on the platform — admins, sellers, buyers, promoters. Use status to
-            suspend or reactivate. Suspending now also revokes all active refresh-token
-            sessions; the 15-min access token is the longest residual access path.
-          </p>
-        </div>
-        {canCreate && (
-          <Button onClick={() => setCreateOpen(true)}>
-            <Plus className="h-4 w-4" />
-            Create user
-          </Button>
-        )}
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Users"
+        description="All accounts on the platform — admins, sellers, buyers, promoters. Use status to suspend or reactivate. Suspending now also revokes all active refresh-token sessions; the 15-min access token is the longest residual access path."
+        action={
+          canCreate ? (
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus className="h-4 w-4" />
+              Create user
+            </Button>
+          ) : undefined
+        }
+      />
 
       <Card>
         <CardHeader className="pb-3">
@@ -162,7 +161,13 @@ export const UsersPage = () => {
         </CardHeader>
       </Card>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <Box
+        sx={{
+          display: 'grid',
+          gap: 2,
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2,1fr)', lg: 'repeat(4,1fr)' },
+        }}
+      >
         <Select value={role} onChange={(e) => setParam({ role: e.target.value })}>
           {ROLE_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -187,7 +192,7 @@ export const UsersPage = () => {
           onChange={(e) => setScrub(e.target.value)}
           placeholder="Search by name / email / mobile"
         />
-      </div>
+      </Box>
 
       {isLoading && <Skeleton className="h-40 w-full" />}
       {isError && (
@@ -285,6 +290,6 @@ export const UsersPage = () => {
 
       <UserStatusDialog open={editing !== null} user={editing} onClose={() => setEditing(null)} />
       <CreateUserDialog open={createOpen} onClose={() => setCreateOpen(false)} />
-    </div>
+    </Stack>
   );
 };

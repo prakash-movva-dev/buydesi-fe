@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import Stack from '@mui/material/Stack';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
@@ -82,17 +84,15 @@ export const OrdersListPage = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Orders</h1>
-        <p className="text-muted-foreground">
-          Every order on the platform. Cluster admins see their cluster's sellers' orders only.
-        </p>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Orders"
+        description="Every order on the platform. Cluster admins see their cluster's sellers' orders only."
+      />
 
       <ScopedAdminBanner />
 
-      <div className="flex flex-wrap items-center gap-3">
+      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
         <Button
           variant={problem ? 'primary' : 'outline'}
           size="sm"
@@ -140,7 +140,7 @@ export const OrdersListPage = () => {
             className="pl-9"
           />
         </div>
-      </div>
+      </Stack>
 
       {isLoading && (
         <div className="space-y-2">
@@ -246,6 +246,6 @@ export const OrdersListPage = () => {
           </div>
         </>
       )}
-    </div>
+    </Stack>
   );
 };

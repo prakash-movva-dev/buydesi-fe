@@ -1,6 +1,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Play } from 'lucide-react';
+import Stack from '@mui/material/Stack';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
@@ -10,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/Card';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
@@ -80,18 +82,15 @@ export const MyPayoutsPage = () => {
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">My payouts</h1>
-        <p className="text-muted-foreground">
-          Funds released to your wallet after each order's return window closes, batched per
-          your preference.
-        </p>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="My payouts"
+        description="Funds released to your wallet after each order's return window closes, batched per your preference."
+      />
 
       <PayoutPreferenceCard />
 
-      <div className="flex flex-wrap items-center gap-3">
+      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
         <Select
           value={status}
           onChange={(e) => setParam({ status: e.target.value })}
@@ -114,7 +113,7 @@ export const MyPayoutsPage = () => {
             </option>
           ))}
         </Select>
-      </div>
+      </Stack>
 
       {isLoading && <Skeleton className="h-40 w-full" />}
 
@@ -247,7 +246,7 @@ export const MyPayoutsPage = () => {
           </div>
         </>
       )}
-    </div>
+    </Stack>
   );
 };
 

@@ -1,53 +1,88 @@
 import { forwardRef, type HTMLAttributes, type TdHTMLAttributes, type ThHTMLAttributes } from 'react';
-import { cn } from '@/lib/cn';
+import { styled } from '@mui/material/styles';
+
+import { varAlpha } from 'src/theme/styles';
+
+// Native <table> elements re-themed to the Minimal look. DOM shape is unchanged
+// so colSpan, className, and event handlers on rows/cells keep working.
+
+const Root = styled('table')(({ theme }) => ({
+  width: '100%',
+  captionSide: 'bottom',
+  borderCollapse: 'collapse',
+  fontSize: 14,
+  fontFamily: theme.typography.fontFamily,
+  color: theme.vars.palette.text.primary,
+}));
+
+const StyledThead = styled('thead')(({ theme }) => ({
+  backgroundColor: varAlpha(theme.vars.palette.grey['500Channel'], 0.08),
+}));
+
+const StyledTbody = styled('tbody')(({ theme }) => ({
+  '& tr:not(:last-of-type)': {
+    borderBottom: `1px dashed ${varAlpha(theme.vars.palette.grey['500Channel'], 0.24)}`,
+  },
+}));
+
+const StyledTr = styled('tr')(({ theme }) => ({
+  transition: theme.transitions.create('background-color'),
+  '&:hover': { backgroundColor: varAlpha(theme.vars.palette.grey['500Channel'], 0.06) },
+}));
+
+const StyledTh = styled('th')(({ theme }) => ({
+  height: 44,
+  padding: '0 16px',
+  textAlign: 'left',
+  verticalAlign: 'middle',
+  fontSize: 12,
+  fontWeight: 700,
+  textTransform: 'uppercase',
+  letterSpacing: '0.5px',
+  whiteSpace: 'nowrap',
+  color: theme.vars.palette.text.secondary,
+}));
+
+const StyledTd = styled('td')({
+  padding: '12px 16px',
+  verticalAlign: 'middle',
+});
 
 export const Table = forwardRef<HTMLTableElement, HTMLAttributes<HTMLTableElement>>(
-  ({ className, ...rest }, ref) => (
-    <div className="w-full overflow-auto rounded-lg border border-border bg-card">
-      <table ref={ref} className={cn('w-full caption-bottom text-sm', className)} {...rest} />
+  ({ children, ...rest }, ref) => (
+    <div
+      style={{ width: '100%', overflow: 'auto', borderRadius: 16 }}
+      className="mui-table-wrap"
+    >
+      <Root ref={ref} {...rest}>
+        {children}
+      </Root>
     </div>
   ),
 );
 Table.displayName = 'Table';
 
 export const TableHeader = forwardRef<HTMLTableSectionElement, HTMLAttributes<HTMLTableSectionElement>>(
-  ({ className, ...rest }, ref) => (
-    <thead ref={ref} className={cn('bg-secondary/40', className)} {...rest} />
-  ),
+  (props, ref) => <StyledThead ref={ref} {...props} />,
 );
 TableHeader.displayName = 'TableHeader';
 
 export const TableBody = forwardRef<HTMLTableSectionElement, HTMLAttributes<HTMLTableSectionElement>>(
-  ({ className, ...rest }, ref) => (
-    <tbody ref={ref} className={cn('divide-y divide-border', className)} {...rest} />
-  ),
+  (props, ref) => <StyledTbody ref={ref} {...props} />,
 );
 TableBody.displayName = 'TableBody';
 
 export const TableRow = forwardRef<HTMLTableRowElement, HTMLAttributes<HTMLTableRowElement>>(
-  ({ className, ...rest }, ref) => (
-    <tr ref={ref} className={cn('transition-colors hover:bg-secondary/30', className)} {...rest} />
-  ),
+  (props, ref) => <StyledTr ref={ref} {...props} />,
 );
 TableRow.displayName = 'TableRow';
 
 export const TableHead = forwardRef<HTMLTableCellElement, ThHTMLAttributes<HTMLTableCellElement>>(
-  ({ className, ...rest }, ref) => (
-    <th
-      ref={ref}
-      className={cn(
-        'h-10 px-4 text-left align-middle text-xs font-semibold uppercase tracking-wide text-muted-foreground',
-        className,
-      )}
-      {...rest}
-    />
-  ),
+  (props, ref) => <StyledTh ref={ref} {...props} />,
 );
 TableHead.displayName = 'TableHead';
 
 export const TableCell = forwardRef<HTMLTableCellElement, TdHTMLAttributes<HTMLTableCellElement>>(
-  ({ className, ...rest }, ref) => (
-    <td ref={ref} className={cn('px-4 py-3 align-middle', className)} {...rest} />
-  ),
+  (props, ref) => <StyledTd ref={ref} {...props} />,
 );
 TableCell.displayName = 'TableCell';

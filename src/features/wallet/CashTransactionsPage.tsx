@@ -1,9 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { CheckCircle2, ChevronLeft, ChevronRight, XCircle } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
 import { Label } from '@/components/ui/Label';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
@@ -77,16 +80,13 @@ export const CashTransactionsPage = () => {
   );
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Cash transactions</h1>
-        <p className="text-muted-foreground">
-          Offline trade settlements logged by sellers. Approving posts the wallet entry;
-          rejecting cancels it.
-        </p>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Cash transactions"
+        description="Offline trade settlements logged by sellers. Approving posts the wallet entry; rejecting cancels it."
+      />
 
-      <div className="flex flex-wrap items-center gap-3">
+      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
         <Select
           value={status}
           onChange={(e) => setParam({ status: e.target.value })}
@@ -109,7 +109,7 @@ export const CashTransactionsPage = () => {
             </option>
           ))}
         </Select>
-      </div>
+      </Stack>
 
       {isLoading && (
         <div className="space-y-2">
@@ -198,7 +198,15 @@ export const CashTransactionsPage = () => {
             </TableBody>
           </Table>
 
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: 14,
+              color: 'text.secondary',
+            }}
+          >
             <span>
               {data?.items.length ?? 0} of {total} · page {page} / {pageCount}
             </span>
@@ -222,7 +230,7 @@ export const CashTransactionsPage = () => {
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
-          </div>
+          </Box>
         </>
       )}
 
@@ -239,7 +247,7 @@ export const CashTransactionsPage = () => {
           }
         }}
       />
-    </div>
+    </Stack>
   );
 };
 

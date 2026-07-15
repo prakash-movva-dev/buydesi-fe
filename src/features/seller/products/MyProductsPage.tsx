@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Pencil, Plus, Search, Trash2, Upload } from 'lucide-react';
+import Stack from '@mui/material/Stack';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
@@ -80,28 +82,25 @@ export const MyProductsPage = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">My products</h1>
-          <p className="text-muted-foreground">
-            Manage your catalogue. New products start in PENDING and go LIVE after a Category
-            Admin approves them.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" onClick={() => setBulkOpen(true)}>
-            <Upload className="h-4 w-4" />
-            Bulk upload
-          </Button>
-          <Button onClick={() => navigate('/seller/products/new')}>
-            <Plus className="h-4 w-4" />
-            New product
-          </Button>
-        </div>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="My products"
+        description="Manage your catalogue. New products start in PENDING and go LIVE after a Category Admin approves them."
+        action={
+          <>
+            <Button variant="outline" onClick={() => setBulkOpen(true)}>
+              <Upload className="h-4 w-4" />
+              Bulk upload
+            </Button>
+            <Button onClick={() => navigate('/seller/products/new')}>
+              <Plus className="h-4 w-4" />
+              New product
+            </Button>
+          </>
+        }
+      />
 
-      <div className="flex flex-wrap items-center gap-3">
+      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
         <Select
           value={status}
           onChange={(e) => setParam({ status: e.target.value })}
@@ -129,7 +128,7 @@ export const MyProductsPage = () => {
             className="pl-9"
           />
         </div>
-      </div>
+      </Stack>
 
       {isLoading && (
         <div className="space-y-2">
@@ -249,6 +248,6 @@ export const MyProductsPage = () => {
       )}
 
       <BulkUploadDialog open={bulkOpen} onClose={() => setBulkOpen(false)} forSelf />
-    </div>
+    </Stack>
   );
 };

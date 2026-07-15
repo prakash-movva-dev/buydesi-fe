@@ -2,11 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import Stack from '@mui/material/Stack';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
@@ -73,19 +75,17 @@ export const MyTicketsPage = () => {
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">My support tickets</h1>
-          <p className="text-muted-foreground">
-            Raise issues — payouts, returns, account problems — and track resolution.
-          </p>
-        </div>
-        <Button onClick={() => setOpen(true)}>
-          <Plus className="h-4 w-4" />
-          New ticket
-        </Button>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="My support tickets"
+        description="Raise issues — payouts, returns, account problems — and track resolution."
+        action={
+          <Button onClick={() => setOpen(true)}>
+            <Plus className="h-4 w-4" />
+            New ticket
+          </Button>
+        }
+      />
 
       <Select
         value={status}
@@ -147,7 +147,7 @@ export const MyTicketsPage = () => {
       )}
 
       <NewTicketDialog open={open} onClose={() => setOpen(false)} />
-    </div>
+    </Stack>
   );
 };
 

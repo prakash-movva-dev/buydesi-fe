@@ -2,6 +2,9 @@ import type { Config } from 'tailwindcss';
 
 const config: Config = {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
+  // MUI's CssBaseline owns the global reset now; disable Tailwind's preflight so
+  // the two don't fight over base element styles during the migration.
+  corePlugins: { preflight: false },
   theme: {
     container: {
       center: true,

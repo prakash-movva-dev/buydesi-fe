@@ -1,11 +1,13 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { CheckCircle2, FileUp, Upload, XCircle } from 'lucide-react';
+import Box from '@mui/material/Box';
 import { UserPicker } from '@/components/pickers/UserPicker';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
 import { Label } from '@/components/ui/Label';
+import { StatCard } from '@/components/ui/StatCard';
 import { Textarea } from '@/components/ui/Textarea';
 import { api } from '@/lib/api';
 import { ApiError, UserRole } from '@/types/api';
@@ -175,11 +177,17 @@ export const BulkUploadDialog = ({ open, onClose, forSelf = false }: Props) => {
 
         {summary && (
           <div className="space-y-3">
-            <div className="grid grid-cols-3 gap-3">
-              <SummaryCard label="Created" value={summary.created} tone="success" />
-              <SummaryCard label="Skipped" value={summary.skipped} tone="muted" />
-              <SummaryCard label="Failed" value={summary.failed} tone="destructive" />
-            </div>
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 2,
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+              }}
+            >
+              <StatCard label="Created" value={summary.created} tone="success" />
+              <StatCard label="Skipped" value={summary.skipped} tone="default" />
+              <StatCard label="Failed" value={summary.failed} tone="destructive" />
+            </Box>
             <p className="text-sm text-muted-foreground">
               Processed {summary.totalRows} row(s). Created products land in PENDING — review
               them from the Products approval queue.
@@ -236,28 +244,5 @@ export const BulkUploadDialog = ({ open, onClose, forSelf = false }: Props) => {
         )}
       </div>
     </Dialog>
-  );
-};
-
-const SummaryCard = ({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: number;
-  tone: 'success' | 'muted' | 'destructive';
-}) => {
-  const toneClass =
-    tone === 'success'
-      ? 'text-emerald-700'
-      : tone === 'destructive'
-        ? 'text-destructive'
-        : 'text-muted-foreground';
-  return (
-    <div className="rounded-md border border-border bg-secondary/30 p-3 text-center">
-      <p className="text-xs uppercase text-muted-foreground">{label}</p>
-      <p className={`text-2xl font-semibold ${toneClass}`}>{value}</p>
-    </div>
   );
 };

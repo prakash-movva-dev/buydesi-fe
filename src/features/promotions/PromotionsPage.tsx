@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Plus, ToggleRight } from 'lucide-react';
+import Stack from '@mui/material/Stack';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
@@ -103,22 +105,19 @@ export const PromotionsPage = () => {
   const [dialogOpen, setDialogOpen] = useState(false);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Promotions</h1>
-          <p className="text-muted-foreground">
-            Banners, coupon codes, featured slots and sale events. Scope can be platform-wide,
-            cluster-specific, or category-specific. Validity is enforced server-side at validate-coupon time.
-          </p>
-        </div>
-        <Button onClick={() => setDialogOpen(true)}>
-          <Plus className="h-4 w-4" />
-          New promotion
-        </Button>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Promotions"
+        description="Banners, coupon codes, featured slots and sale events. Scope can be platform-wide, cluster-specific, or category-specific. Validity is enforced server-side at validate-coupon time."
+        action={
+          <Button onClick={() => setDialogOpen(true)}>
+            <Plus className="h-4 w-4" />
+            New promotion
+          </Button>
+        }
+      />
 
-      <div className="flex flex-wrap items-center gap-3">
+      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
         <Select
           value={type}
           onChange={(e) => setParam({ type: e.target.value })}
@@ -150,7 +149,7 @@ export const PromotionsPage = () => {
           <option value="true">Active</option>
           <option value="false">Inactive</option>
         </Select>
-      </div>
+      </Stack>
 
       {isLoading && <Skeleton className="h-40 w-full" />}
       {isError && (
@@ -273,6 +272,6 @@ export const PromotionsPage = () => {
         onClose={() => setDialogOpen(false)}
         defaultType={type || 'banner'}
       />
-    </div>
+    </Stack>
   );
 };

@@ -1,7 +1,9 @@
 import { useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { AlertCircle, ChevronLeft, ChevronRight, Clock, UserX } from 'lucide-react';
+import Stack from '@mui/material/Stack';
 import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
@@ -129,18 +131,15 @@ export const TicketsListPage = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Support tickets</h1>
-        <p className="text-muted-foreground">
-          Customer and seller issues. Claim a ticket to take ownership; escalate if it needs
-          a higher tier.
-        </p>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Support tickets"
+        description="Customer and seller issues. Claim a ticket to take ownership; escalate if it needs a higher tier."
+      />
 
       <ScopedAdminBanner />
 
-      <div className="flex flex-wrap items-center gap-3">
+      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
         <Select
           value={status}
           onChange={(e) => setParam({ status: e.target.value })}
@@ -197,7 +196,7 @@ export const TicketsListPage = () => {
         >
           {slaRiskOnly ? 'SLA risk (page)' : 'SLA risk only'}
         </Button>
-      </div>
+      </Stack>
 
       {isLoading && (
         <div className="space-y-2">
@@ -348,6 +347,6 @@ export const TicketsListPage = () => {
           </div>
         </>
       )}
-    </div>
+    </Stack>
   );
 };

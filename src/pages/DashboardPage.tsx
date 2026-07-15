@@ -13,6 +13,8 @@ import {
   ShoppingBag,
   UserCheck,
 } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
@@ -22,7 +24,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/Card';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { StatCard } from '@/components/ui/StatCard';
 import { useActivityList } from '@/features/activity/api';
 import { CategoryAdminDashboard } from '@/features/category-admin/CategoryAdminDashboard';
 import { useDashboardOverview, type DashboardPeriod } from '@/features/dashboard/api';
@@ -60,29 +64,27 @@ export const DashboardPage = () => {
   const greeting = 'Operations overview.';
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {`Hi, ${user.name.split(' ')[0]}`}
-          </h1>
-          <p className="text-muted-foreground">{greeting}</p>
-        </div>
-        {isAdmin && (
-          <div className="flex items-center gap-2">
-            <PeriodToggle value={period} onChange={setPeriod} />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => overview.refetch()}
-              disabled={overview.isFetching}
-            >
-              <RefreshCw className={`h-4 w-4 ${overview.isFetching ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-          </div>
-        )}
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title={`Hi, ${user.name.split(' ')[0]}`}
+        description={greeting}
+        action={
+          isAdmin ? (
+            <Stack direction="row" spacing={1} alignItems="center">
+              <PeriodToggle value={period} onChange={setPeriod} />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => overview.refetch()}
+                disabled={overview.isFetching}
+              >
+                <RefreshCw className={`h-4 w-4 ${overview.isFetching ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            </Stack>
+          ) : undefined
+        }
+      />
 
       {isAdmin && <AdminOverview navigate={navigate} />}
 
@@ -108,7 +110,7 @@ export const DashboardPage = () => {
           </CardContent>
         </Card>
       )}
-    </div>
+    </Stack>
   );
 
   // Embedded components below — they share `overview` and `activity` via closure.
@@ -119,7 +121,18 @@ export const DashboardPage = () => {
 
     return (
       <>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 2,
+            gridTemplateColumns: {
+              xs: '1fr',
+              sm: 'repeat(2,1fr)',
+              lg: 'repeat(3,1fr)',
+              xl: 'repeat(5,1fr)',
+            },
+          }}
+        >
           <MetricCard
             label="Sellers — pending KYC"
             value={loading ? null : o?.sellers.pendingApproval ?? 0}
@@ -166,7 +179,7 @@ export const DashboardPage = () => {
             }
             tone="info"
           />
-        </div>
+        </Box>
 
         <Card>
           <CardHeader>
@@ -175,7 +188,18 @@ export const DashboardPage = () => {
               Direct links into filtered work queues. The number is the live count.
             </CardDescription>
           </CardHeader>
-          <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <CardContent>
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 1.5,
+                gridTemplateColumns: {
+                  xs: '1fr',
+                  sm: 'repeat(2,1fr)',
+                  lg: 'repeat(4,1fr)',
+                },
+              }}
+            >
             <ActionTile
               icon={UserCheck}
               label="Pending seller KYC"
@@ -242,6 +266,7 @@ export const DashboardPage = () => {
               loading={loading}
               onClick={() => navigate('/admin/support?status=OPEN')}
             />
+            </Box>
           </CardContent>
         </Card>
       </>
@@ -362,29 +387,16 @@ interface MetricCardProps {
   tone: 'info' | 'warning' | 'success' | 'destructive';
 }
 
-const toneClasses: Record<MetricCardProps['tone'], string> = {
-  info: 'text-blue-700',
-  warning: 'text-amber-700',
-  success: 'text-emerald-700',
-  destructive: 'text-destructive',
-};
-
 const MetricCard = ({ label, value, display, secondary, tone }: MetricCardProps) => {
   const content = display !== undefined ? display : value;
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardDescription>{label}</CardDescription>
-        {content === null || content === undefined ? (
-          <Skeleton className="h-9 w-20" />
-        ) : (
-          <CardTitle className={`text-3xl ${toneClasses[tone]}`}>{content}</CardTitle>
-        )}
-        {secondary !== null && (
-          <p className="text-xs text-muted-foreground">{secondary}</p>
-        )}
-      </CardHeader>
-    </Card>
+    <StatCard
+      label={label}
+      value={content}
+      loading={content === null || content === undefined}
+      secondary={secondary}
+      tone={tone}
+    />
   );
 };
 

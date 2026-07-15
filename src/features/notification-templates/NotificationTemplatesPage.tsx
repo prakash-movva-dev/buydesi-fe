@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Bell, Languages, Search } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
 import { Badge } from '@/components/ui/Badge';
 import {
   Card,
@@ -9,6 +11,7 @@ import {
   CardTitle,
 } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useNotificationTemplates } from './api';
 
@@ -54,18 +57,26 @@ export const NotificationTemplatesPage = () => {
   }, [data, keys.length]);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Notification templates</h1>
-        <p className="text-muted-foreground">
-          Read-only catalogue of in-app, email and push notification templates by locale.
-          Variables in the body (e.g.{' '}
-          <code className="font-mono text-xs">{'{{orderNumber}}'}</code>) are substituted at
-          dispatch time.
-        </p>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Notification templates"
+        description={
+          <>
+            Read-only catalogue of in-app, email and push notification templates by locale.
+            Variables in the body (e.g.{' '}
+            <code className="font-mono text-xs">{'{{orderNumber}}'}</code>) are substituted at
+            dispatch time.
+          </>
+        }
+      />
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <Box
+        sx={{
+          display: 'grid',
+          gap: 2,
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(3,1fr)' },
+        }}
+      >
         <MetricCard
           icon={Bell}
           label="Template keys"
@@ -81,7 +92,7 @@ export const NotificationTemplatesPage = () => {
           label="Locale coverage"
           value={isLoading ? null : `${totalLocaleCoverage}%`}
         />
-      </div>
+      </Box>
 
       <div className="relative w-96 max-w-full">
         <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -154,7 +165,7 @@ export const NotificationTemplatesPage = () => {
           )}
         </div>
       )}
-    </div>
+    </Stack>
   );
 };
 

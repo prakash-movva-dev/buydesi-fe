@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import Box from '@mui/material/Box';
 import { ImageUploadField } from '@/components/ImageUploadField';
 import { UserPicker } from '@/components/pickers/UserPicker';
 import { Button } from '@/components/ui/Button';
@@ -126,7 +127,13 @@ export const CategoryFormDialog = ({ open, onClose, editing }: CategoryFormDialo
       }
     >
       <form onSubmit={onSubmit} className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-2">
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 2,
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+          }}
+        >
           <div className="space-y-1.5">
             <Label htmlFor="cat-name">Name *</Label>
             <Input
@@ -147,9 +154,15 @@ export const CategoryFormDialog = ({ open, onClose, editing }: CategoryFormDialo
               placeholder="auto-generated from name"
             />
           </div>
-        </div>
+        </Box>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 2,
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+          }}
+        >
           <div className="space-y-1.5">
             <Label htmlFor="cat-commission">Default commission % *</Label>
             <Input
@@ -173,9 +186,15 @@ export const CategoryFormDialog = ({ open, onClose, editing }: CategoryFormDialo
               onChange={(e) => setForm({ ...form, displayOrder: e.target.value })}
             />
           </div>
-        </div>
+        </Box>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 2,
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+          }}
+        >
           <div className="space-y-1.5">
             <Label>Icon</Label>
             <ImageUploadField
@@ -196,9 +215,15 @@ export const CategoryFormDialog = ({ open, onClose, editing }: CategoryFormDialo
               <option value="inactive">Inactive</option>
             </Select>
           </div>
-        </div>
+        </Box>
 
-        <div className="grid gap-4 sm:grid-cols-2">
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 2,
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+          }}
+        >
           {isSuper && editing && (
             <div className="space-y-1.5">
               <Label htmlFor="cat-admin">Category admin</Label>
@@ -213,7 +238,7 @@ export const CategoryFormDialog = ({ open, onClose, editing }: CategoryFormDialo
               </p>
             </div>
           )}
-        </div>
+        </Box>
 
         {error && <p className="text-sm text-destructive">{error}</p>}
 

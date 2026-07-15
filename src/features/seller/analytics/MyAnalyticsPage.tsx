@@ -1,5 +1,8 @@
 import { useMemo, useState } from 'react';
-import { BarChart3, Box, RefreshCw, ShoppingBag, Star, Users, Wallet } from 'lucide-react';
+import { BarChart3, Box as BoxIcon, RefreshCw, ShoppingBag, Star, Users, Wallet } from 'lucide-react';
+import MuiBox from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
@@ -11,6 +14,7 @@ import {
 } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
@@ -48,26 +52,24 @@ export const MyAnalyticsPage = () => {
   const { data, isLoading, isError, error, refetch, isFetching } = useSellerAnalytics(query);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">My analytics</h1>
-          <p className="text-muted-foreground">
-            Your sales, earnings, inventory, customers, and trade activity for any date range.
-          </p>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
-          <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="My analytics"
+        description="Your sales, earnings, inventory, customers, and trade activity for any date range."
+        action={
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        }
+      />
 
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Date range</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap items-end gap-3">
+          <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="flex-end">
             <div className="space-y-1.5">
               <Label htmlFor="an-from">From</Label>
               <Input
@@ -94,16 +96,22 @@ export const MyAnalyticsPage = () => {
                 <option value="monthly">Monthly</option>
               </Select>
             </div>
-          </div>
+          </Stack>
         </CardContent>
       </Card>
 
       {isLoading && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <MuiBox
+          sx={{
+            display: 'grid',
+            gap: 2,
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2,1fr)', lg: 'repeat(4,1fr)' },
+          }}
+        >
           {Array.from({ length: 8 }).map((_, i) => (
             <Skeleton key={i} className="h-28" />
           ))}
-        </div>
+        </MuiBox>
       )}
 
       {isError && (
@@ -115,11 +123,11 @@ export const MyAnalyticsPage = () => {
       {data && (
         <>
           <SectionTitle icon={ShoppingBag} title="Sales" />
-          <div className="grid gap-4 sm:grid-cols-3">
+          <MuiBox sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: 'repeat(3,1fr)' } }}>
             <Metric label="Orders" value={String(data.sales.totalOrders)} />
             <Metric label="Revenue" value={formatInr(data.sales.totalRevenueInr)} />
             <Metric label="Average order" value={formatInr(data.sales.averageOrderValueInr)} />
-          </div>
+          </MuiBox>
 
           <Card>
             <CardHeader className="pb-2">
@@ -160,7 +168,7 @@ export const MyAnalyticsPage = () => {
           </Card>
 
           <SectionTitle icon={Wallet} title="Earnings" />
-          <div className="grid gap-4 sm:grid-cols-5">
+          <MuiBox sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: 'repeat(5,1fr)' } }}>
             <Metric label="Gross" value={formatInr(data.earnings.grossInr)} />
             <Metric
               label="Commission"
@@ -174,10 +182,10 @@ export const MyAnalyticsPage = () => {
             />
             <Metric label="Net paid" value={formatInr(data.earnings.netPaidInr)} highlight />
             <Metric label="Pending" value={formatInr(data.earnings.pendingInr)} />
-          </div>
+          </MuiBox>
 
-          <SectionTitle icon={Box} title="Inventory" />
-          <div className="grid gap-4 sm:grid-cols-4">
+          <SectionTitle icon={BoxIcon} title="Inventory" />
+          <MuiBox sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: 'repeat(4,1fr)' } }}>
             <Metric label="Live products" value={String(data.inventory.liveProducts)} />
             <Metric
               label="Low stock"
@@ -190,10 +198,10 @@ export const MyAnalyticsPage = () => {
               warning={data.inventory.outOfStockProducts > 0}
             />
             <Metric label="Units on hand" value={String(data.inventory.totalUnitsInStock)} />
-          </div>
+          </MuiBox>
 
           <SectionTitle icon={Users} title="Customers" />
-          <div className="grid gap-4 sm:grid-cols-4">
+          <MuiBox sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: 'repeat(4,1fr)' } }}>
             <Metric label="Unique buyers" value={String(data.customers.uniqueBuyers)} />
             <Metric label="Repeat buyers" value={String(data.customers.repeatBuyers)} />
             <Metric
@@ -201,14 +209,14 @@ export const MyAnalyticsPage = () => {
               value={data.customers.averageRating ? data.customers.averageRating.toFixed(1) : '—'}
             />
             <Metric label="Total reviews" value={String(data.customers.totalReviews)} />
-          </div>
+          </MuiBox>
 
           <SectionTitle icon={BarChart3} title="Order status breakdown" />
-          <div className="grid gap-3 sm:grid-cols-6">
+          <MuiBox sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(6,1fr)' } }}>
             {(Object.entries(data.orderStatus) as Array<[keyof typeof data.orderStatus, number]>).map(([k, v]) => (
               <Metric key={k} label={k} value={String(v)} muted={v === 0} />
             ))}
-          </div>
+          </MuiBox>
 
           <SectionTitle icon={Star} title="Top products" />
           <Card>
@@ -244,21 +252,21 @@ export const MyAnalyticsPage = () => {
           </Card>
 
           <SectionTitle icon={Wallet} title="Trade activity" />
-          <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
+          <MuiBox sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: 'repeat(3,1fr)', lg: 'repeat(6,1fr)' } }}>
             <Metric label="Trades placed" value={String(data.trade.tradesPlaced)} />
             <Metric label="Trades received" value={String(data.trade.tradesReceived)} />
             <Metric label="Trade revenue" value={formatInr(data.trade.tradeRevenueInr)} />
             <Metric label="Trade spend" value={formatInr(data.trade.tradeSpendInr)} />
             <Metric label="Online tx" value={String(data.trade.onlineCount)} />
             <Metric label="Cash tx" value={String(data.trade.cashCount)} />
-          </div>
+          </MuiBox>
 
-          <p className="text-xs text-muted-foreground">
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
             Range {formatDate(data.range.from)} → {formatDate(data.range.to)}
-          </p>
+          </Typography>
         </>
       )}
-    </div>
+    </Stack>
   );
 };
 
@@ -269,10 +277,13 @@ const SectionTitle = ({
   icon: React.ComponentType<{ className?: string }>;
   title: string;
 }) => (
-  <h2 className="flex items-center gap-2 pt-4 text-lg font-semibold">
+  <Typography
+    variant="h6"
+    sx={{ display: 'flex', alignItems: 'center', gap: 1, pt: 2 }}
+  >
     <Icon className="h-4 w-4 text-muted-foreground" />
     {title}
-  </h2>
+  </Typography>
 );
 
 const Metric = ({

@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { ExternalLink, MapPin, PackageSearch, Receipt, Truck, User } from 'lucide-react';
+import Stack from '@mui/material/Stack';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
@@ -11,6 +12,7 @@ import {
 } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { resolveOrderId, useOrder } from '@/features/orders/api';
@@ -38,15 +40,11 @@ const statusVariant: Record<ShipmentStatus, 'info' | 'warning' | 'success' | 'de
 
 export const DeliveryPage = () => {
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Delivery</h1>
-        <p className="text-muted-foreground">
-          Track a Delhivery shipment by AWB / shipment id, compute a freight quote, or push a
-          fresh shipment for a paid order. Reverse pickups are scheduled from the linked support
-          ticket.
-        </p>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Delivery"
+        description="Track a Delhivery shipment by AWB / shipment id, compute a freight quote, or push a fresh shipment for a paid order. Reverse pickups are scheduled from the linked support ticket."
+      />
 
       <ScopedAdminBanner />
 
@@ -56,7 +54,7 @@ export const DeliveryPage = () => {
       </div>
 
       <CreateShipmentPanel />
-    </div>
+    </Stack>
   );
 };
 

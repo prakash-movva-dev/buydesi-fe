@@ -9,10 +9,12 @@ import {
   Star,
   Trash2,
 } from 'lucide-react';
+import Stack from '@mui/material/Stack';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
 import { Label } from '@/components/ui/Label';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
@@ -127,19 +129,15 @@ export const ReviewsPage = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Reviews moderation</h1>
-        <p className="text-muted-foreground">
-          Buyer reviews on products and sellers. Hide inappropriate content or permanently
-          remove spam. Pending reviews are auto-approved by default — flagged ones land in
-          pending status for review.
-        </p>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Reviews moderation"
+        description="Buyer reviews on products and sellers. Hide inappropriate content or permanently remove spam. Pending reviews are auto-approved by default — flagged ones land in pending status for review."
+      />
 
       <ScopedAdminBanner />
 
-      <div className="flex flex-wrap items-center gap-3">
+      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
         <Select
           value={status}
           onChange={(e) => setParam({ status: e.target.value })}
@@ -173,7 +171,7 @@ export const ReviewsPage = () => {
             </option>
           ))}
         </Select>
-      </div>
+      </Stack>
 
       {isLoading && (
         <div className="space-y-2">
@@ -288,11 +286,16 @@ export const ReviewsPage = () => {
             </TableBody>
           </Table>
 
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+            sx={{ fontSize: 14, color: 'text.secondary' }}
+          >
             <span>
               {data?.items.length ?? 0} of {total} · page {page} / {pageCount}
             </span>
-            <div className="flex gap-2">
+            <Stack direction="row" spacing={1}>
               <Button
                 variant="outline"
                 size="sm"
@@ -311,8 +314,8 @@ export const ReviewsPage = () => {
                 Next
                 <ChevronRight className="h-4 w-4" />
               </Button>
-            </div>
-          </div>
+            </Stack>
+          </Stack>
         </>
       )}
 
@@ -329,7 +332,7 @@ export const ReviewsPage = () => {
           });
         }}
       />
-    </div>
+    </Stack>
   );
 };
 

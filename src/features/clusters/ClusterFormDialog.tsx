@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 import { Check, MapPin, X } from 'lucide-react';
+import Box from '@mui/material/Box';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
@@ -245,7 +246,13 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
         {step === 0 && (
           <>
             <p className="text-xs text-muted-foreground">{STEPS[0].hint}</p>
-            <div className="grid gap-3 sm:grid-cols-3">
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 1.5,
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+              }}
+            >
               <div className="space-y-1.5">
                 <Label htmlFor="cl-name">Name *</Label>
                 <Input
@@ -291,7 +298,7 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
                   ))}
                 </Select>
               </div>
-            </div>
+            </Box>
 
             {/* PIN codes — the defining attribute of a cluster. Mandatory. */}
             <PincodeInput pins={pinCodes} onChange={setPinCodes} />
@@ -301,7 +308,13 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
         {step === 1 && (
           <>
             <p className="text-xs text-muted-foreground">{STEPS[1].hint}</p>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 1.5,
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+              }}
+            >
               <div className="space-y-1.5">
                 <Label htmlFor="cl-region">Region (optional)</Label>
                 <Select
@@ -329,7 +342,7 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
                   placeholder="e.g. South"
                 />
               </div>
-            </div>
+            </Box>
 
             <div className="space-y-1.5">
               <Label>Active categories (optional)</Label>
@@ -350,7 +363,13 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
         {step === 2 && (
           <>
             <p className="text-xs text-muted-foreground">{STEPS[2].hint}</p>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 1.5,
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+              }}
+            >
               <div className="space-y-1.5">
                 <Label htmlFor="cl-code">Cluster code</Label>
                 <Input
@@ -370,7 +389,7 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
                   onChange={(e) => setLaunchDate(e.target.value)}
                 />
               </div>
-            </div>
+            </Box>
 
             <div className="space-y-1.5">
               <Label htmlFor="cl-desc">Description</Label>
@@ -384,7 +403,13 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
               />
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 1.5,
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+              }}
+            >
               <div className="space-y-1.5">
                 <Label htmlFor="cl-phone">Contact phone</Label>
                 <Input
@@ -406,7 +431,7 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
                   maxLength={200}
                 />
               </div>
-            </div>
+            </Box>
           </>
         )}
 
@@ -425,7 +450,13 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
               />
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-3">
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 1.5,
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+              }}
+            >
               <div className="space-y-1.5">
                 <Label htmlFor="cl-hubpin">Hub PIN code</Label>
                 <Input
@@ -463,9 +494,15 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
                   <span className="text-sm">{codAllowed ? 'Allowed' : 'Disabled'}</span>
                 </label>
               </div>
-            </div>
+            </Box>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 1.5,
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+              }}
+            >
               <div className="space-y-1.5">
                 <Label htmlFor="cl-status">Status</Label>
                 <Select
@@ -489,7 +526,7 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
                   <option value="DELHIVERY">Delhivery (inter-cluster)</option>
                 </Select>
               </div>
-            </div>
+            </Box>
 
             {isEdit && (
               <p className="rounded-md border border-border bg-secondary/30 p-3 text-xs text-muted-foreground">

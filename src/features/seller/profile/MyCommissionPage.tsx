@@ -1,7 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { ReceiptText } from 'lucide-react';
+import Stack from '@mui/material/Stack';
 import { Badge } from '@/components/ui/Badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
   Table,
@@ -27,15 +29,11 @@ export const MyCommissionPage = () => {
   });
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">My commission</h1>
-        <p className="text-muted-foreground">
-          Rates the platform deducts from each sale. Resolution order: seller-specific
-          override → product-specific → category-specific → category default. The most
-          specific live rule wins.
-        </p>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="My commission"
+        description="Rates the platform deducts from each sale. Resolution order: seller-specific override → product-specific → category-specific → category default. The most specific live rule wins."
+      />
 
       <Card>
         <CardHeader className="pb-2">
@@ -107,6 +105,6 @@ export const MyCommissionPage = () => {
           )}
         </CardContent>
       </Card>
-    </div>
+    </Stack>
   );
 };

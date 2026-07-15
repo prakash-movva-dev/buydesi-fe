@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Save } from 'lucide-react';
+import Stack from '@mui/material/Stack';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { api } from '@/lib/api';
@@ -64,13 +66,11 @@ export const ProfilePage = () => {
   if (!me.data) return null;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Profile</h1>
-        <p className="text-muted-foreground">
-          Your account basics. Storefront and bank details live on the Storefront page.
-        </p>
-      </div>
+    <Stack spacing={3} sx={{ mx: 'auto', maxWidth: 672, width: '100%' }}>
+      <PageHeader
+        title="Profile"
+        description="Your account basics. Storefront and bank details live on the Storefront page."
+      />
 
       <Card>
         <CardHeader>
@@ -118,6 +118,6 @@ export const ProfilePage = () => {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </Stack>
   );
 };

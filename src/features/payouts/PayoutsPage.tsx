@@ -1,6 +1,8 @@
 import { Fragment, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Play } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
 import { UserPicker } from '@/components/pickers/UserPicker';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -14,6 +16,7 @@ import {
 import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
@@ -99,26 +102,23 @@ export const PayoutsPage = () => {
   const isSuper = user?.role === UserRole.SUPER_ADMIN;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Payouts</h1>
-          <p className="text-muted-foreground">
-            Seller payout batches. Daily and weekly batches run automatically (configured via env
-            cron). Trigger an off-cycle batch when needed.
-          </p>
-        </div>
-        {isSuper && (
-          <Button onClick={() => setBatchOpen(true)}>
-            <Play className="h-4 w-4" />
-            Run batch
-          </Button>
-        )}
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Payouts"
+        description="Seller payout batches. Daily and weekly batches run automatically (configured via env cron). Trigger an off-cycle batch when needed."
+        action={
+          isSuper ? (
+            <Button onClick={() => setBatchOpen(true)}>
+              <Play className="h-4 w-4" />
+              Run batch
+            </Button>
+          ) : undefined
+        }
+      />
 
       <ScopedAdminBanner />
 
-      <div className="flex flex-wrap items-center gap-3">
+      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
         <Select
           value={status}
           onChange={(e) => setParam({ status: e.target.value })}
@@ -141,15 +141,15 @@ export const PayoutsPage = () => {
             </option>
           ))}
         </Select>
-        <div className="w-72">
+        <Box sx={{ width: 288 }}>
           <UserPicker
             role={UserRole.SELLER}
             value={sellerId || null}
             onChange={(id) => setParam({ sellerId: id ?? '' })}
             placeholder="Filter by seller…"
           />
-        </div>
-      </div>
+        </Box>
+      </Stack>
 
       {isLoading && (
         <div className="space-y-2">
@@ -240,7 +240,15 @@ export const PayoutsPage = () => {
             </TableBody>
           </Table>
 
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: 14,
+              color: 'text.secondary',
+            }}
+          >
             <span>
               {data?.items.length ?? 0} of {total} · page {page} / {pageCount}
             </span>
@@ -264,12 +272,12 @@ export const PayoutsPage = () => {
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
-          </div>
+          </Box>
         </>
       )}
 
       <RunBatchDialog open={batchOpen} onClose={() => setBatchOpen(false)} />
-    </div>
+    </Stack>
   );
 };
 

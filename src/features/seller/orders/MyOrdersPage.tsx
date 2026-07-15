@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import Stack from '@mui/material/Stack';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
@@ -66,16 +68,13 @@ export const MyOrdersPage = () => {
   }, [data, scrub]);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Incoming orders</h1>
-        <p className="text-muted-foreground">
-          Buyer orders that contain your products. Move them along the pipeline:
-          Placed → Packed → Dispatched → Delivered.
-        </p>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Incoming orders"
+        description="Buyer orders that contain your products. Move them along the pipeline: Placed → Packed → Dispatched → Delivered."
+      />
 
-      <div className="flex flex-wrap items-center gap-3">
+      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
         <Select
           value={status}
           onChange={(e) => setParam({ status: e.target.value })}
@@ -94,7 +93,7 @@ export const MyOrdersPage = () => {
           onChange={(e) => setScrub(e.target.value)}
           className="h-10 w-72 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         />
-      </div>
+      </Stack>
 
       {isLoading && <Skeleton className="h-40 w-full" />}
 
@@ -199,6 +198,6 @@ export const MyOrdersPage = () => {
           </div>
         </>
       )}
-    </div>
+    </Stack>
   );
 };

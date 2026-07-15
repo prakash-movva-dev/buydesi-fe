@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Box from '@mui/material/Box';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { ClusterPicker } from '@/components/pickers/ClusterPicker';
 import { Button } from '@/components/ui/Button';
@@ -90,7 +91,13 @@ export const CartLimitFormDialog = ({ open, editing, onClose }: Props) => {
       className="max-w-2xl"
     >
       <div className="space-y-3">
-        <div className="grid gap-3 sm:grid-cols-3">
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 1.5,
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+          }}
+        >
           <div className="space-y-1.5">
             <Label htmlFor="cl-kind">Kind</Label>
             <Select
@@ -121,9 +128,15 @@ export const CartLimitFormDialog = ({ open, editing, onClose }: Props) => {
               disabled={Boolean(editing)}
             />
           </div>
-        </div>
+        </Box>
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 1.5,
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+          }}
+        >
           <Field
             id="cl-mqpp"
             label="Max qty per product"
@@ -157,7 +170,7 @@ export const CartLimitFormDialog = ({ open, editing, onClose }: Props) => {
               hint="Bulk orders are always PREPAID — this is ignored for kind=bulk."
             />
           )}
-        </div>
+        </Box>
 
         {error && <p className="text-sm text-destructive">{error}</p>}
       </div>

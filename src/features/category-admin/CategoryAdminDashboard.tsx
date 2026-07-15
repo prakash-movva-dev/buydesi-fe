@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   AlertCircle,
   ArrowRight,
-  Box,
+  Box as BoxIcon,
   FolderTree,
   ImageOff,
   MessageSquareText,
@@ -12,6 +12,7 @@ import {
   Star,
   TrendingDown,
 } from 'lucide-react';
+import Stack from '@mui/material/Stack';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
@@ -21,6 +22,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/Card';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useCategoriesList } from '@/features/categories/api';
 import { useProductsList } from '@/features/products/api';
@@ -98,30 +100,25 @@ export const CategoryAdminDashboard = () => {
     .length;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {`Hi, ${user?.name.split(' ')[0] ?? 'Admin'}`}
-          </h1>
-          <p className="text-muted-foreground">
-            Catalog quality cockpit. Approve pending listings, watch for low stock, and keep
-            your category's product info clean.
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            pendingProducts.refetch();
-            liveProducts.refetch();
-            reviews.refetch();
-          }}
-        >
-          <RefreshCw className="h-4 w-4" />
-          Refresh
-        </Button>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title={`Hi, ${user?.name.split(' ')[0] ?? 'Admin'}`}
+        description="Catalog quality cockpit. Approve pending listings, watch for low stock, and keep your category's product info clean."
+        action={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              pendingProducts.refetch();
+              liveProducts.refetch();
+              reviews.refetch();
+            }}
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </Button>
+        }
+      />
 
       <ScopedAdminBanner />
 
@@ -169,7 +166,7 @@ export const CategoryAdminDashboard = () => {
         <Metric
           label="Live products"
           value={liveProducts.isLoading ? null : liveProducts.data?.meta.total ?? 0}
-          icon={Box}
+          icon={BoxIcon}
           tone="success"
         />
         <Metric
@@ -237,7 +234,7 @@ export const CategoryAdminDashboard = () => {
             onClick={() => navigate('/admin/products?status=LIVE')}
           />
           <QualityTile
-            icon={Box}
+            icon={BoxIcon}
             label="Out of stock"
             count={liveProducts.isLoading ? undefined : outOfStockCount}
             description="Sellers should restock"
@@ -275,7 +272,7 @@ export const CategoryAdminDashboard = () => {
           <QuickLink label="Users" hint="Team directory" onClick={() => navigate('/admin/users')} />
         </CardContent>
       </Card>
-    </div>
+    </Stack>
   );
 };
 

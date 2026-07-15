@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
 import { Check, Pencil, X } from 'lucide-react';
+import Stack from '@mui/material/Stack';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { cn } from '@/lib/cn';
@@ -45,14 +47,11 @@ export const PlatformSettingsPage = () => {
   const rows = activeGroup ? grouped.get(activeGroup) ?? [] : [];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Platform settings</h1>
-        <p className="text-muted-foreground">
-          Runtime-editable knobs. Changes apply within 5 minutes platform-wide. Every change is
-          recorded to the activity log.
-        </p>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Platform settings"
+        description="Runtime-editable knobs. Changes apply within 5 minutes platform-wide. Every change is recorded to the activity log."
+      />
 
       {settings.isLoading && (
         <div className="space-y-2">
@@ -98,7 +97,7 @@ export const PlatformSettingsPage = () => {
           </div>
         </>
       )}
-    </div>
+    </Stack>
   );
 };
 

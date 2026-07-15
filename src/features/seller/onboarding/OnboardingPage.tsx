@@ -12,6 +12,8 @@ import {
   Store,
   Trash2,
 } from 'lucide-react';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -348,14 +350,14 @@ export const SellerOnboardingPage = () => {
   // Submitted and awaiting review — show a clean status screen, not the form.
   if (profile && profile.status === 'PENDING') {
     return (
-      <div className="mx-auto max-w-2xl space-y-6">
+      <Stack spacing={3} sx={{ mx: 'auto', maxWidth: 672, width: '100%' }}>
         <Card className="overflow-hidden">
           <div className="flex items-start gap-4 border-b border-border bg-amber-50 p-6">
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600">
               <Hourglass className="h-6 w-6" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold tracking-tight">Application under review</h1>
+              <Typography variant="h5" component="h1">Application under review</Typography>
               <p className="mt-1 text-sm text-muted-foreground">
                 Thanks{profile.farmName ? `, ${profile.farmName}` : ''}! We've received your
                 details and an admin is reviewing your KYC — usually within 24 hours. You'll get a
@@ -395,23 +397,27 @@ export const SellerOnboardingPage = () => {
             </div>
           </CardContent>
         </Card>
-      </div>
+      </Stack>
     );
   }
 
   const submitted = step >= STEPS.length;
 
   return (
-    <div className="w-full space-y-6">
+    <Stack spacing={3} sx={{ width: '100%' }}>
       <div>
-        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
+        <Typography
+          variant="h4"
+          component="h1"
+          sx={{ display: 'flex', alignItems: 'center', gap: 1 }}
+        >
           <Sprout className="h-6 w-6 text-primary" />
           {isResubmit ? 'Resubmit your details' : 'Welcome — let’s get you set up'}
-        </h1>
-        <p className="text-muted-foreground">
+        </Typography>
+        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
           Tell us about your business, upload your documents and set up your store. Your progress is
           saved automatically.
-        </p>
+        </Typography>
       </div>
 
       {/* Stepper */}
@@ -466,7 +472,7 @@ export const SellerOnboardingPage = () => {
             {/* ── Step 1: Account ── */}
             {step === 0 && (
               <>
-                <h2 className="text-lg font-semibold">Your account</h2>
+                <Typography variant="h6">Your account</Typography>
                 <p className="text-sm text-muted-foreground">
                   You're signed in with this account. The rest of the wizard sets up your seller
                   profile.
@@ -491,7 +497,7 @@ export const SellerOnboardingPage = () => {
             {/* ── Step 2: Business ── */}
             {step === 1 && (
               <>
-                <h2 className="text-lg font-semibold">Business details</h2>
+                <Typography variant="h6">Business details</Typography>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Field label="Farm / business name *">
                     <Input value={form.farmName} onChange={(e) => set('farmName', e.target.value)} maxLength={200} />
@@ -562,7 +568,7 @@ export const SellerOnboardingPage = () => {
             {/* ── Step 3: Products ── */}
             {step === 2 && (
               <>
-                <h2 className="text-lg font-semibold">Products & categories</h2>
+                <Typography variant="h6">Products & categories</Typography>
                 <Field label="Categories you'll sell in *">
                   <CategoryPicker
                     multi
@@ -617,7 +623,7 @@ export const SellerOnboardingPage = () => {
             {/* ── Step 4: Documents ── */}
             {step === 3 && (
               <>
-                <h2 className="text-lg font-semibold">Identity & tax documents</h2>
+                <Typography variant="h6">Identity & tax documents</Typography>
                 <p className="text-sm text-muted-foreground">
                   Documents are encrypted and used only for verification. PAN, a government ID and a
                   bank proof are required.
@@ -686,7 +692,7 @@ export const SellerOnboardingPage = () => {
             {/* ── Step 5: Banking ── */}
             {step === 4 && (
               <>
-                <h2 className="text-lg font-semibold">Bank account details</h2>
+                <Typography variant="h6">Bank account details</Typography>
                 <p className="text-sm text-muted-foreground">
                   Where should we deposit your earnings? The account should be in your business name.
                 </p>
@@ -746,7 +752,7 @@ export const SellerOnboardingPage = () => {
             {/* ── Step 6: Store ── */}
             {step === 5 && (
               <>
-                <h2 className="text-lg font-semibold">Set up your storefront</h2>
+                <Typography variant="h6">Set up your storefront</Typography>
                 <div className="grid gap-3 sm:grid-cols-2">
                   <Field label="Store / display name *">
                     <Input
@@ -815,7 +821,7 @@ export const SellerOnboardingPage = () => {
             {/* ── Step 7: Agreement ── */}
             {step === 6 && (
               <>
-                <h2 className="text-lg font-semibold">Seller agreement & verification</h2>
+                <Typography variant="h6">Seller agreement & verification</Typography>
                 <div className="space-y-2">
                   {[
                     ['agAcceptedPolicies', 'I have read and agree to the Buy Desi Seller Agreement and all applicable policies.'],
@@ -875,7 +881,7 @@ export const SellerOnboardingPage = () => {
           </CardContent>
         </Card>
       )}
-    </div>
+    </Stack>
   );
 };
 

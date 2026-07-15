@@ -7,8 +7,10 @@ import {
   ChevronRight,
   Image as ImageIcon,
 } from 'lucide-react';
+import Stack from '@mui/material/Stack';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
@@ -161,20 +163,17 @@ export const StockMonitorPage = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Stock monitor</h1>
-          <p className="text-muted-foreground">
-            Track low and out-of-stock products and nudge sellers to restock. Category Admins see
-            only their assigned branch.
-          </p>
-        </div>
-        <Button onClick={sendBatchAlert} disabled={batchAlertMut.isPending}>
-          <Bell className="h-4 w-4" />
-          {batchAlertMut.isPending ? 'Sending…' : 'Batch alert all low stock'}
-        </Button>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Stock monitor"
+        description="Track low and out-of-stock products and nudge sellers to restock. Category Admins see only their assigned branch."
+        action={
+          <Button onClick={sendBatchAlert} disabled={batchAlertMut.isPending}>
+            <Bell className="h-4 w-4" />
+            {batchAlertMut.isPending ? 'Sending…' : 'Batch alert all low stock'}
+          </Button>
+        }
+      />
 
       <ScopedAdminBanner />
 
@@ -191,7 +190,7 @@ export const StockMonitorPage = () => {
         </div>
       )}
 
-      <div className="flex flex-wrap items-center gap-3">
+      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
         <Select
           value={stockState}
           onChange={(e) => setParam({ stockState: e.target.value })}
@@ -220,7 +219,7 @@ export const StockMonitorPage = () => {
             />
           </div>
         )}
-      </div>
+      </Stack>
 
       {isLoading && (
         <div className="space-y-2">
@@ -328,11 +327,16 @@ export const StockMonitorPage = () => {
             </TableBody>
           </Table>
 
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+            sx={{ fontSize: 14, color: 'text.secondary' }}
+          >
             <span>
               {data?.items.length ?? 0} of {total} · page {page} / {pageCount}
             </span>
-            <div className="flex gap-2">
+            <Stack direction="row" spacing={1}>
               <Button
                 variant="outline"
                 size="sm"
@@ -351,10 +355,10 @@ export const StockMonitorPage = () => {
                 Next
                 <ChevronRight className="h-4 w-4" />
               </Button>
-            </div>
-          </div>
+            </Stack>
+          </Stack>
         </>
       )}
-    </div>
+    </Stack>
   );
 };

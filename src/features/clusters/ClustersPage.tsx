@@ -1,8 +1,12 @@
 import { useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Pencil, Plus } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -73,29 +77,26 @@ export const ClustersPage = () => {
   const [editing, setEditing] = useState<SafeCluster | null>(null);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Clusters</h1>
-          <p className="text-muted-foreground">
-            Geographic operating units. Each cluster has its own Cluster Admin, pin codes
-            served, and default trade-transport mode.
-          </p>
-        </div>
-        {isSuper && (
-          <Button
-            onClick={() => {
-              setEditing(null);
-              setDialogOpen(true);
-            }}
-          >
-            <Plus className="h-4 w-4" />
-            New cluster
-          </Button>
-        )}
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Clusters"
+        description="Geographic operating units. Each cluster has its own Cluster Admin, pin codes served, and default trade-transport mode."
+        action={
+          isSuper ? (
+            <Button
+              onClick={() => {
+                setEditing(null);
+                setDialogOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              New cluster
+            </Button>
+          ) : undefined
+        }
+      />
 
-      <div className="flex flex-wrap items-center gap-3">
+      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
         <Select
           value={status}
           onChange={(e) => setParam({ status: e.target.value })}
@@ -113,7 +114,7 @@ export const ClustersPage = () => {
           placeholder="Filter by state"
           className="w-56"
         />
-      </div>
+      </Stack>
 
       {isLoading && <Skeleton className="h-40 w-full" />}
       {isError && (
@@ -195,11 +196,17 @@ export const ClustersPage = () => {
             </TableBody>
           </Table>
 
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               {data?.items.length ?? 0} of {total} · page {page} / {pageCount}
-            </span>
-            <div className="flex gap-2">
+            </Typography>
+            <Stack direction="row" spacing={1}>
               <Button
                 variant="outline"
                 size="sm"
@@ -218,8 +225,8 @@ export const ClustersPage = () => {
                 Next
                 <ChevronRight className="h-4 w-4" />
               </Button>
-            </div>
-          </div>
+            </Stack>
+          </Box>
         </>
       )}
 
@@ -228,6 +235,6 @@ export const ClustersPage = () => {
         editing={editing}
         onClose={() => setDialogOpen(false)}
       />
-    </div>
+    </Stack>
   );
 };

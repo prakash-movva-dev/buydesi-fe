@@ -20,6 +20,8 @@ import {
   Wallet,
   X,
 } from 'lucide-react';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -318,21 +320,21 @@ export const SellerProductFormPage = () => {
   const saving = create.isPending || update.isPending;
 
   return (
-    <div className="w-full space-y-6">
+    <Stack spacing={3} sx={{ width: '100%' }}>
       <Button variant="ghost" size="sm" onClick={() => navigate('/seller/products')}>
         <ArrowLeft className="h-4 w-4" />
         Back to products
       </Button>
 
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
+        <Typography variant="h4" component="h1">
           {isEdit ? `Edit — ${existing?.name}` : 'New product'}
-        </h1>
-        <p className="text-muted-foreground">
+        </Typography>
+        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
           {isEdit
             ? 'Editing a LIVE product sends it back to PENDING for re-approval.'
             : 'Add a rich listing across a few quick steps. Your draft is saved automatically.'}
-        </p>
+        </Typography>
       </div>
 
       {/* Stepper */}
@@ -376,7 +378,7 @@ export const SellerProductFormPage = () => {
           {/* ── Step 1: Basic information ── */}
           {step === 0 && (
             <>
-              <h2 className="text-lg font-semibold">Basic information</h2>
+              <Typography variant="h6">Basic information</Typography>
               <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Product name *">
                   <Input value={form.name} onChange={(e) => set('name', e.target.value)} maxLength={200} />
@@ -469,7 +471,7 @@ export const SellerProductFormPage = () => {
           {/* ── Step 2: Pricing & availability ── */}
           {step === 1 && (
             <>
-              <h2 className="text-lg font-semibold">Pricing & availability</h2>
+              <Typography variant="h6">Pricing & availability</Typography>
               <p className="text-sm text-muted-foreground">
                 Set at least one price tier. Premium is hidden from public buyers; only verified
                 premium accounts see it.
@@ -540,7 +542,7 @@ export const SellerProductFormPage = () => {
           {/* ── Step 3: Produce & logistics ── */}
           {step === 2 && (
             <>
-              <h2 className="text-lg font-semibold">Produce & logistics</h2>
+              <Typography variant="h6">Produce & logistics</Typography>
               <p className="text-sm text-muted-foreground">
                 Optional details that help buyers and shipping. Useful for fresh / perishable goods.
               </p>
@@ -572,7 +574,7 @@ export const SellerProductFormPage = () => {
           {/* ── Step 4: Images & media ── */}
           {step === 3 && (
             <>
-              <h2 className="text-lg font-semibold">Images & media</h2>
+              <Typography variant="h6">Images & media</Typography>
               <p className="text-sm text-muted-foreground">
                 First image is the primary thumbnail. Clear photos improve approval and sales.
               </p>
@@ -620,7 +622,7 @@ export const SellerProductFormPage = () => {
           {/* ── Step 5: Review ── */}
           {step === 4 && (
             <>
-              <h2 className="text-lg font-semibold">Review & submit</h2>
+              <Typography variant="h6">Review & submit</Typography>
               <p className="text-sm text-muted-foreground">
                 Check the details below. Submitting sends the listing to a Category Admin for
                 approval.
@@ -683,7 +685,7 @@ export const SellerProductFormPage = () => {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </Stack>
   );
 };
 

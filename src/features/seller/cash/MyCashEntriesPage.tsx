@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Plus } from 'lucide-react';
+import Stack from '@mui/material/Stack';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
@@ -59,22 +61,19 @@ export const MyCashEntriesPage = () => {
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Cash entries</h1>
-          <p className="text-muted-foreground">
-            Log offline trade settlements — money you received from or paid to another seller
-            outside the platform. Admins review and post to your wallet.
-          </p>
-        </div>
-        <Button onClick={() => setOpen(true)}>
-          <Plus className="h-4 w-4" />
-          New cash entry
-        </Button>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Cash entries"
+        description="Log offline trade settlements — money you received from or paid to another seller outside the platform. Admins review and post to your wallet."
+        action={
+          <Button onClick={() => setOpen(true)}>
+            <Plus className="h-4 w-4" />
+            New cash entry
+          </Button>
+        }
+      />
 
-      <div className="flex flex-wrap items-center gap-3">
+      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
         <Select
           value={status}
           onChange={(e) => setParam({ status: e.target.value })}
@@ -97,7 +96,7 @@ export const MyCashEntriesPage = () => {
             </option>
           ))}
         </Select>
-      </div>
+      </Stack>
 
       {isLoading && <Skeleton className="h-40 w-full" />}
 
@@ -142,7 +141,7 @@ export const MyCashEntriesPage = () => {
       )}
 
       <NewCashEntryDialog open={open} onClose={() => setOpen(false)} />
-    </div>
+    </Stack>
   );
 };
 

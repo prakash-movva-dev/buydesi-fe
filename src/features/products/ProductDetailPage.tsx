@@ -11,6 +11,9 @@ import {
   RotateCcw,
   XCircle,
 } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
@@ -67,11 +70,11 @@ export const ProductDetailPage = () => {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
+      <Stack spacing={2}>
         <Skeleton className="h-8 w-72" />
         <Skeleton className="h-64 w-full" />
         <Skeleton className="h-40 w-full" />
-      </div>
+      </Stack>
     );
   }
 
@@ -100,7 +103,7 @@ export const ProductDetailPage = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <Stack spacing={3}>
       <Button variant="ghost" size="sm" onClick={() => navigate('/admin/products')}>
         <ArrowLeft className="h-4 w-4" />
         Back to products
@@ -122,20 +125,30 @@ export const ProductDetailPage = () => {
         </div>
       )}
 
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{product.name}</h1>
-          <p className="text-sm text-muted-foreground">
+      <Box
+        sx={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          alignItems: 'flex-start',
+          justifyContent: 'space-between',
+          gap: 2,
+        }}
+      >
+        <Box>
+          <Typography variant="h4" component="h1">
+            {product.name}
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             ID {product.id} · category {categoryName} · seller {product.sellerId}
-          </p>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
+          </Typography>
+          <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center" sx={{ mt: 1 }}>
             <ProductStatusBadge status={product.status} />
             {product.stock.quantity <= product.stock.threshold && (
               <Badge variant="warning">Low stock</Badge>
             )}
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
+          </Stack>
+        </Box>
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
           {isPending && (
             <>
               <Button onClick={() => setAction('approve')}>
@@ -160,10 +173,10 @@ export const ProductDetailPage = () => {
               Move to pending
             </Button>
           )}
-        </div>
-      </div>
+        </Box>
+      </Box>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', lg: 'repeat(3, 1fr)' } }}>
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Description</CardTitle>
@@ -223,7 +236,7 @@ export const ProductDetailPage = () => {
             )}
           </CardContent>
         </Card>
-      </div>
+      </Box>
 
       <ListingDetails product={product} />
 
@@ -324,7 +337,7 @@ export const ProductDetailPage = () => {
           });
         }}
       />
-    </div>
+    </Stack>
   );
 };
 

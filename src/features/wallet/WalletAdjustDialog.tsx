@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Box from '@mui/material/Box';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
@@ -72,7 +73,7 @@ export const WalletAdjustDialog = ({ open, sellerId, onClose }: Props) => {
       }
     >
       <div className="space-y-3">
-        <div className="grid grid-cols-2 gap-3">
+        <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: 'repeat(2, 1fr)' }}>
           <div className="space-y-1.5">
             <Label htmlFor="adjust-dir">Direction</Label>
             <Select
@@ -95,7 +96,7 @@ export const WalletAdjustDialog = ({ open, sellerId, onClose }: Props) => {
               onChange={(e) => setAmount(e.target.value)}
             />
           </div>
-        </div>
+        </Box>
         <div className="space-y-1.5">
           <Label htmlFor="adjust-reason">
             Reason <span className="text-destructive">*</span>

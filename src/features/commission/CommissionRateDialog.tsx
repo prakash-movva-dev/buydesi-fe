@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Box from '@mui/material/Box';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { ProductPicker } from '@/components/pickers/ProductPicker';
 import { UserPicker } from '@/components/pickers/UserPicker';
@@ -163,7 +164,7 @@ export const CommissionRateDialog = ({ open, editing, onClose }: Props) => {
           </>
         )}
 
-        <div className="grid grid-cols-2 gap-3">
+        <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: 'repeat(2, 1fr)' }}>
           <div className="space-y-1.5">
             <Label htmlFor="rate-pct">Rate % *</Label>
             <Input
@@ -189,9 +190,9 @@ export const CommissionRateDialog = ({ open, editing, onClose }: Props) => {
               </Select>
             </div>
           )}
-        </div>
+        </Box>
 
-        <div className="grid grid-cols-2 gap-3">
+        <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: 'repeat(2, 1fr)' }}>
           {!isEdit && (
             <div className="space-y-1.5">
               <Label htmlFor="rate-from">Effective from</Label>
@@ -212,7 +213,7 @@ export const CommissionRateDialog = ({ open, editing, onClose }: Props) => {
               onChange={(e) => setEffectiveTo(e.target.value)}
             />
           </div>
-        </div>
+        </Box>
 
         <div className="space-y-1.5">
           <Label htmlFor="rate-notes">Notes</Label>

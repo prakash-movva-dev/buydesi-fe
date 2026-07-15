@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
-  Box,
+  Box as BoxIcon,
   ClipboardList,
   CreditCard,
   Headset,
@@ -13,6 +13,8 @@ import {
   ShoppingBag,
   UserCheck,
 } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
@@ -22,7 +24,9 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/Card';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { StatCard } from '@/components/ui/StatCard';
 import { useDashboardOverview, type DashboardPeriod } from '@/features/dashboard/api';
 import { usePayoutsList } from '@/features/payouts/api';
 import { useProductsList } from '@/features/products/api';
@@ -47,34 +51,40 @@ export const RegionalAdminDashboard = () => {
   const o = overview.data;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {`Hi, ${user?.name.split(' ')[0] ?? 'Admin'}`}
-          </h1>
-          <p className="text-muted-foreground">
-            Cluster operations cockpit. Every list and queue below is scoped to your cluster
-            automatically.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <PeriodToggle value={period} onChange={setPeriod} />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => overview.refetch()}
-            disabled={overview.isFetching}
-          >
-            <RefreshCw className={`h-4 w-4 ${overview.isFetching ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-        </div>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title={`Hi, ${user?.name.split(' ')[0] ?? 'Admin'}`}
+        description="Cluster operations cockpit. Every list and queue below is scoped to your cluster automatically."
+        action={
+          <Stack direction="row" spacing={1} alignItems="center">
+            <PeriodToggle value={period} onChange={setPeriod} />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => overview.refetch()}
+              disabled={overview.isFetching}
+            >
+              <RefreshCw className={`h-4 w-4 ${overview.isFetching ? 'animate-spin' : ''}`} />
+              Refresh
+            </Button>
+          </Stack>
+        }
+      />
 
       <ScopedAdminBanner />
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <Box
+        sx={{
+          display: 'grid',
+          gap: 2,
+          gridTemplateColumns: {
+            xs: '1fr',
+            sm: 'repeat(2,1fr)',
+            lg: 'repeat(3,1fr)',
+            xl: 'repeat(5,1fr)',
+          },
+        }}
+      >
         <Metric
           label="Pending seller KYC"
           value={overview.isLoading ? null : o?.sellers.pendingApproval ?? 0}
@@ -113,7 +123,7 @@ export const RegionalAdminDashboard = () => {
           }
           tone="info"
         />
-      </div>
+      </Box>
 
       <Card>
         <CardHeader>
@@ -122,7 +132,18 @@ export const RegionalAdminDashboard = () => {
             Direct links into work queues, pre-filtered to your cluster.
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <CardContent>
+          <Box
+            sx={{
+              display: 'grid',
+              gap: 1.5,
+              gridTemplateColumns: {
+                xs: '1fr',
+                sm: 'repeat(2,1fr)',
+                lg: 'repeat(4,1fr)',
+              },
+            }}
+          >
           <ActionTile
             icon={UserCheck}
             label="Pending seller KYC"
@@ -153,7 +174,7 @@ export const RegionalAdminDashboard = () => {
             onClick={() => navigate('/admin/payouts?status=PENDING')}
           />
           <ActionTile
-            icon={Box}
+            icon={BoxIcon}
             label="Low-stock products"
             count={lowStock.isLoading ? undefined : lowStockCount}
             loading={lowStock.isLoading}
@@ -190,6 +211,7 @@ export const RegionalAdminDashboard = () => {
             loading={overview.isLoading}
             onClick={() => navigate('/admin/orders')}
           />
+          </Box>
         </CardContent>
       </Card>
 
@@ -197,22 +219,44 @@ export const RegionalAdminDashboard = () => {
         <CardHeader>
           <CardTitle className="text-base">Quick links</CardTitle>
         </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <CardContent>
+          <Box
+            sx={{
+              display: 'grid',
+              gap: 1.5,
+              gridTemplateColumns: {
+                xs: '1fr',
+                sm: 'repeat(2,1fr)',
+                lg: 'repeat(3,1fr)',
+              },
+            }}
+          >
           <QuickLink label="Sellers" hint="Approve / verify" onClick={() => navigate('/admin/sellers')} />
           <QuickLink label="Products" hint="Approval queue" onClick={() => navigate('/admin/products')} />
           <QuickLink label="Orders" hint="Search / refund" onClick={() => navigate('/admin/orders')} />
           <QuickLink label="Wallet" hint="Per-seller adjustments" onClick={() => navigate('/admin/wallet')} />
           <QuickLink label="Promoters" hint="Create / manage" onClick={() => navigate('/admin/promoters')} />
           <QuickLink label="Reports" hint="Cluster-scoped totals" onClick={() => navigate('/admin/reports')} />
+          </Box>
         </CardContent>
       </Card>
 
       {overview.isError && (
-        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
+        <Box
+          sx={{
+            borderRadius: 1,
+            border: 1,
+            borderColor: 'error.light',
+            bgcolor: 'error.lighter',
+            p: 2,
+            fontSize: '0.875rem',
+            color: 'error.main',
+          }}
+        >
           {overview.error instanceof Error ? overview.error.message : 'Failed to load dashboard'}
-        </div>
+        </Box>
       )}
-    </div>
+    </Stack>
   );
 };
 
@@ -261,27 +305,16 @@ interface MetricProps {
   tone: 'info' | 'warning' | 'success' | 'destructive';
 }
 
-const toneClasses: Record<MetricProps['tone'], string> = {
-  info: 'text-blue-700',
-  warning: 'text-amber-700',
-  success: 'text-emerald-700',
-  destructive: 'text-destructive',
-};
-
 const Metric = ({ label, value, display, secondary, tone }: MetricProps) => {
   const content = display !== undefined ? display : value;
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardDescription>{label}</CardDescription>
-        {content === null || content === undefined ? (
-          <Skeleton className="h-9 w-20" />
-        ) : (
-          <CardTitle className={`text-3xl ${toneClasses[tone]}`}>{content}</CardTitle>
-        )}
-        {secondary !== null && <p className="text-xs text-muted-foreground">{secondary}</p>}
-      </CardHeader>
-    </Card>
+    <StatCard
+      label={label}
+      value={content}
+      loading={content === null || content === undefined}
+      secondary={secondary}
+      tone={tone}
+    />
   );
 };
 

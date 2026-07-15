@@ -1,5 +1,7 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
 import { BadgeCheck, FileUp, Plus, Trash2 } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
@@ -11,6 +13,7 @@ import {
 } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Textarea } from '@/components/ui/Textarea';
 import {
@@ -134,22 +137,19 @@ export const SellerStorefrontPage = () => {
   if (isLoading || !me) return <Skeleton className="h-96 w-full" />;
 
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Storefront</h1>
-          <p className="text-muted-foreground">
-            How buyers see your farm. Bank details are encrypted at rest — only the last 4
-            digits of the account are echoed back.
-          </p>
-        </div>
-        {me.verifiedBadge && (
-          <Badge variant="info">
-            <BadgeCheck className="mr-1 inline h-3 w-3" />
-            Verified by Buy Desi
-          </Badge>
-        )}
-      </div>
+    <Stack spacing={3} sx={{ mx: 'auto', maxWidth: 768, width: '100%' }}>
+      <PageHeader
+        title="Storefront"
+        description="How buyers see your farm. Bank details are encrypted at rest — only the last 4 digits of the account are echoed back."
+        action={
+          me.verifiedBadge ? (
+            <Badge variant="info">
+              <BadgeCheck className="mr-1 inline h-3 w-3" />
+              Verified by Buy Desi
+            </Badge>
+          ) : undefined
+        }
+      />
 
       <Card>
         <CardHeader>
@@ -179,7 +179,13 @@ export const SellerStorefrontPage = () => {
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 sm:grid-cols-2">
+      <Box
+        sx={{
+          display: 'grid',
+          gap: 2,
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2,1fr)' },
+        }}
+      >
         <AssetCard
           title="Banner"
           description="Wide hero image at the top of your storefront."
@@ -196,7 +202,7 @@ export const SellerStorefrontPage = () => {
           uploading={uploading === 'profile'}
           onFile={onPhotoFile}
         />
-      </div>
+      </Box>
 
       <Card>
         <CardHeader>
@@ -368,7 +374,7 @@ export const SellerStorefrontPage = () => {
           {update.isPending ? 'Saving…' : 'Save changes'}
         </Button>
       </div>
-    </div>
+    </Stack>
   );
 };
 

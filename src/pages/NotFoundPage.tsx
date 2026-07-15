@@ -1,16 +1,33 @@
 import { useNavigate } from 'react-router-dom';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { Button } from '@/components/ui/Button';
 
 export const NotFoundPage = () => {
   const navigate = useNavigate();
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center">
-      <p className="text-7xl font-bold tracking-tight text-muted-foreground">404</p>
-      <h1 className="text-xl font-semibold">Page not found</h1>
-      <p className="max-w-sm text-sm text-muted-foreground">
-        The page you tried to open doesn’t exist or you don’t have access to it.
-      </p>
-      <Button onClick={() => navigate('/')}>Back to dashboard</Button>
-    </div>
+    <Box
+      sx={{
+        minHeight: '60vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+      }}
+    >
+      <Stack spacing={2} alignItems="center" sx={{ textAlign: 'center' }}>
+        <Typography
+          variant="h1"
+          sx={{ fontSize: '5rem', fontWeight: 700, color: 'text.secondary', lineHeight: 1 }}
+        >
+          404
+        </Typography>
+        <Typography variant="h6">Page not found</Typography>
+        <Typography variant="body2" sx={{ color: 'text.secondary', maxWidth: 360 }}>
+          The page you tried to open doesn’t exist or you don’t have access to it.
+        </Typography>
+        <Button onClick={() => navigate('/')}>Back to dashboard</Button>
+      </Stack>
+    </Box>
   );
 };

@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { ArrowDown, ArrowUp, FolderTree, Pencil, Plus } from 'lucide-react';
+import Stack from '@mui/material/Stack';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
   Table,
@@ -64,22 +66,19 @@ export const CategoriesPage = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Categories</h1>
-          <p className="text-muted-foreground">
-            Catalogue taxonomy. Each category sets a default commission rate inherited by its
-            products unless overridden.
-          </p>
-        </div>
-        {canCreate && (
-          <Button onClick={openCreate}>
-            <Plus className="h-4 w-4" />
-            New category
-          </Button>
-        )}
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Categories"
+        description="Catalogue taxonomy. Each category sets a default commission rate inherited by its products unless overridden."
+        action={
+          canCreate ? (
+            <Button onClick={openCreate}>
+              <Plus className="h-4 w-4" />
+              New category
+            </Button>
+          ) : undefined
+        }
+      />
 
       <ScopedAdminBanner />
 
@@ -180,6 +179,6 @@ export const CategoriesPage = () => {
         onClose={() => setDialogOpen(false)}
         editing={editing}
       />
-    </div>
+    </Stack>
   );
 };

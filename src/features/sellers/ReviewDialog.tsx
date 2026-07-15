@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Stack from '@mui/material/Stack';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
 import { Label } from '@/components/ui/Label';
@@ -96,7 +97,7 @@ export const ReviewDialog = ({ open, action, onClose, onSubmit }: ReviewDialogPr
         </>
       }
     >
-      <div className="space-y-2">
+      <Stack spacing={1}>
         <Label htmlFor="review-notes">
           Notes {cfg.notesRequired ? <span className="text-destructive">*</span> : '(optional)'}
         </Label>
@@ -108,7 +109,7 @@ export const ReviewDialog = ({ open, action, onClose, onSubmit }: ReviewDialogPr
           rows={4}
         />
         {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+      </Stack>
     </Dialog>
   );
 };

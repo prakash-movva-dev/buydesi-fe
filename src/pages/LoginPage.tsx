@@ -1,16 +1,13 @@
 import { useState, type FormEvent } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Sprout } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/Card';
 import { useAuth } from '@/lib/auth';
 import { ApiError } from '@/types/api';
 
@@ -49,21 +46,35 @@ export const LoginPage = () => {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-secondary/40 p-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="items-center text-center">
-          <div className="mb-2 flex items-center gap-2">
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        bgcolor: 'background.default',
+        p: 2,
+      }}
+    >
+      <Card sx={{ width: '100%', maxWidth: 400, p: 4 }}>
+        <Stack spacing={1} alignItems="center" sx={{ textAlign: 'center', mb: 3 }}>
+          <Stack direction="row" spacing={1} alignItems="center">
             <Sprout className="h-6 w-6 text-primary" />
-            <span className="text-lg font-semibold tracking-tight">Buy Desi</span>
-          </div>
-          <CardTitle>Sign in to the back-office</CardTitle>
-          <CardDescription>
+            <Typography variant="h6" component="span">
+              Buy Desi
+            </Typography>
+          </Stack>
+          <Typography variant="h5" sx={{ mt: 1 }}>
+            Sign in to the back-office
+          </Typography>
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             Use your registered email or mobile number with your password.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={onSubmit} className="space-y-4">
-            <div className="space-y-1.5">
+          </Typography>
+        </Stack>
+
+        <form onSubmit={onSubmit}>
+          <Stack spacing={2}>
+            <Stack spacing={0.75}>
               <Label htmlFor="identifier">Email or mobile</Label>
               <Input
                 id="identifier"
@@ -73,8 +84,8 @@ export const LoginPage = () => {
                 autoComplete="username"
                 required
               />
-            </div>
-            <div className="space-y-1.5">
+            </Stack>
+            <Stack spacing={0.75}>
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
@@ -84,28 +95,38 @@ export const LoginPage = () => {
                 autoComplete="current-password"
                 required
               />
-            </div>
+            </Stack>
             {error && (
-              <p className="text-sm text-destructive" role="alert">
+              <Typography variant="body2" sx={{ color: 'error.main' }} role="alert">
                 {error}
-              </p>
+              </Typography>
             )}
             <Button type="submit" className="w-full" disabled={submitting}>
               {submitting ? 'Signing in…' : 'Sign in'}
             </Button>
-          </form>
+          </Stack>
+        </form>
 
-          <div className="mt-6 border-t border-border pt-4 text-center text-sm">
-            <p className="text-muted-foreground">New to Buy Desi?</p>
-            <Link
-              to="/register/seller"
-              className="mt-1 inline-block font-medium text-primary hover:underline"
-            >
-              Register as a seller
-            </Link>
-          </div>
-        </CardContent>
+        <Box
+          sx={{
+            mt: 3,
+            pt: 2,
+            borderTop: 1,
+            borderColor: 'divider',
+            textAlign: 'center',
+          }}
+        >
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            New to Buy Desi?
+          </Typography>
+          <Link
+            to="/register/seller"
+            className="mt-1 inline-block font-medium text-primary hover:underline"
+          >
+            Register as a seller
+          </Link>
+        </Box>
       </Card>
-    </div>
+    </Box>
   );
 };

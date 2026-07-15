@@ -1,6 +1,13 @@
 import type { HTMLAttributes } from 'react';
-import { cn } from '@/lib/cn';
+import MuiSkeleton from '@mui/material/Skeleton';
 
+// Keep the className API (pages size it with Tailwind, e.g. "h-40 w-full").
 export const Skeleton = ({ className, ...rest }: HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn('animate-pulse rounded-md bg-muted', className)} {...rest} />
+  <MuiSkeleton
+    variant="rounded"
+    animation="wave"
+    className={className}
+    sx={{ bgcolor: 'action.hover' }}
+    {...(rest as object)}
+  />
 );

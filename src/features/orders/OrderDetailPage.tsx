@@ -9,6 +9,8 @@ import {
   Truck,
   XCircle,
 } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
@@ -18,6 +20,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/Card';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
   Table,
@@ -73,11 +76,11 @@ export const OrderDetailPage = () => {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
+      <Stack spacing={2}>
         <Skeleton className="h-8 w-72" />
         <Skeleton className="h-40 w-full" />
         <Skeleton className="h-64 w-full" />
-      </div>
+      </Stack>
     );
   }
 
@@ -110,40 +113,42 @@ export const OrderDetailPage = () => {
   const remainingRefund = order.totalInr; // backend tracks refundedAmountInr on Payment, not Order
 
   return (
-    <div className="space-y-6">
-      <Button variant="ghost" size="sm" onClick={() => navigate('/admin/orders')}>
-        <ArrowLeft className="h-4 w-4" />
-        Back to orders
-      </Button>
+    <Stack spacing={3}>
+      <Box>
+        <Button variant="ghost" size="sm" onClick={() => navigate('/admin/orders')}>
+          <ArrowLeft className="h-4 w-4" />
+          Back to orders
+        </Button>
+      </Box>
 
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{order.orderNumber}</h1>
-          <p className="text-sm text-muted-foreground">
-            placed {formatDateTime(order.createdAt)} · buyer {order.buyerId} · {order.kind}
-          </p>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <OrderStatusBadge status={order.status} />
-            {order.payment?.status && <PaymentStatusBadge status={order.payment.status} />}
-            <EscrowStatusBadge status={order.escrowStatus} />
-            {order.payment?.mode && <Badge variant="muted">{order.payment.mode}</Badge>}
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {canRefund && (
-            <Button onClick={() => setRefundOpen(true)}>
-              <CircleDollarSign className="h-4 w-4" />
-              Refund
-            </Button>
-          )}
-          {canCancel && (
-            <Button variant="destructive" onClick={() => setCancelOpen(true)}>
-              <XCircle className="h-4 w-4" />
-              Cancel
-            </Button>
-          )}
-        </div>
-      </div>
+      <Stack spacing={2}>
+        <PageHeader
+          title={order.orderNumber}
+          description={`placed ${formatDateTime(order.createdAt)} · buyer ${order.buyerId} · ${order.kind}`}
+          action={
+            <>
+              {canRefund && (
+                <Button onClick={() => setRefundOpen(true)}>
+                  <CircleDollarSign className="h-4 w-4" />
+                  Refund
+                </Button>
+              )}
+              {canCancel && (
+                <Button variant="destructive" onClick={() => setCancelOpen(true)}>
+                  <XCircle className="h-4 w-4" />
+                  Cancel
+                </Button>
+              )}
+            </>
+          }
+        />
+        <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
+          <OrderStatusBadge status={order.status} />
+          {order.payment?.status && <PaymentStatusBadge status={order.payment.status} />}
+          <EscrowStatusBadge status={order.escrowStatus} />
+          {order.payment?.mode && <Badge variant="muted">{order.payment.mode}</Badge>}
+        </Stack>
+      </Stack>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
@@ -423,7 +428,7 @@ export const OrderDetailPage = () => {
         maxAmount={remainingRefund}
         onClose={() => setRefundOpen(false)}
       />
-    </div>
+    </Stack>
   );
 };
 

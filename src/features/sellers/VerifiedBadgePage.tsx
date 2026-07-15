@@ -1,9 +1,12 @@
 import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
 import { BadgeCheck, ChevronLeft, ChevronRight, ShieldCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { StatCard } from '@/components/ui/StatCard';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
@@ -62,37 +65,25 @@ export const VerifiedBadgePage = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Verified badge</h1>
-        <p className="text-muted-foreground">
-          "Verified by Buy Desi" is a trust signal granted by Super Admin to approved sellers
-          with complete KYC and storefront. Use it sparingly.
-        </p>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Verified badge"
+        description={'"Verified by Buy Desi" is a trust signal granted by Super Admin to approved sellers with complete KYC and storefront. Use it sparingly.'}
+      />
 
-      <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Approved sellers (this page)</CardDescription>
-            <CardTitle className="text-3xl">{data?.items.length ?? 0}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Verified (this page)</CardDescription>
-            <CardTitle className="text-3xl text-emerald-700">{verifiedCount}</CardTitle>
-          </CardHeader>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardDescription>Total approved on platform</CardDescription>
-            <CardTitle className="text-3xl">{total}</CardTitle>
-          </CardHeader>
-        </Card>
-      </div>
+      <Box
+        sx={{
+          display: 'grid',
+          gap: 2,
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+        }}
+      >
+        <StatCard label="Approved sellers (this page)" value={data?.items.length ?? 0} />
+        <StatCard label="Verified (this page)" value={verifiedCount} tone="success" />
+        <StatCard label="Total approved on platform" value={total} />
+      </Box>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
         <Select
           value={verifiedFilter}
           onChange={(e) => setParam({ filter: e.target.value })}
@@ -104,7 +95,7 @@ export const VerifiedBadgePage = () => {
             </option>
           ))}
         </Select>
-      </div>
+      </Stack>
 
       {isLoading && <Skeleton className="h-40 w-full" />}
       {isError && (
@@ -180,11 +171,16 @@ export const VerifiedBadgePage = () => {
             </TableBody>
           </Table>
 
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+            sx={{ fontSize: 14, color: 'text.secondary' }}
+          >
             <span>
               Showing {filtered.length} of {total} approved · page {page} / {pageCount}
             </span>
-            <div className="flex gap-2">
+            <Stack direction="row" spacing={1}>
               <Button
                 variant="outline"
                 size="sm"
@@ -203,10 +199,10 @@ export const VerifiedBadgePage = () => {
                 Next
                 <ChevronRight className="h-4 w-4" />
               </Button>
-            </div>
-          </div>
+            </Stack>
+          </Stack>
         </>
       )}
-    </div>
+    </Stack>
   );
 };

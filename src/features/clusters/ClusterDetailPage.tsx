@@ -2,6 +2,9 @@ import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Headset, Plus, ShieldCheck, Trash2 } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
@@ -15,6 +18,7 @@ import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { StatCard } from '@/components/ui/StatCard';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { UserPicker } from '@/components/pickers/UserPicker';
 import { useAdminCreateUser } from '@/features/users/api';
@@ -65,7 +69,7 @@ export const ClusterDetailPage = () => {
   const c = cluster.data;
 
   return (
-    <div className="space-y-6">
+    <Stack spacing={3}>
       <Link
         to="/admin/clusters"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
@@ -83,19 +87,19 @@ export const ClusterDetailPage = () => {
 
       {c && (
         <>
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <div className="flex items-center gap-3">
-                <h1 className="text-2xl font-semibold tracking-tight">{c.name}</h1>
-                <Badge variant={statusVariant[c.status]}>{c.status}</Badge>
-              </div>
-              <p className="text-muted-foreground">
-                {c.state} · {c.district}
-                {c.zone ? ` · ${c.zone}` : ''} · default transport{' '}
-                <span className="font-medium">{c.defaultTradeTransport}</span>
-              </p>
-            </div>
-          </div>
+          <Stack spacing={0.5}>
+            <Stack direction="row" spacing={1.5} alignItems="center" flexWrap="wrap">
+              <Typography variant="h4" component="h1">
+                {c.name}
+              </Typography>
+              <Badge variant={statusVariant[c.status]}>{c.status}</Badge>
+            </Stack>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              {c.state} · {c.district}
+              {c.zone ? ` · ${c.zone}` : ''} · default transport{' '}
+              <span className="font-medium">{c.defaultTradeTransport}</span>
+            </Typography>
+          </Stack>
 
           <Card>
             <CardHeader>
@@ -110,11 +114,20 @@ export const ClusterDetailPage = () => {
                 </p>
               )}
               {stats.data && (
-                <div className="grid gap-4 sm:grid-cols-3">
-                  <Stat label="Sellers" value={String(stats.data.sellerCount)} />
-                  <Stat label="Pin codes served" value={String(stats.data.pinCodeCount)} />
-                  <Stat label="Active categories" value={String(stats.data.activeCategoryCount)} />
-                </div>
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gap: 2,
+                    gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+                  }}
+                >
+                  <StatCard label="Sellers" value={String(stats.data.sellerCount)} />
+                  <StatCard label="Pin codes served" value={String(stats.data.pinCodeCount)} />
+                  <StatCard
+                    label="Active categories"
+                    value={String(stats.data.activeCategoryCount)}
+                  />
+                </Box>
               )}
             </CardContent>
           </Card>
@@ -145,12 +158,22 @@ export const ClusterDetailPage = () => {
                 </p>
               )}
               {perfRow && (
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  <Stat label="Orders" value={String(perfRow.orders)} />
-                  <Stat label="Revenue (₹)" value={formatInr(perfRow.revenueInr)} />
-                  <Stat label="Live listings" value={String(perfRow.liveListings)} />
-                  <Stat label="Open tickets" value={String(perfRow.openTickets)} />
-                  <Stat
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gap: 2,
+                    gridTemplateColumns: {
+                      xs: '1fr',
+                      sm: 'repeat(2, 1fr)',
+                      lg: 'repeat(3, 1fr)',
+                    },
+                  }}
+                >
+                  <StatCard label="Orders" value={String(perfRow.orders)} />
+                  <StatCard label="Revenue (₹)" value={formatInr(perfRow.revenueInr)} />
+                  <StatCard label="Live listings" value={String(perfRow.liveListings)} />
+                  <StatCard label="Open tickets" value={String(perfRow.openTickets)} />
+                  <StatCard
                     label="Avg delivery"
                     value={
                       perfRow.avgDeliveryHours
@@ -158,22 +181,15 @@ export const ClusterDetailPage = () => {
                         : '—'
                     }
                   />
-                </div>
+                </Box>
               )}
             </CardContent>
           </Card>
         </>
       )}
-    </div>
+    </Stack>
   );
 };
-
-const Stat = ({ label, value }: { label: string; value: string }) => (
-  <div className="rounded-md border bg-muted/30 p-4">
-    <div className="text-xs text-muted-foreground">{label}</div>
-    <div className="mt-1 text-2xl font-semibold">{value}</div>
-  </div>
-);
 
 const ClusterDetailsCard = ({ cluster }: { cluster: SafeCluster }) => {
   const rows: Array<[string, string]> = [
@@ -448,7 +464,13 @@ const AddClusterAdminDialog = ({
           <Label htmlFor="ca-name">Name *</Label>
           <Input id="ca-name" value={name} onChange={(e) => setName(e.target.value)} />
         </div>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 1.5,
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+          }}
+        >
           <div className="space-y-1.5">
             <Label htmlFor="ca-email">Email</Label>
             <Input id="ca-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
@@ -457,7 +479,7 @@ const AddClusterAdminDialog = ({
             <Label htmlFor="ca-mobile">Mobile</Label>
             <Input id="ca-mobile" value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="+91…" />
           </div>
-        </div>
+        </Box>
         <div className="space-y-1.5">
           <Label htmlFor="ca-pass">Temporary password *</Label>
           <Input id="ca-pass" value={password} onChange={(e) => setPassword(e.target.value)} />

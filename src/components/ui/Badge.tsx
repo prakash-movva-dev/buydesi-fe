@@ -1,5 +1,7 @@
 import type { HTMLAttributes } from 'react';
-import { cn } from '@/lib/cn';
+import Box from '@mui/material/Box';
+
+import { varAlpha } from 'src/theme/styles';
 
 type Variant = 'default' | 'success' | 'warning' | 'destructive' | 'info' | 'muted';
 
@@ -7,22 +9,47 @@ interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
   variant?: Variant;
 }
 
-const variantClasses: Record<Variant, string> = {
-  default: 'bg-primary/10 text-primary',
-  success: 'bg-emerald-100 text-emerald-700',
-  warning: 'bg-amber-100 text-amber-700',
-  destructive: 'bg-destructive/10 text-destructive',
-  info: 'bg-blue-100 text-blue-700',
-  muted: 'bg-secondary text-secondary-foreground',
+// Maps our variants onto Minimal palette channels for the soft (bg-tinted) look.
+const PALETTE: Record<Variant, string> = {
+  default: 'primary',
+  success: 'success',
+  warning: 'warning',
+  destructive: 'error',
+  info: 'info',
+  muted: 'grey',
 };
 
-export const Badge = ({ className, variant = 'default', ...rest }: BadgeProps) => (
-  <span
-    className={cn(
-      'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-      variantClasses[variant],
-      className,
-    )}
-    {...rest}
-  />
-);
+export const Badge = ({ className, variant = 'default', children, ...rest }: BadgeProps) => {
+  const key = PALETTE[variant];
+  const isGrey = variant === 'muted';
+
+  return (
+    <Box
+      component="span"
+      className={className}
+      sx={(theme) => {
+        const channel = isGrey
+          ? theme.vars.palette.grey['500Channel']
+          : theme.vars.palette[key as 'primary'].mainChannel;
+        return {
+          display: 'inline-flex',
+          alignItems: 'center',
+          borderRadius: 1,
+          px: 0.875,
+          py: 0.375,
+          fontSize: 12,
+          fontWeight: 700,
+          lineHeight: 1.5,
+          whiteSpace: 'nowrap',
+          color: isGrey
+            ? theme.vars.palette.text.secondary
+            : theme.vars.palette[key as 'primary'].dark,
+          backgroundColor: varAlpha(channel, 0.16),
+        };
+      }}
+      {...rest}
+    >
+      {children}
+    </Box>
+  );
+};

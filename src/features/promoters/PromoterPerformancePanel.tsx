@@ -1,9 +1,13 @@
 import { useState } from 'react';
 import { Download } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { ClusterPicker } from '@/components/pickers/ClusterPicker';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { StatCard } from '@/components/ui/StatCard';
 import {
   Table,
   TableBody,
@@ -50,9 +54,17 @@ export const PromoterPerformancePanel = () => {
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <Box
+          sx={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 1.5,
+          }}
+        >
           <CardTitle>Performance</CardTitle>
-          <div className="flex flex-wrap items-center gap-2">
+          <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
             {isSuper && (
               <ClusterPicker
                 value={clusterId}
@@ -65,8 +77,8 @@ export const PromoterPerformancePanel = () => {
               <Download className="h-4 w-4" />
               {downloading ? 'Preparing…' : 'Download CSV'}
             </Button>
-          </div>
-        </div>
+          </Stack>
+        </Box>
       </CardHeader>
       <CardContent className="space-y-4">
         {downloadError && <p className="text-sm text-destructive">{downloadError}</p>}
@@ -80,25 +92,22 @@ export const PromoterPerformancePanel = () => {
 
         {!isLoading && !isError && data && (
           <>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="rounded-lg border border-border p-4">
-                <p className="text-xs text-muted-foreground">Total promoters</p>
-                <p className="mt-1 text-2xl font-semibold">{data.totalPromoters}</p>
-              </div>
-              <div className="rounded-lg border border-border p-4">
-                <p className="text-xs text-muted-foreground">Total coupon uses</p>
-                <p className="mt-1 text-2xl font-semibold">{data.totalUses}</p>
-              </div>
-              <div className="rounded-lg border border-border p-4">
-                <p className="text-xs text-muted-foreground">Total discount given</p>
-                <p className="mt-1 text-2xl font-semibold">
-                  {formatInr(data.totalDiscountInr)}
-                </p>
-              </div>
-            </div>
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 2,
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(3,1fr)' },
+              }}
+            >
+              <StatCard label="Total promoters" value={data.totalPromoters} />
+              <StatCard label="Total coupon uses" value={data.totalUses} />
+              <StatCard label="Total discount given" value={formatInr(data.totalDiscountInr)} />
+            </Box>
 
             <div>
-              <p className="mb-2 text-sm font-medium">Top performers</p>
+              <Typography variant="h6" sx={{ mb: 1 }}>
+                Top performers
+              </Typography>
               <Table>
                 <TableHeader>
                   <TableRow>

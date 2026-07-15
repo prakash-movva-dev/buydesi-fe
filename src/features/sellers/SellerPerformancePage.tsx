@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import Stack from '@mui/material/Stack';
 import { Calendar, Download } from 'lucide-react';
 import { ClusterPicker } from '@/components/pickers/ClusterPicker';
 import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
 import {
   Card,
   CardContent,
@@ -88,15 +90,11 @@ export const SellerPerformancePage = () => {
   const rows = data?.rows ?? [];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Seller performance</h1>
-        <p className="text-muted-foreground">
-          Per-seller orders, fulfilment, returns, ratings, complaints and revenue for a chosen
-          date range. Cluster admins are auto-scoped to their cluster; super admin can pin to a
-          specific cluster or leave blank for platform-wide.
-        </p>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Seller performance"
+        description="Per-seller orders, fulfilment, returns, ratings, complaints and revenue for a chosen date range. Cluster admins are auto-scoped to their cluster; super admin can pin to a specific cluster or leave blank for platform-wide."
+      />
 
       <Card>
         <CardHeader>
@@ -107,7 +105,7 @@ export const SellerPerformancePage = () => {
           <CardDescription>Defaults to the last 30 days.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap items-end gap-3">
+          <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="flex-end">
             <div className="space-y-1.5">
               <Label htmlFor="sp-from">From</Label>
               <Input
@@ -152,7 +150,7 @@ export const SellerPerformancePage = () => {
               <Download className="h-4 w-4" />
               {downloading ? 'Downloading…' : 'Download CSV'}
             </Button>
-          </div>
+          </Stack>
           {runError && <p className="mt-3 text-sm text-destructive">{runError}</p>}
           {downloadError && <p className="mt-3 text-sm text-destructive">{downloadError}</p>}
         </CardContent>
@@ -200,6 +198,6 @@ export const SellerPerformancePage = () => {
           </TableBody>
         </Table>
       )}
-    </div>
+    </Stack>
   );
 };

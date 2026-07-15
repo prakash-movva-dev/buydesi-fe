@@ -1,18 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Wallet as WalletIcon } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
 import { Button } from '@/components/ui/Button';
-import {
-  Card,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/Card';
 import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { StatCard } from '@/components/ui/StatCard';
 import {
   Table,
   TableBody,
@@ -88,44 +86,45 @@ export const MyWalletPage = () => {
   const [withdrawOpen, setWithdrawOpen] = useState(false);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">My wallet</h1>
-          <p className="text-muted-foreground">
-            Balance, pending credits, and every transaction. Withdraw to your bank when
-            ready.
-          </p>
-        </div>
-        <Button
-          onClick={() => setWithdrawOpen(true)}
-          disabled={!snapshot.data || snapshot.data.availableInr <= 0}
-        >
-          <WalletIcon className="h-4 w-4" />
-          Withdraw
-        </Button>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="My wallet"
+        description="Balance, pending credits, and every transaction. Withdraw to your bank when ready."
+        action={
+          <Button
+            onClick={() => setWithdrawOpen(true)}
+            disabled={!snapshot.data || snapshot.data.availableInr <= 0}
+          >
+            <WalletIcon className="h-4 w-4" />
+            Withdraw
+          </Button>
+        }
+      />
 
-      <div className="grid gap-4 sm:grid-cols-4">
-        <Metric label="Balance" value={snapshot.data ? formatInr(snapshot.data.balanceInr) : null} />
-        <Metric
+      <Box
+        sx={{
+          display: 'grid',
+          gap: 2,
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(4,1fr)' },
+        }}
+      >
+        <StatCard label="Balance" value={snapshot.data ? formatInr(snapshot.data.balanceInr) : null} />
+        <StatCard
           label="Available to withdraw"
           value={snapshot.data ? formatInr(snapshot.data.availableInr) : null}
-          highlight
+          tone="success"
         />
-        <Metric
+        <StatCard
           label="Pending credit"
           value={snapshot.data ? formatInr(snapshot.data.pendingCreditInr) : null}
-          muted
         />
-        <Metric
+        <StatCard
           label="Pending debit"
           value={snapshot.data ? formatInr(snapshot.data.pendingDebitInr) : null}
-          muted
         />
-      </div>
+      </Box>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
         <Select
           value={type}
           onChange={(e) => setParam({ type: e.target.value })}
@@ -159,7 +158,7 @@ export const MyWalletPage = () => {
             </option>
           ))}
         </Select>
-      </div>
+      </Stack>
 
       {txs.isLoading && <Skeleton className="h-40 w-full" />}
 
@@ -241,36 +240,9 @@ export const MyWalletPage = () => {
         onClose={() => setWithdrawOpen(false)}
         maxAmount={snapshot.data?.availableInr ?? 0}
       />
-    </div>
+    </Stack>
   );
 };
-
-const Metric = ({
-  label,
-  value,
-  highlight,
-  muted,
-}: {
-  label: string;
-  value: string | null;
-  highlight?: boolean;
-  muted?: boolean;
-}) => (
-  <Card>
-    <CardHeader className="pb-2">
-      <CardDescription>{label}</CardDescription>
-      {value === null ? (
-        <Skeleton className="h-9 w-24" />
-      ) : (
-        <CardTitle
-          className={`text-3xl ${highlight ? 'text-emerald-700' : muted ? 'text-muted-foreground' : ''}`}
-        >
-          {value}
-        </CardTitle>
-      )}
-    </CardHeader>
-  </Card>
-);
 
 const WithdrawDialog = ({
   open,

@@ -10,6 +10,9 @@ import {
   Truck,
   Wallet as WalletIcon,
 } from 'lucide-react';
+import MuiBox from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { Badge } from '@/components/ui/Badge';
 import {
   Card,
@@ -65,23 +68,29 @@ export const SellerDashboard = () => {
   const monthRevenue = analytics.data?.sales.totalRevenueInr ?? null;
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">
+    <Stack spacing={3}>
+      <MuiBox>
+        <Typography variant="h4" component="h1">
           {`Hi, ${user?.name.split(' ')[0] ?? ''}`}
-        </h1>
-        <p className="text-muted-foreground">
+        </Typography>
+        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
           Your storefront at a glance — pending orders, low stock, wallet, and the last
           30 days of sales.
-        </p>
+        </Typography>
         {me && me.verifiedBadge && (
           <Badge variant="info" className="mt-2">
             Verified by Buy Desi
           </Badge>
         )}
-      </div>
+      </MuiBox>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <MuiBox
+        sx={{
+          display: 'grid',
+          gap: 2,
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2,1fr)', lg: 'repeat(4,1fr)' },
+        }}
+      >
         <Metric
           label="Pending dispatch"
           icon={Package}
@@ -110,7 +119,7 @@ export const SellerDashboard = () => {
           tone="success"
           onClick={() => navigate('/seller/wallet')}
         />
-      </div>
+      </MuiBox>
 
       <Card>
         <CardHeader>
@@ -139,7 +148,13 @@ export const SellerDashboard = () => {
         </CardContent>
       </Card>
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <MuiBox
+        sx={{
+          display: 'grid',
+          gap: 2,
+          gridTemplateColumns: { xs: '1fr', lg: 'repeat(2,1fr)' },
+        }}
+      >
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Money</CardTitle>
@@ -185,8 +200,8 @@ export const SellerDashboard = () => {
             />
           </CardContent>
         </Card>
-      </div>
-    </div>
+      </MuiBox>
+    </Stack>
   );
 };
 

@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { Pencil, Plus, ShoppingCart } from 'lucide-react';
+import Stack from '@mui/material/Stack';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
   Table,
@@ -30,26 +32,22 @@ export const CartLimitsPage = () => {
   const [editing, setEditing] = useState<CartLimit | null>(null);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Cart limits</h1>
-          <p className="text-muted-foreground">
-            Maximum quantities, value, weight and COD ceiling per cart. The cart validator
-            picks the most-specific applicable rule at checkout (cluster_category &gt; category
-            &gt; cluster &gt; default).
-          </p>
-        </div>
-        <Button
-          onClick={() => {
-            setEditing(null);
-            setOpen(true);
-          }}
-        >
-          <Plus className="h-4 w-4" />
-          New rule
-        </Button>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Cart limits"
+        description="Maximum quantities, value, weight and COD ceiling per cart. The cart validator picks the most-specific applicable rule at checkout (cluster_category > category > cluster > default)."
+        action={
+          <Button
+            onClick={() => {
+              setEditing(null);
+              setOpen(true);
+            }}
+          >
+            <Plus className="h-4 w-4" />
+            New rule
+          </Button>
+        }
+      />
 
       <Card>
         <CardHeader className="pb-3">
@@ -133,6 +131,6 @@ export const CartLimitsPage = () => {
       )}
 
       <CartLimitFormDialog open={open} editing={editing} onClose={() => setOpen(false)} />
-    </div>
+    </Stack>
   );
 };

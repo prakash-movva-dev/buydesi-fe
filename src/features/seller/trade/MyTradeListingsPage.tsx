@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
+import Stack from '@mui/material/Stack';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
   Table,
@@ -34,20 +36,17 @@ export const MyTradeListingsPage = () => {
   const [createOpen, setCreateOpen] = useState(false);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">My trade listings</h1>
-          <p className="text-muted-foreground">
-            Listings you've published on the B2B marketplace. Buyers from other clusters can
-            place trade orders once your listing is approved.
-          </p>
-        </div>
-        <Button onClick={() => setCreateOpen(true)}>
-          <Plus className="h-4 w-4" />
-          New listing
-        </Button>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="My trade listings"
+        description="Listings you've published on the B2B marketplace. Buyers from other clusters can place trade orders once your listing is approved."
+        action={
+          <Button onClick={() => setCreateOpen(true)}>
+            <Plus className="h-4 w-4" />
+            New listing
+          </Button>
+        }
+      />
 
       {isLoading && <Skeleton className="h-40 w-full" />}
 
@@ -95,7 +94,7 @@ export const MyTradeListingsPage = () => {
       )}
 
       <NewListingDialog open={createOpen} onClose={() => setCreateOpen(false)} />
-    </div>
+    </Stack>
   );
 };
 

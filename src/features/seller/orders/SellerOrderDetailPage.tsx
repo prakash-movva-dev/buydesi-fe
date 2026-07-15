@@ -8,6 +8,9 @@ import {
   Truck,
   XCircle,
 } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
@@ -50,10 +53,10 @@ export const SellerOrderDetailPage = () => {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
+      <Stack spacing={2}>
         <Skeleton className="h-8 w-72" />
         <Skeleton className="h-40 w-full" />
-      </div>
+      </Stack>
     );
   }
   if (isError || !order) {
@@ -76,7 +79,7 @@ export const SellerOrderDetailPage = () => {
   const canCancel = order.status === 'PLACED' || order.status === 'PACKED';
 
   return (
-    <div className="space-y-6">
+    <Stack spacing={3}>
       <Button variant="ghost" size="sm" onClick={() => navigate('/seller/orders')}>
         <ArrowLeft className="h-4 w-4" />
         Back to orders
@@ -84,10 +87,10 @@ export const SellerOrderDetailPage = () => {
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">{order.orderNumber}</h1>
-          <p className="text-sm text-muted-foreground">
+          <Typography variant="h4" component="h1">{order.orderNumber}</Typography>
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             placed {formatDateTime(order.createdAt)} · {order.shippingAddress.name}
-          </p>
+          </Typography>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <OrderStatusBadge status={order.status} />
             <PaymentStatusBadge status={order.payment.status} />
@@ -123,8 +126,15 @@ export const SellerOrderDetailPage = () => {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
+      <Box
+        sx={{
+          display: 'grid',
+          gap: 3,
+          gridTemplateColumns: { xs: '1fr', lg: 'repeat(3,1fr)' },
+        }}
+      >
+        <Box sx={{ gridColumn: { lg: 'span 2' } }}>
+        <Card>
           <CardHeader>
             <CardTitle>My items in this order</CardTitle>
             <CardDescription>
@@ -164,6 +174,7 @@ export const SellerOrderDetailPage = () => {
             </Table>
           </CardContent>
         </Card>
+        </Box>
 
         <Card>
           <CardHeader>
@@ -183,7 +194,7 @@ export const SellerOrderDetailPage = () => {
             </p>
           </CardContent>
         </Card>
-      </div>
+      </Box>
 
       <Card>
         <CardHeader>
@@ -271,7 +282,7 @@ export const SellerOrderDetailPage = () => {
           await cancel.mutateAsync({ id: order.id, reason });
         }}
       />
-    </div>
+    </Stack>
   );
 };
 

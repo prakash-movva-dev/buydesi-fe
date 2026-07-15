@@ -1,5 +1,8 @@
 import { useMemo, useState } from 'react';
 import { Pencil, Plus, ReceiptText, Wand2 } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { ProductPicker } from '@/components/pickers/ProductPicker';
 import { UserPicker } from '@/components/pickers/UserPicker';
@@ -13,6 +16,7 @@ import {
   CardTitle,
 } from '@/components/ui/Card';
 import { Label } from '@/components/ui/Label';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
@@ -79,33 +83,30 @@ export const CommissionPage = () => {
   }, [data]);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Commission rules</h1>
-          <p className="text-muted-foreground">
-            Resolution order — seller &gt; product &gt; category &gt; category default. The
-            payout pipeline picks the most specific live rule at payout time.
-          </p>
-        </div>
-        {isSuper && (
-          <Button
-            onClick={() => {
-              setEditing(null);
-              setDialogOpen(true);
-            }}
-          >
-            <Plus className="h-4 w-4" />
-            New rule
-          </Button>
-        )}
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Commission rules"
+        description="Resolution order — seller > product > category > category default. The payout pipeline picks the most specific live rule at payout time."
+        action={
+          isSuper ? (
+            <Button
+              onClick={() => {
+                setEditing(null);
+                setDialogOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              New rule
+            </Button>
+          ) : undefined
+        }
+      />
 
       <ScopedAdminBanner />
 
       <ResolveTool />
 
-      <div className="flex flex-wrap items-center gap-3">
+      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
         <Select
           value={scope}
           onChange={(e) => setScope(e.target.value as '' | CommissionScope)}
@@ -125,7 +126,7 @@ export const CommissionPage = () => {
           />
           Active only
         </label>
-      </div>
+      </Stack>
 
       {isLoading && <Skeleton className="h-40 w-full" />}
       {isError && (
@@ -135,7 +136,7 @@ export const CommissionPage = () => {
       )}
 
       {!isLoading && !isError && (
-        <div className="space-y-6">
+        <Stack spacing={3}>
           {(['seller', 'product', 'category'] as const).map((s) => (
             <Card key={s}>
               <CardHeader className="pb-2">
@@ -216,7 +217,7 @@ export const CommissionPage = () => {
               </CardContent>
             </Card>
           ))}
-        </div>
+        </Stack>
       )}
 
       <CommissionRateDialog
@@ -224,7 +225,7 @@ export const CommissionPage = () => {
         editing={editing}
         onClose={() => setDialogOpen(false)}
       />
-    </div>
+    </Stack>
   );
 };
 
@@ -247,7 +248,13 @@ const ResolveTool = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="grid gap-3 sm:grid-cols-3">
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 1.5,
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+          }}
+        >
           <div className="space-y-1.5">
             <Label>Seller</Label>
             <UserPicker
@@ -271,13 +278,15 @@ const ResolveTool = () => {
               onChange={(id) => setCategoryId(id ?? '')}
             />
           </div>
-        </div>
+        </Box>
         {result.data && (
           <div className="rounded-md border border-border bg-secondary/30 p-3">
-            <p className="text-2xl font-semibold">{result.data.ratePercent}%</p>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <Typography variant="h5" sx={{ fontWeight: 600 }}>
+              {result.data.ratePercent}%
+            </Typography>
+            <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
               Matched rule: <Badge variant="muted">{SOURCE_LABEL[result.data.source]}</Badge>
-            </p>
+            </Typography>
           </div>
         )}
         {result.isError && (

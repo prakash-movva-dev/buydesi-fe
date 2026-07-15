@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ShoppingBasket } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { ClusterPicker } from '@/components/pickers/ClusterPicker';
 import { Badge } from '@/components/ui/Badge';
@@ -14,6 +16,7 @@ import {
 import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { formatInr } from '@/lib/format';
@@ -35,16 +38,13 @@ export const TradeCataloguePage = () => {
   const [placing, setPlacing] = useState<TradeListing | null>(null);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Trade catalogue</h1>
-        <p className="text-muted-foreground">
-          Buy from other sellers across clusters. Place orders, pay online or via cash
-          settlement, and arrange delivery yourself or via Delhivery.
-        </p>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Trade catalogue"
+        description="Buy from other sellers across clusters. Place orders, pay online or via cash settlement, and arrange delivery yourself or via Delhivery."
+      />
 
-      <div className="flex flex-wrap items-end gap-3">
+      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="flex-end">
         <div className="w-56">
           <Label className="mb-1.5 block text-xs">Category</Label>
           <CategoryPicker
@@ -61,18 +61,30 @@ export const TradeCataloguePage = () => {
             placeholder="All clusters"
           />
         </div>
-      </div>
+      </Stack>
 
       {isLoading && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 2,
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2,1fr)', lg: 'repeat(3,1fr)' },
+          }}
+        >
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton key={i} className="h-40" />
           ))}
-        </div>
+        </Box>
       )}
 
       {!isLoading && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 2,
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2,1fr)', lg: 'repeat(3,1fr)' },
+          }}
+        >
           {(data?.items ?? []).map((l) => (
             <Card key={l.id ?? l._id}>
               <CardHeader className="pb-2">
@@ -104,20 +116,22 @@ export const TradeCataloguePage = () => {
             </Card>
           ))}
           {(data?.items.length ?? 0) === 0 && (
-            <Card className="sm:col-span-2 lg:col-span-3">
-              <CardContent className="py-12 text-center text-sm text-muted-foreground">
-                No listings match the current filter.
-              </CardContent>
-            </Card>
+            <Box sx={{ gridColumn: '1 / -1' }}>
+              <Card>
+                <CardContent className="py-12 text-center text-sm text-muted-foreground">
+                  No listings match the current filter.
+                </CardContent>
+              </Card>
+            </Box>
           )}
-        </div>
+        </Box>
       )}
 
       <PlaceOrderDialog
         listing={placing}
         onClose={() => setPlacing(null)}
       />
-    </div>
+    </Stack>
   );
 };
 

@@ -1,9 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
@@ -98,16 +101,19 @@ export const ActivityLogPage = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Activity log</h1>
-        <p className="text-muted-foreground">
-          Every admin mutation is captured here (auto by the activity middleware, plus
-          domain-specific entries written by service code). Super and Sub-Super only.
-        </p>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Activity log"
+        description="Every admin mutation is captured here (auto by the activity middleware, plus domain-specific entries written by service code). Super and Sub-Super only."
+      />
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <Box
+        sx={{
+          display: 'grid',
+          gap: 2,
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2,1fr)', lg: 'repeat(4,1fr)' },
+        }}
+      >
         <Input
           value={actorId}
           onChange={(e) => setParam({ actorId: e.target.value })}
@@ -154,7 +160,7 @@ export const ActivityLogPage = () => {
           <Download className="h-4 w-4" />
           {downloading ? 'Exporting…' : 'Download CSV'}
         </Button>
-      </div>
+      </Box>
 
       {downloadError && (
         <p className="text-sm text-destructive">{downloadError}</p>
@@ -273,6 +279,6 @@ export const ActivityLogPage = () => {
           </p>
         </>
       )}
-    </div>
+    </Stack>
   );
 };

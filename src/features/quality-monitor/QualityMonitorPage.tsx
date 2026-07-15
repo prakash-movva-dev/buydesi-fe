@@ -1,10 +1,14 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ExternalLink, ShieldAlert, Star, TicketPlus } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
 import { Label } from '@/components/ui/Label';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
   Table,
@@ -50,20 +54,19 @@ export const QualityMonitorPage = () => {
   const reviews = data?.items ?? [];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="flex items-center gap-2 text-2xl font-semibold tracking-tight">
-          <ShieldAlert className="h-6 w-6 text-amber-600" />
-          Quality Monitor
-        </h1>
-        <p className="text-muted-foreground">
-          Recent low-rated reviews (2 stars or below) on products and sellers. Raise a
-          product-quality support ticket directly from a flagged review.
-        </p>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title={
+          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+            <ShieldAlert className="h-6 w-6 text-amber-600" />
+            Quality Monitor
+          </Box>
+        }
+        description="Recent low-rated reviews (2 stars or below) on products and sellers. Raise a product-quality support ticket directly from a flagged review."
+      />
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Low ratings</h2>
+      <Stack component="section" spacing={1.5}>
+        <Typography variant="h6">Low ratings</Typography>
 
         {isLoading && (
           <div className="space-y-2">
@@ -153,13 +156,13 @@ export const QualityMonitorPage = () => {
             </TableBody>
           </Table>
         )}
-      </section>
+      </Stack>
 
       <CreateTicketDialog
         review={ticketFor}
         onClose={() => setTicketFor(null)}
       />
-    </div>
+    </Stack>
   );
 };
 

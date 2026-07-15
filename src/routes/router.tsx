@@ -1,5 +1,5 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
-import { AppShell } from '@/components/layout/AppShell';
+import { MuiAppShell } from '@/components/layout/MuiAppShell';
 import { ActivityLogPage } from '@/features/activity/ActivityLogPage';
 import { CartLimitsPage } from '@/features/cartlimits/CartLimitsPage';
 import { CategoriesPage } from '@/features/categories/CategoriesPage';
@@ -120,7 +120,7 @@ const router = createBrowserRouter([
     element: <ProtectedRoute />,
     children: [
       {
-        element: <AppShell />,
+        element: <MuiAppShell />,
         children: [
           { path: '/', element: <DashboardPage /> },
           { path: '/forbidden', element: <ForbiddenPage /> },

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Stack from '@mui/material/Stack';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
 import { Label } from '@/components/ui/Label';
@@ -95,7 +96,7 @@ export const DisciplinaryDialog = ({
         </>
       }
     >
-      <div className="space-y-2">
+      <Stack spacing={1}>
         <Label htmlFor="disciplinary-reason">
           Reason <span className="text-destructive">*</span>
         </Label>
@@ -107,7 +108,7 @@ export const DisciplinaryDialog = ({
           rows={4}
         />
         {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+      </Stack>
     </Dialog>
   );
 };

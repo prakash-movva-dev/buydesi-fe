@@ -1,9 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, ChevronLeft, ChevronRight, Search, Upload, XCircle } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
 import { BulkUploadDialog } from './BulkUploadDialog';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
@@ -130,25 +133,23 @@ export const ProductsListPage = () => {
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Products</h1>
-          <p className="text-muted-foreground">
-            Approval queue and catalogue. Category Admins see only their assigned branch.
-          </p>
-        </div>
-        <Button variant="outline" onClick={() => setBulkUploadOpen(true)}>
-          <Upload className="h-4 w-4" />
-          Bulk upload CSV
-        </Button>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Products"
+        description="Approval queue and catalogue. Category Admins see only their assigned branch."
+        action={
+          <Button variant="outline" onClick={() => setBulkUploadOpen(true)}>
+            <Upload className="h-4 w-4" />
+            Bulk upload CSV
+          </Button>
+        }
+      />
 
       <BulkUploadDialog open={bulkUploadOpen} onClose={() => setBulkUploadOpen(false)} />
 
       <ScopedAdminBanner />
 
-      <div className="flex flex-wrap items-center gap-3">
+      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
         <Select
           value={status}
           onChange={(e) => setParam({ status: e.target.value })}
@@ -181,10 +182,13 @@ export const ProductsListPage = () => {
             className="pl-9"
           />
         </div>
-      </div>
+      </Stack>
 
       {selected.size > 0 && (
-        <div className="flex items-center gap-3 rounded-md border border-border bg-secondary/40 px-4 py-3 text-sm">
+        <Box
+          className="rounded-md border border-border bg-secondary/40 px-4 py-3 text-sm"
+          sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}
+        >
           <span className="font-medium">{selected.size} selected</span>
           <span className="text-muted-foreground">·</span>
           <Button size="sm" onClick={() => setBulkAction('approve')}>
@@ -201,7 +205,7 @@ export const ProductsListPage = () => {
           <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
             Clear
           </Button>
-        </div>
+        </Box>
       )}
 
       {isLoading && (
@@ -320,11 +324,16 @@ export const ProductsListPage = () => {
             </TableBody>
           </Table>
 
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <Stack
+            direction="row"
+            alignItems="center"
+            justifyContent="space-between"
+            sx={{ fontSize: 14, color: 'text.secondary' }}
+          >
             <span>
               {data?.items.length ?? 0} of {total} · page {page} / {pageCount}
             </span>
-            <div className="flex gap-2">
+            <Stack direction="row" spacing={1}>
               <Button
                 variant="outline"
                 size="sm"
@@ -343,8 +352,8 @@ export const ProductsListPage = () => {
                 Next
                 <ChevronRight className="h-4 w-4" />
               </Button>
-            </div>
-          </div>
+            </Stack>
+          </Stack>
         </>
       )}
 
@@ -372,6 +381,6 @@ export const ProductsListPage = () => {
           await setStatusMut.mutateAsync({ id: singleAction.id, status: target, notes });
         }}
       />
-    </div>
+    </Stack>
   );
 };

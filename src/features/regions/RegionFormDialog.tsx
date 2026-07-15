@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Box from '@mui/material/Box';
 import { ClusterPicker } from '@/components/pickers/ClusterPicker';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
@@ -84,7 +85,13 @@ export const RegionFormDialog = ({ open, editing, onClose }: Props) => {
       className="max-w-2xl"
     >
       <div className="space-y-3">
-        <div className="grid gap-3 sm:grid-cols-2">
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 1.5,
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+          }}
+        >
           <div className="space-y-1.5">
             <Label htmlFor="rg-name">Name *</Label>
             <Input id="rg-name" value={name} onChange={(e) => setName(e.target.value)} />
@@ -100,7 +107,7 @@ export const RegionFormDialog = ({ open, editing, onClose }: Props) => {
               ))}
             </Select>
           </div>
-        </div>
+        </Box>
 
         <div className="space-y-1.5">
           <Label>Clusters in this region</Label>

@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, Copy, Pencil, Plus, Trash2 } from 'lucide-react';
+import Stack from '@mui/material/Stack';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
@@ -84,27 +86,24 @@ export const PromotersPage = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Promoters</h1>
-          <p className="text-muted-foreground">
-            People with a unique DESI-XXX coupon code. Track usage, discount given, and
-            buyer/seller referrals (SOW 4.18).
-          </p>
-        </div>
-        {canCreate && (
-          <Button
-            onClick={() => {
-              setEditing(null);
-              setDialogOpen(true);
-            }}
-          >
-            <Plus className="h-4 w-4" />
-            New promoter
-          </Button>
-        )}
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Promoters"
+        description="People with a unique DESI-XXX coupon code. Track usage, discount given, and buyer/seller referrals (SOW 4.18)."
+        action={
+          canCreate ? (
+            <Button
+              onClick={() => {
+                setEditing(null);
+                setDialogOpen(true);
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              New promoter
+            </Button>
+          ) : undefined
+        }
+      />
 
       {newlyCreatedCode && (
         <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm">
@@ -129,7 +128,7 @@ export const PromotersPage = () => {
 
       <PromoterPerformancePanel />
 
-      <div className="flex flex-wrap items-center gap-3">
+      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
         <Select
           value={active}
           onChange={(e) => setParam({ active: e.target.value })}
@@ -139,7 +138,7 @@ export const PromotersPage = () => {
           <option value="true">Active</option>
           <option value="false">Inactive</option>
         </Select>
-      </div>
+      </Stack>
 
       {isLoading && <Skeleton className="h-40 w-full" />}
       {isError && (
@@ -257,6 +256,6 @@ export const PromotersPage = () => {
         onClose={() => setDialogOpen(false)}
         onCreated={(code) => setNewlyCreatedCode(code)}
       />
-    </div>
+    </Stack>
   );
 };

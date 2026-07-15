@@ -1,7 +1,9 @@
 import { Link } from 'react-router-dom';
 import { AlertTriangle, ChevronRight, PackageSearch } from 'lucide-react';
+import Stack from '@mui/material/Stack';
 import { Badge } from '@/components/ui/Badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
   Table,
@@ -36,14 +38,11 @@ export const EscalationPanelPage = () => {
   const listingItems = listings.data?.items ?? [];
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Escalation Panel</h1>
-        <p className="text-muted-foreground">
-          A unified queue of items escalated to the super tier. Open any row to act on it from
-          its detail page.
-        </p>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Escalation Panel"
+        description="A unified queue of items escalated to the super tier. Open any row to act on it from its detail page."
+      />
 
       {/* Section 1 — Escalated support tickets */}
       <Card>
@@ -193,6 +192,6 @@ export const EscalationPanelPage = () => {
           )}
         </CardContent>
       </Card>
-    </div>
+    </Stack>
   );
 };

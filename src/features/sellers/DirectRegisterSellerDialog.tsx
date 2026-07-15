@@ -1,4 +1,7 @@
 import { useEffect, useState } from 'react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { ClusterPicker } from '@/components/pickers/ClusterPicker';
 import { Button } from '@/components/ui/Button';
@@ -172,8 +175,8 @@ export const DirectRegisterSellerDialog = ({ open, onClose }: Props) => {
       }
       className="max-w-2xl"
     >
-      <div className="space-y-3">
-        <div className="grid gap-3 sm:grid-cols-2">
+      <Stack spacing={1.5}>
+        <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' } }}>
           <div className="space-y-1.5">
             <Label htmlFor="ds-name">Full name *</Label>
             <Input id="ds-name" value={name} onChange={(e) => setName(e.target.value)} />
@@ -184,9 +187,9 @@ export const DirectRegisterSellerDialog = ({ open, onClose }: Props) => {
             <Input id="ds-farm" value={farmName} onChange={(e) => setFarmName(e.target.value)} />
             <FieldError show={showErrors} message={farmNameError} />
           </div>
-        </div>
+        </Box>
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' } }}>
           <div className="space-y-1.5">
             <Label htmlFor="ds-mobile">Mobile</Label>
             <Input
@@ -220,7 +223,7 @@ export const DirectRegisterSellerDialog = ({ open, onClose }: Props) => {
             />
             <FieldError show={showErrors} message={passwordError} />
           </div>
-        </div>
+        </Box>
 
         <div className="space-y-1.5">
           <Label htmlFor="ds-line1">Street address *</Label>
@@ -232,7 +235,7 @@ export const DirectRegisterSellerDialog = ({ open, onClose }: Props) => {
           <Input id="ds-line2" value={line2} onChange={(e) => setLine2(e.target.value)} />
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-3">
+        <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' } }}>
           <div className="space-y-1.5">
             <Label htmlFor="ds-state">State *</Label>
             <Select
@@ -281,7 +284,7 @@ export const DirectRegisterSellerDialog = ({ open, onClose }: Props) => {
             />
             <FieldError show={showErrors} message={pincodeError} />
           </div>
-        </div>
+        </Box>
 
         <div className="space-y-1.5">
           <Label>Produce categories *</Label>
@@ -301,13 +304,13 @@ export const DirectRegisterSellerDialog = ({ open, onClose }: Props) => {
           </div>
         )}
 
-        <p className="text-xs text-muted-foreground">
+        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
           KYC documents can be uploaded by the seller from their portal after first login, or added
           later from the seller's profile.
-        </p>
+        </Typography>
 
         {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+      </Stack>
     </Dialog>
   );
 };

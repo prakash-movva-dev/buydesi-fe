@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, RefreshCw, Wallet as WalletIcon } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
 import { UserPicker } from '@/components/pickers/UserPicker';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -11,8 +14,10 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/Card';
+import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { StatCard } from '@/components/ui/StatCard';
 import { UserRole } from '@/types/api';
 import {
   Table,
@@ -102,20 +107,17 @@ export const WalletPage = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Wallet</h1>
-          <p className="text-muted-foreground">
-            Every wallet transaction across sellers. Paste a seller id to pin the view to a
-            single wallet and unlock per-seller actions.
-          </p>
-        </div>
-        <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
-          <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
-      </div>
+    <Stack spacing={3}>
+      <PageHeader
+        title="Wallet"
+        description="Every wallet transaction across sellers. Paste a seller id to pin the view to a single wallet and unlock per-seller actions."
+        action={
+          <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
+            <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        }
+      />
 
       <Card>
         <CardHeader className="pb-3">
@@ -128,15 +130,15 @@ export const WalletPage = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="w-80">
+          <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="flex-end">
+            <Box sx={{ width: 320 }}>
               <UserPicker
                 role={UserRole.SELLER}
                 value={sellerIdFilter || null}
                 onChange={(id) => setParam({ sellerId: id ?? '' })}
                 placeholder="Pick a seller…"
               />
-            </div>
+            </Box>
             <Button
               disabled={!sellerIdFilter}
               onClick={() => setAdjustOpen(true)}
@@ -144,27 +146,30 @@ export const WalletPage = () => {
             >
               Adjust wallet
             </Button>
-          </div>
+          </Stack>
 
           {sellerIdFilter && snapshot.isLoading && (
             <Skeleton className="mt-4 h-20 w-full" />
           )}
           {sellerIdFilter && snapshot.data && (
-            <div className="mt-4 grid gap-4 sm:grid-cols-4">
-              <Metric label="Balance" value={formatInr(snapshot.data.balanceInr)} />
-              <Metric label="Available" value={formatInr(snapshot.data.availableInr)} />
-              <Metric
-                label="Pending credit"
-                value={formatInr(snapshot.data.pendingCreditInr)}
-                muted
-              />
-              <Metric label="Pending debit" value={formatInr(snapshot.data.pendingDebitInr)} muted />
-            </div>
+            <Box
+              sx={{
+                mt: 2,
+                display: 'grid',
+                gap: 2,
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(4, 1fr)' },
+              }}
+            >
+              <StatCard label="Balance" value={formatInr(snapshot.data.balanceInr)} />
+              <StatCard label="Available" value={formatInr(snapshot.data.availableInr)} />
+              <StatCard label="Pending credit" value={formatInr(snapshot.data.pendingCreditInr)} />
+              <StatCard label="Pending debit" value={formatInr(snapshot.data.pendingDebitInr)} />
+            </Box>
           )}
         </CardContent>
       </Card>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
         <Select
           value={type}
           onChange={(e) => setParam({ type: e.target.value })}
@@ -198,7 +203,7 @@ export const WalletPage = () => {
             </option>
           ))}
         </Select>
-      </div>
+      </Stack>
 
       {isLoading && (
         <div className="space-y-2">
@@ -300,7 +305,15 @@ export const WalletPage = () => {
             </TableBody>
           </Table>
 
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <Box
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              fontSize: 14,
+              color: 'text.secondary',
+            }}
+          >
             <span>
               {data?.items.length ?? 0} of {total} · page {page} / {pageCount}
             </span>
@@ -324,7 +337,7 @@ export const WalletPage = () => {
                 <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
-          </div>
+          </Box>
         </>
       )}
 
@@ -334,24 +347,9 @@ export const WalletPage = () => {
         onClose={() => setAdjustOpen(false)}
       />
 
-      <p className="text-xs text-muted-foreground">
+      <Typography variant="caption" sx={{ color: 'text.secondary' }}>
         Last refreshed {formatDateTime(new Date())}
-      </p>
-    </div>
+      </Typography>
+    </Stack>
   );
 };
-
-const Metric = ({
-  label,
-  value,
-  muted,
-}: {
-  label: string;
-  value: string;
-  muted?: boolean;
-}) => (
-  <div className="rounded-md border border-border bg-secondary/30 p-3">
-    <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
-    <p className={`mt-1 text-xl font-semibold ${muted ? 'text-muted-foreground' : ''}`}>{value}</p>
-  </div>
-);
