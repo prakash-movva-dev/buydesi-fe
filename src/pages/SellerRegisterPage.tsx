@@ -1,20 +1,23 @@
 import { useState, type FormEvent } from 'react';
-import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { ArrowLeft, CheckCircle2, ShieldCheck, Sprout } from 'lucide-react';
+import { Link as RouterLink, Navigate, useNavigate } from 'react-router-dom';
+import { CheckCircle2, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+
 import Box from '@mui/material/Box';
+import Link from '@mui/material/Link';
+import Step from '@mui/material/Step';
+import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
+import Button from '@mui/material/Button';
+import Stepper from '@mui/material/Stepper';
+import MenuItem from '@mui/material/MenuItem';
+import StepLabel from '@mui/material/StepLabel';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { Button } from '@/components/ui/Button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
-import { Select } from '@/components/ui/Select';
+import IconButton from '@mui/material/IconButton';
+import InputAdornment from '@mui/material/InputAdornment';
+import LoadingButton from '@mui/lab/LoadingButton';
+
+import { AuthSplitLayout } from '@/layouts/auth-split';
 import { api } from '@/lib/api';
 import { useAuth } from '@/lib/auth';
 import { ApiError, UserRole } from '@/types/api';
@@ -32,18 +35,19 @@ const LANG_OPTIONS = [
   { value: 'pa', label: 'Punjabi' },
 ];
 
-type Step = 1 | 2 | 3;
+type WizardStep = 1 | 2 | 3;
 
 export const SellerRegisterPage = () => {
   const { isAuthenticated, loginWithPassword } = useAuth();
   const navigate = useNavigate();
 
   // Form state
-  const [step, setStep] = useState<Step>(1);
+  const [step, setStep] = useState<WizardStep>(1);
   const [name, setName] = useState('');
   const [mobile, setMobile] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [pincode, setPincode] = useState('');
   const [preferredLanguage, setPreferredLanguage] = useState('en');
   const [referralCode, setReferralCode] = useState('');
@@ -83,23 +87,27 @@ export const SellerRegisterPage = () => {
 
     setSubmitting(true);
     try {
-      await api.post('/auth/register', {
-        role: UserRole.SELLER,
-        name: name.trim(),
-        mobile: mobile.trim(),
-        email: email.trim() || undefined,
-        password,
-        pincode: pincode.trim(),
-        preferredLanguage,
-        referredByCouponCode: referralCode.trim().toUpperCase() || undefined,
-      }, { skipAuth: true });
+      await api.post(
+        '/auth/register',
+        {
+          role: UserRole.SELLER,
+          name: name.trim(),
+          mobile: mobile.trim(),
+          email: email.trim() || undefined,
+          password,
+          pincode: pincode.trim(),
+          preferredLanguage,
+          referredByCouponCode: referralCode.trim().toUpperCase() || undefined,
+        },
+        { skipAuth: true },
+      );
 
       // Send OTP to mobile for registration purpose.
-      await api.post('/auth/otp/send', {
-        channel: 'mobile',
-        identifier: mobile.trim(),
-        purpose: 'registration',
-      }, { skipAuth: true });
+      await api.post(
+        '/auth/otp/send',
+        { channel: 'mobile', identifier: mobile.trim(), purpose: 'registration' },
+        { skipAuth: true },
+      );
 
       setOtpSent(true);
       setStep(2);
@@ -115,11 +123,11 @@ export const SellerRegisterPage = () => {
     setError(null);
     setResending(true);
     try {
-      await api.post('/auth/otp/send', {
-        channel: 'mobile',
-        identifier: mobile.trim(),
-        purpose: 'registration',
-      }, { skipAuth: true });
+      await api.post(
+        '/auth/otp/send',
+        { channel: 'mobile', identifier: mobile.trim(), purpose: 'registration' },
+        { skipAuth: true },
+      );
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Could not resend OTP.');
     } finally {
@@ -136,23 +144,22 @@ export const SellerRegisterPage = () => {
     }
     setSubmitting(true);
     try {
-      await api.post('/auth/otp/verify', {
-        channel: 'mobile',
-        identifier: mobile.trim(),
-        purpose: 'registration',
-        code: otpCode.trim(),
-      }, { skipAuth: true });
+      await api.post(
+        '/auth/otp/verify',
+        {
+          channel: 'mobile',
+          identifier: mobile.trim(),
+          purpose: 'registration',
+          code: otpCode.trim(),
+        },
+        { skipAuth: true },
+      );
 
       // OTP verified → user is now active. Auto-login with the password they
       // just set so they land directly on the onboarding wizard.
-      await loginWithPassword({
-        identifier: mobile.trim(),
-        password,
-        channel: 'mobile',
-      });
+      await loginWithPassword({ identifier: mobile.trim(), password, channel: 'mobile' });
 
       setStep(3);
-      // Small UX delay so the success state is visible before redirect.
       setTimeout(() => navigate('/seller/onboarding', { replace: true }), 800);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Verification failed.');
@@ -162,296 +169,209 @@ export const SellerRegisterPage = () => {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', p: 2 }}>
-      <Stack spacing={3} sx={{ maxWidth: 576, mx: 'auto', py: 4 }}>
-        <Link
-          to="/login"
-          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="h-3.5 w-3.5" />
-          Back to sign in
-        </Link>
-
-        <Stack direction="row" spacing={1} alignItems="center">
-          <Sprout className="h-7 w-7 text-primary" />
-          <Box>
-            <Typography variant="h5" component="h1">
-              Become a Buy Desi seller
-            </Typography>
-            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-              Free to join. Quick mobile verification, then a one-time KYC for approval.
-            </Typography>
-          </Box>
-        </Stack>
-
-        <Stack
-          direction="row"
-          spacing={1.5}
-          alignItems="center"
-          component="ol"
-          sx={{ m: 0, p: 0, listStyle: 'none' }}
-        >
-          <StepPill n={1} label="Sign up" active={step === 1} done={step > 1} />
-          <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
-          <StepPill n={2} label="Verify mobile" active={step === 2} done={step > 2} />
-          <Box sx={{ flex: 1, height: '1px', bgcolor: 'divider' }} />
-          <StepPill n={3} label="Continue" active={step === 3} done={false} />
-        </Stack>
-
-        {step === 1 && (
-          <Card>
-            <CardHeader>
-              <CardTitle>Tell us about yourself</CardTitle>
-              <CardDescription>
-                Mobile and pincode are required — they decide which cluster you'll be routed
-                to. Email is optional. Promoter referral code is optional.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={submitRegister} className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="r-name">Full name *</Label>
-                  <Input
-                    id="r-name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Your name as it should appear on the storefront"
-                    autoComplete="name"
-                    required
-                  />
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="r-mobile">Mobile *</Label>
-                    <Input
-                      id="r-mobile"
-                      value={mobile}
-                      onChange={(e) => setMobile(e.target.value)}
-                      placeholder="+91XXXXXXXXXX"
-                      inputMode="tel"
-                      autoComplete="tel"
-                      required
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      We'll send a 6-digit OTP to this number.
-                    </p>
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="r-pin">Pincode *</Label>
-                    <Input
-                      id="r-pin"
-                      value={pincode}
-                      onChange={(e) => setPincode(e.target.value)}
-                      pattern="\d{6}"
-                      maxLength={6}
-                      inputMode="numeric"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="grid gap-3 sm:grid-cols-2">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="r-email">Email (optional)</Label>
-                    <Input
-                      id="r-email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      autoComplete="email"
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label htmlFor="r-lang">Preferred language</Label>
-                    <Select
-                      id="r-lang"
-                      value={preferredLanguage}
-                      onChange={(e) => setPreferredLanguage(e.target.value)}
-                    >
-                      {LANG_OPTIONS.map((l) => (
-                        <option key={l.value} value={l.value}>
-                          {l.label}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="r-pass">Password *</Label>
-                  <Input
-                    id="r-pass"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    autoComplete="new-password"
-                    minLength={8}
-                    required
-                  />
-                  <p className="text-xs text-muted-foreground">At least 8 characters.</p>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label htmlFor="r-ref">Promoter referral code (optional)</Label>
-                  <Input
-                    id="r-ref"
-                    value={referralCode}
-                    onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-                    placeholder="DESI-XXXX-XXXX"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Got a code from a Buy Desi promoter? Paste it here so they get credit.
-                  </p>
-                </div>
-
-                {error && <p className="text-sm text-destructive">{error}</p>}
-
-                <Button type="submit" className="w-full" disabled={submitting}>
-                  {submitting ? 'Creating account…' : 'Continue'}
-                </Button>
-
-                <p className="pt-1 text-center text-xs text-muted-foreground">
-                  Already have an account?{' '}
-                  <Link to="/login" className="text-primary hover:underline">
-                    Sign in
-                  </Link>
-                </p>
-              </form>
-            </CardContent>
-          </Card>
-        )}
-
-        {step === 2 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ShieldCheck className="h-5 w-5 text-primary" />
-                Verify your mobile
-              </CardTitle>
-              <CardDescription>
-                We sent a 6-digit code to <span className="font-medium">{mobile}</span>. Enter
-                it below to activate your account.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={submitVerify} className="space-y-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="r-otp">OTP</Label>
-                  <Input
-                    id="r-otp"
-                    value={otpCode}
-                    onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
-                    inputMode="numeric"
-                    pattern="\d{4,8}"
-                    maxLength={8}
-                    placeholder="6-digit code"
-                    autoFocus
-                    required
-                  />
-                </div>
-                {error && <p className="text-sm text-destructive">{error}</p>}
-                <div className="flex flex-col gap-2">
-                  <Button type="submit" className="w-full" disabled={submitting}>
-                    {submitting ? 'Verifying…' : 'Verify & continue'}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={resendOtp}
-                    disabled={resending}
-                  >
-                    {resending ? 'Sending…' : "Didn't get it? Resend OTP"}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => {
-                      setStep(1);
-                      setOtpSent(false);
-                      setOtpCode('');
-                      setError(null);
-                    }}
-                  >
-                    Edit my details
-                  </Button>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {otpSent
-                    ? 'In dev mode the OTP is logged on the backend console (SMS_PROVIDER=console).'
-                    : null}
-                </p>
-              </form>
-            </CardContent>
-          </Card>
-        )}
-
-        {step === 3 && (
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                Account activated
-              </CardTitle>
-              <CardDescription>
-                Taking you to the KYC step now. Won't take long.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        )}
-      </Stack>
-    </Box>
-  );
-};
-
-const StepPill = ({
-  n,
-  label,
-  active,
-  done,
-}: {
-  n: number;
-  label: string;
-  active: boolean;
-  done: boolean;
-}) => (
-  <Stack
-    direction="row"
-    spacing={1}
-    alignItems="center"
-    component="li"
-    sx={{
-      borderRadius: 5,
-      px: 1.5,
-      py: 0.5,
-      fontSize: '0.875rem',
-      ...(done
-        ? { bgcolor: 'success.light', color: 'success.dark' }
-        : active
-          ? { bgcolor: 'action.selected', color: 'primary.main' }
-          : { bgcolor: 'action.hover', color: 'text.secondary' }),
-    }}
-  >
-    <Box
-      sx={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        height: 20,
-        width: 20,
-        borderRadius: '50%',
-        fontSize: '0.75rem',
-        ...(done
-          ? { bgcolor: 'success.main', color: 'common.white' }
-          : active
-            ? { bgcolor: 'primary.main', color: 'primary.contrastText' }
-            : { bgcolor: 'action.disabledBackground' }),
+    <AuthSplitLayout
+      section={{
+        title: 'Sell fresh, sell desi',
+        subtitle: 'Reach buyers in your cluster. Free to join — quick verification, then KYC.',
+        imgUrl: '/assets/illustrations/illustration-rocket-large.webp',
       }}
     >
-      {done ? '✓' : n}
-    </Box>
-    {label}
-  </Stack>
-);
+      <Stack spacing={1} sx={{ mb: 4, textAlign: 'center' }}>
+        <Typography variant="h5">Become a Buy Desi seller</Typography>
+        <Stack direction="row" spacing={0.5} justifyContent="center">
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            Already have an account?
+          </Typography>
+          <Link component={RouterLink} to="/login" variant="subtitle2">
+            Sign in
+          </Link>
+        </Stack>
+      </Stack>
+
+      <Stepper activeStep={step - 1} alternativeLabel sx={{ mb: 4 }}>
+        {['Sign up', 'Verify', 'Done'].map((label) => (
+          <Step key={label}>
+            <StepLabel>{label}</StepLabel>
+          </Step>
+        ))}
+      </Stepper>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
+
+      {step === 1 && (
+        <form onSubmit={submitRegister}>
+          <Stack spacing={2.5}>
+            <TextField
+              fullWidth
+              label="Full name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoComplete="name"
+              required
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              fullWidth
+              label="Mobile"
+              value={mobile}
+              onChange={(e) => setMobile(e.target.value)}
+              placeholder="+91XXXXXXXXXX"
+              helperText="We'll send a 6-digit OTP to this number."
+              inputProps={{ inputMode: 'tel' }}
+              autoComplete="tel"
+              required
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              fullWidth
+              label="Pincode"
+              value={pincode}
+              onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
+              helperText="Decides which cluster you're routed to."
+              inputProps={{ inputMode: 'numeric', maxLength: 6 }}
+              required
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              fullWidth
+              type="email"
+              label="Email (optional)"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              fullWidth
+              select
+              label="Preferred language"
+              value={preferredLanguage}
+              onChange={(e) => setPreferredLanguage(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            >
+              {LANG_OPTIONS.map((l) => (
+                <MenuItem key={l.value} value={l.value}>
+                  {l.label}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              fullWidth
+              label="Password"
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              helperText="At least 8 characters."
+              autoComplete="new-password"
+              required
+              InputLabelProps={{ shrink: true }}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton onClick={() => setShowPassword((s) => !s)} edge="end">
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <TextField
+              fullWidth
+              label="Promoter referral code (optional)"
+              value={referralCode}
+              onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+              placeholder="DESI-XXXX-XXXX"
+              InputLabelProps={{ shrink: true }}
+            />
+            <LoadingButton
+              fullWidth
+              size="large"
+              type="submit"
+              variant="contained"
+              loading={submitting}
+            >
+              Create account
+            </LoadingButton>
+          </Stack>
+        </form>
+      )}
+
+      {step === 2 && (
+        <form onSubmit={submitVerify}>
+          <Stack spacing={2.5}>
+            <Stack direction="row" spacing={1} alignItems="center" justifyContent="center">
+              <ShieldCheck size={20} color="var(--palette-primary-main)" />
+              <Typography variant="subtitle1">Verify your mobile</Typography>
+            </Stack>
+            <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'center' }}>
+              We sent a 6-digit code to <b>{mobile}</b>. Enter it to activate your account.
+            </Typography>
+            <TextField
+              fullWidth
+              label="OTP"
+              value={otpCode}
+              onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+              inputProps={{ inputMode: 'numeric', maxLength: 8 }}
+              placeholder="6-digit code"
+              autoFocus
+              required
+              InputLabelProps={{ shrink: true }}
+            />
+            <LoadingButton
+              fullWidth
+              size="large"
+              type="submit"
+              variant="contained"
+              loading={submitting}
+            >
+              Verify &amp; continue
+            </LoadingButton>
+            <Stack direction="row" spacing={1} justifyContent="center">
+              <Button variant="text" size="small" onClick={resendOtp} disabled={resending}>
+                {resending ? 'Sending…' : 'Resend OTP'}
+              </Button>
+              <Button
+                variant="text"
+                size="small"
+                color="inherit"
+                onClick={() => {
+                  setStep(1);
+                  setOtpSent(false);
+                  setOtpCode('');
+                  setError(null);
+                }}
+              >
+                Edit details
+              </Button>
+            </Stack>
+            {otpSent && (
+              <Typography variant="caption" sx={{ color: 'text.disabled', textAlign: 'center' }}>
+                In dev mode the OTP is logged on the backend console.
+              </Typography>
+            )}
+          </Stack>
+        </form>
+      )}
+
+      {step === 3 && (
+        <Stack spacing={1.5} alignItems="center" sx={{ py: 4 }}>
+          <CheckCircle2 size={40} color="var(--palette-success-main)" />
+          <Typography variant="h6">Account activated</Typography>
+          <Typography variant="body2" sx={{ color: 'text.secondary', textAlign: 'center' }}>
+            Taking you to the KYC step now. Won't take long.
+          </Typography>
+        </Stack>
+      )}
+
+      <Box sx={{ mt: 3, textAlign: 'center' }}>
+        <Link component={RouterLink} to="/login" variant="body2" sx={{ color: 'text.secondary' }}>
+          ← Back to sign in
+        </Link>
+      </Box>
+    </AuthSplitLayout>
+  );
+};
