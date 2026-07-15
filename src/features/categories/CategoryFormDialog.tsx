@@ -1,12 +1,14 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Alert from '@mui/material/Alert';
+import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
 import { ImageUploadField } from '@/components/ImageUploadField';
 import { UserPicker } from '@/components/pickers/UserPicker';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
-import { Select } from '@/components/ui/Select';
 import { UserRole } from '@/types/api';
 import { useAuth } from '@/lib/auth';
 import { ApiError } from '@/types/api';
@@ -126,130 +128,130 @@ export const CategoryFormDialog = ({ open, onClose, editing }: CategoryFormDialo
           : 'Create a catalogue category. Products inherit its default commission rate unless overridden.'
       }
     >
-      <form onSubmit={onSubmit} className="space-y-4">
-        <Box
-          sx={{
-            display: 'grid',
-            gap: 2,
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
-          }}
-        >
-          <div className="space-y-1.5">
-            <Label htmlFor="cat-name">Name *</Label>
-            <Input
+      <form onSubmit={onSubmit}>
+        <Stack spacing={2.5}>
+          {error && <Alert severity="error">{error}</Alert>}
+
+          <Box
+            sx={{
+              display: 'grid',
+              gap: 2.5,
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+            }}
+          >
+            <TextField
               id="cat-name"
+              fullWidth
+              label="Name"
+              required
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
-              required
-              minLength={2}
-              maxLength={120}
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ minLength: 2, maxLength: 120 }}
             />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="cat-slug">Slug (optional)</Label>
-            <Input
+            <TextField
               id="cat-slug"
+              fullWidth
+              label="Slug (optional)"
               value={form.slug}
               onChange={(e) => setForm({ ...form, slug: e.target.value })}
               placeholder="auto-generated from name"
+              InputLabelProps={{ shrink: true }}
             />
-          </div>
-        </Box>
+          </Box>
 
-        <Box
-          sx={{
-            display: 'grid',
-            gap: 2,
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
-          }}
-        >
-          <div className="space-y-1.5">
-            <Label htmlFor="cat-commission">Default commission % *</Label>
-            <Input
+          <Box
+            sx={{
+              display: 'grid',
+              gap: 2.5,
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+            }}
+          >
+            <TextField
               id="cat-commission"
+              fullWidth
               type="number"
-              min={0}
-              max={100}
-              step="0.1"
+              label="Default commission %"
+              required
               value={form.defaultCommissionRate}
               onChange={(e) => setForm({ ...form, defaultCommissionRate: e.target.value })}
-              required
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ min: 0, max: 100, step: '0.1' }}
             />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="cat-order">Display order</Label>
-            <Input
+            <TextField
               id="cat-order"
+              fullWidth
               type="number"
-              min={0}
+              label="Display order"
               value={form.displayOrder}
               onChange={(e) => setForm({ ...form, displayOrder: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ min: 0 }}
             />
-          </div>
-        </Box>
+          </Box>
 
-        <Box
-          sx={{
-            display: 'grid',
-            gap: 2,
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
-          }}
-        >
-          <div className="space-y-1.5">
-            <Label>Icon</Label>
-            <ImageUploadField
-              value={form.iconUrl}
-              onChange={(url) => setForm({ ...form, iconUrl: url })}
-              kind="category"
-              variant="square"
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="cat-status">Status</Label>
-            <Select
+          <Box
+            sx={{
+              display: 'grid',
+              gap: 2.5,
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+            }}
+          >
+            <Stack spacing={1}>
+              <Typography variant="subtitle2">Icon</Typography>
+              <ImageUploadField
+                value={form.iconUrl}
+                onChange={(url) => setForm({ ...form, iconUrl: url })}
+                kind="category"
+                variant="square"
+              />
+            </Stack>
+            <TextField
               id="cat-status"
+              select
+              fullWidth
+              label="Status"
               value={form.status}
               onChange={(e) => setForm({ ...form, status: e.target.value as CategoryStatus })}
+              InputLabelProps={{ shrink: true }}
             >
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-            </Select>
+              <MenuItem value="active">Active</MenuItem>
+              <MenuItem value="inactive">Inactive</MenuItem>
+            </TextField>
+          </Box>
+
+          <Box
+            sx={{
+              display: 'grid',
+              gap: 2.5,
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+            }}
+          >
+            {isSuper && editing && (
+              <Stack spacing={1}>
+                <Typography variant="subtitle2">Category admin</Typography>
+                <UserPicker
+                  role={UserRole.CATEGORY_ADMIN}
+                  value={form.adminId || null}
+                  onChange={(id) => setForm({ ...form, adminId: id ?? '' })}
+                  placeholder="Pick a category admin…"
+                />
+                <Typography variant="caption" color="text.secondary">
+                  Clear to unassign. Only users with role=CATEGORY_ADMIN are listed.
+                </Typography>
+              </Stack>
+            )}
+          </Box>
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? 'Saving…' : submitLabel}
+            </Button>
           </div>
-        </Box>
-
-        <Box
-          sx={{
-            display: 'grid',
-            gap: 2,
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
-          }}
-        >
-          {isSuper && editing && (
-            <div className="space-y-1.5">
-              <Label htmlFor="cat-admin">Category admin</Label>
-              <UserPicker
-                role={UserRole.CATEGORY_ADMIN}
-                value={form.adminId || null}
-                onChange={(id) => setForm({ ...form, adminId: id ?? '' })}
-                placeholder="Pick a category admin…"
-              />
-              <p className="text-xs text-muted-foreground">
-                Clear to unassign. Only users with role=CATEGORY_ADMIN are listed.
-              </p>
-            </div>
-          )}
-        </Box>
-
-        {error && <p className="text-sm text-destructive">{error}</p>}
-
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
-            Cancel
-          </Button>
-          <Button type="submit" disabled={submitting}>
-            {submitting ? 'Saving…' : submitLabel}
-          </Button>
-        </div>
+        </Stack>
       </form>
     </Dialog>
   );

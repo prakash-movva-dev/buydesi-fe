@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
+import Stack from '@mui/material/Stack';
+import Alert from '@mui/material/Alert';
+import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
-import { Select } from '@/components/ui/Select';
-import { Textarea } from '@/components/ui/Textarea';
 import { ApiError } from '@/types/api';
 import {
   useClaimTicket,
@@ -57,17 +57,19 @@ export const ClaimDialog = ({ open, ticketId, onClose }: BaseProps) => {
         </>
       }
     >
-      <div className="space-y-2">
-        <Label htmlFor="claim-notes">Initial note (optional)</Label>
-        <Textarea
-          id="claim-notes"
+      <Stack spacing={2.5}>
+        {error && <Alert severity="error">{error}</Alert>}
+        <TextField
+          fullWidth
+          multiline
+          minRows={3}
+          label="Initial note (optional)"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Acknowledgement message visible to the raiser."
-          rows={3}
+          InputLabelProps={{ shrink: true }}
         />
-        {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+      </Stack>
     </Dialog>
   );
 };
@@ -115,31 +117,31 @@ export const ResolveDialog = ({ open, ticketId, onClose }: BaseProps) => {
         </>
       }
     >
-      <div className="space-y-3">
-        <div className="space-y-1.5">
-          <Label htmlFor="resolve-action">Action</Label>
-          <Select
-            id="resolve-action"
-            value={action}
-            onChange={(e) => setAction(e.target.value as SupportResolutionAction)}
-          >
-            <option value="refund">Refund issued</option>
-            <option value="replacement">Replacement sent</option>
-            <option value="rejected">Claim rejected</option>
-            <option value="other">Other</option>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="resolve-notes">Notes (optional)</Label>
-          <Textarea
-            id="resolve-notes"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={4}
-          />
-        </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+      <Stack spacing={2.5}>
+        {error && <Alert severity="error">{error}</Alert>}
+        <TextField
+          select
+          fullWidth
+          label="Action"
+          value={action}
+          onChange={(e) => setAction(e.target.value as SupportResolutionAction)}
+          InputLabelProps={{ shrink: true }}
+        >
+          <MenuItem value="refund">Refund issued</MenuItem>
+          <MenuItem value="replacement">Replacement sent</MenuItem>
+          <MenuItem value="rejected">Claim rejected</MenuItem>
+          <MenuItem value="other">Other</MenuItem>
+        </TextField>
+        <TextField
+          fullWidth
+          multiline
+          minRows={4}
+          label="Notes (optional)"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
+      </Stack>
     </Dialog>
   );
 };
@@ -185,18 +187,18 @@ export const EscalateDialog = ({ open, ticketId, onClose }: BaseProps) => {
         </>
       }
     >
-      <div className="space-y-2">
-        <Label htmlFor="escalate-notes">
-          Why escalate? <span className="text-destructive">*</span>
-        </Label>
-        <Textarea
-          id="escalate-notes"
+      <Stack spacing={2.5}>
+        {error && <Alert severity="error">{error}</Alert>}
+        <TextField
+          fullWidth
+          multiline
+          minRows={4}
+          label="Why escalate? *"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          rows={4}
+          InputLabelProps={{ shrink: true }}
         />
-        {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+      </Stack>
     </Dialog>
   );
 };
@@ -257,30 +259,28 @@ export const ForceRefundDialog = ({ open, ticketId, onClose, maxAmount }: ForceR
         </>
       }
     >
-      <div className="space-y-3">
-        <div className="space-y-1.5">
-          <Label htmlFor="force-amount">Amount (₹) — blank for full</Label>
-          <Input
-            id="force-amount"
-            type="number"
-            min={1}
-            step="0.01"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder={maxAmount ? `up to ${maxAmount}` : ''}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="force-notes">Notes (optional)</Label>
-          <Textarea
-            id="force-notes"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={3}
-          />
-        </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+      <Stack spacing={2.5}>
+        {error && <Alert severity="error">{error}</Alert>}
+        <TextField
+          fullWidth
+          type="number"
+          label="Amount (₹) — blank for full"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          placeholder={maxAmount ? `up to ${maxAmount}` : ''}
+          InputLabelProps={{ shrink: true }}
+          inputProps={{ min: 1, step: '0.01' }}
+        />
+        <TextField
+          fullWidth
+          multiline
+          minRows={3}
+          label="Notes (optional)"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
+      </Stack>
     </Dialog>
   );
 };

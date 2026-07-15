@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Alert from '@mui/material/Alert';
+import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { ClusterPicker } from '@/components/pickers/ClusterPicker';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
-import { Select } from '@/components/ui/Select';
 import { ApiError } from '@/types/api';
 import { useUpsertCartLimit } from './api';
 import type { CartLimit, CartLimitKind } from './types';
@@ -90,50 +92,52 @@ export const CartLimitFormDialog = ({ open, editing, onClose }: Props) => {
       }
       className="max-w-2xl"
     >
-      <div className="space-y-3">
+      <Stack spacing={2.5}>
+        {error && <Alert severity="error">{error}</Alert>}
+
         <Box
           sx={{
             display: 'grid',
-            gap: 1.5,
+            gap: 2.5,
             gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
           }}
         >
-          <div className="space-y-1.5">
-            <Label htmlFor="cl-kind">Kind</Label>
-            <Select
-              id="cl-kind"
-              value={kind}
-              onChange={(e) => setKind(e.target.value as CartLimitKind)}
-              disabled={Boolean(editing)}
-            >
-              <option value="regular">Regular</option>
-              <option value="bulk">Bulk</option>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label>Cluster scope</Label>
+          <TextField
+            select
+            fullWidth
+            label="Kind"
+            value={kind}
+            onChange={(e) => setKind(e.target.value as CartLimitKind)}
+            disabled={Boolean(editing)}
+            InputLabelProps={{ shrink: true }}
+          >
+            <MenuItem value="regular">Regular</MenuItem>
+            <MenuItem value="bulk">Bulk</MenuItem>
+          </TextField>
+          <Stack spacing={1}>
+            <Typography variant="subtitle2">Cluster scope</Typography>
             <ClusterPicker
               value={clusterId}
               onChange={setClusterId}
               placeholder="Blank = any cluster"
               disabled={Boolean(editing)}
             />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Category scope</Label>
+          </Stack>
+          <Stack spacing={1}>
+            <Typography variant="subtitle2">Category scope</Typography>
             <CategoryPicker
               value={categoryId}
               onChange={setCategoryId}
               placeholder="Blank = any category"
               disabled={Boolean(editing)}
             />
-          </div>
+          </Stack>
         </Box>
 
         <Box
           sx={{
             display: 'grid',
-            gap: 1.5,
+            gap: 2.5,
             gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
           }}
         >
@@ -171,9 +175,7 @@ export const CartLimitFormDialog = ({ open, editing, onClose }: Props) => {
             />
           )}
         </Box>
-
-        {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+      </Stack>
     </Dialog>
   );
 };
@@ -191,15 +193,15 @@ const Field = ({
   onChange: (v: string) => void;
   hint?: string;
 }) => (
-  <div className="space-y-1.5">
-    <Label htmlFor={id}>{label}</Label>
-    <Input
-      id={id}
-      type="number"
-      min={0}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-    />
-    {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
-  </div>
+  <TextField
+    id={id}
+    fullWidth
+    type="number"
+    label={label}
+    value={value}
+    onChange={(e) => onChange(e.target.value)}
+    InputLabelProps={{ shrink: true }}
+    inputProps={{ min: 0 }}
+    helperText={hint}
+  />
 );

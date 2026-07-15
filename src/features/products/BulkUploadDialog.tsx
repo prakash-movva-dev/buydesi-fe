@@ -2,13 +2,15 @@ import { useEffect, useState, type ChangeEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { CheckCircle2, FileUp, Upload, XCircle } from 'lucide-react';
 import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Alert from '@mui/material/Alert';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
 import { UserPicker } from '@/components/pickers/UserPicker';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
-import { Label } from '@/components/ui/Label';
 import { StatCard } from '@/components/ui/StatCard';
-import { Textarea } from '@/components/ui/Textarea';
 import { api } from '@/lib/api';
 import { ApiError, UserRole } from '@/types/api';
 
@@ -115,24 +117,25 @@ export const BulkUploadDialog = ({ open, onClose, forSelf = false }: Props) => {
     >
       <div className="space-y-4">
         {!summary && (
-          <>
+          <Stack spacing={2.5}>
+            {error && <Alert severity="error">{error}</Alert>}
             {!forSelf && (
-              <div className="space-y-1.5">
-                <Label>Seller *</Label>
+              <Stack spacing={1}>
+                <Typography variant="subtitle2">Seller *</Typography>
                 <UserPicker
                   role={UserRole.SELLER}
                   value={sellerId}
                   onChange={setSellerId}
                   placeholder="Pick the seller to upload for…"
                 />
-                <p className="text-xs text-muted-foreground">
+                <Typography variant="caption" color="text.secondary">
                   The seller must be approved (status=APPROVED).
-                </p>
-              </div>
+                </Typography>
+              </Stack>
             )}
 
-            <div className="space-y-1.5">
-              <Label htmlFor="bulk-file">CSV file</Label>
+            <Stack spacing={1}>
+              <Typography variant="subtitle2">CSV file</Typography>
               <div className="flex items-center gap-3">
                 <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent">
                   <FileUp className="h-4 w-4" />
@@ -149,30 +152,24 @@ export const BulkUploadDialog = ({ open, onClose, forSelf = false }: Props) => {
                   <span className="truncate text-sm text-muted-foreground">{fileName}</span>
                 )}
               </div>
-            </div>
+            </Stack>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="bulk-csv">Or paste CSV content</Label>
-              <Textarea
-                id="bulk-csv"
-                value={csv}
-                onChange={(e) => {
-                  setCsv(e.target.value);
-                  setFileName(null);
-                }}
-                rows={8}
-                className="font-mono text-xs"
-                placeholder={CSV_HEADER_HINT}
-              />
-              <p className="text-xs text-muted-foreground">
-                Required columns: name, description, categorySlug, unit, standardPriceInr,
-                stockQuantity. Optional: organicPriceInr, premiumPriceInr, stockThreshold,
-                weightGrams, images (pipe-separated URLs).
-              </p>
-            </div>
-
-            {error && <p className="text-sm text-destructive">{error}</p>}
-          </>
+            <TextField
+              fullWidth
+              multiline
+              minRows={8}
+              label="Or paste CSV content"
+              value={csv}
+              onChange={(e) => {
+                setCsv(e.target.value);
+                setFileName(null);
+              }}
+              className="font-mono text-xs"
+              placeholder={CSV_HEADER_HINT}
+              InputLabelProps={{ shrink: true }}
+              helperText="Required columns: name, description, categorySlug, unit, standardPriceInr, stockQuantity. Optional: organicPriceInr, premiumPriceInr, stockThreshold, weightGrams, images (pipe-separated URLs)."
+            />
+          </Stack>
         )}
 
         {summary && (

@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Alert from '@mui/material/Alert';
+import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
-import { Select } from '@/components/ui/Select';
-import { Textarea } from '@/components/ui/Textarea';
 import { ApiError } from '@/types/api';
 import { useAdjustWallet } from './api';
 
@@ -72,45 +72,42 @@ export const WalletAdjustDialog = ({ open, sellerId, onClose }: Props) => {
         </>
       }
     >
-      <div className="space-y-3">
-        <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: 'repeat(2, 1fr)' }}>
-          <div className="space-y-1.5">
-            <Label htmlFor="adjust-dir">Direction</Label>
-            <Select
-              id="adjust-dir"
-              value={direction}
-              onChange={(e) => setDirection(e.target.value as 'credit' | 'debit')}
-            >
-              <option value="credit">Credit (give money)</option>
-              <option value="debit">Debit (take money)</option>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="adjust-amount">Amount (₹)</Label>
-            <Input
-              id="adjust-amount"
-              type="number"
-              min={1}
-              step="0.01"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-            />
-          </div>
-        </Box>
-        <div className="space-y-1.5">
-          <Label htmlFor="adjust-reason">
-            Reason <span className="text-destructive">*</span>
-          </Label>
-          <Textarea
-            id="adjust-reason"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            rows={3}
-            placeholder="e.g. compensation for incorrect commission charge on order #ABC"
+      <Stack spacing={2.5}>
+        {error && <Alert severity="error">{error}</Alert>}
+        <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: 'repeat(2, 1fr)' }}>
+          <TextField
+            select
+            fullWidth
+            label="Direction"
+            value={direction}
+            onChange={(e) => setDirection(e.target.value as 'credit' | 'debit')}
+            InputLabelProps={{ shrink: true }}
+          >
+            <MenuItem value="credit">Credit (give money)</MenuItem>
+            <MenuItem value="debit">Debit (take money)</MenuItem>
+          </TextField>
+          <TextField
+            fullWidth
+            type="number"
+            label="Amount (₹)"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            inputProps={{ min: 1, step: '0.01' }}
           />
-        </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+        </Box>
+        <TextField
+          fullWidth
+          multiline
+          minRows={3}
+          required
+          label="Reason"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="e.g. compensation for incorrect commission charge on order #ABC"
+          InputLabelProps={{ shrink: true }}
+        />
+      </Stack>
     </Dialog>
   );
 };

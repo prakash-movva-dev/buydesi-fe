@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
+import Stack from '@mui/material/Stack';
+import Alert from '@mui/material/Alert';
+import TextField from '@mui/material/TextField';
 import {
   readNumber,
   useExposedSettingMap,
 } from '@/features/platform-settings/exposed';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
-import { Textarea } from '@/components/ui/Textarea';
 import { useAuth } from '@/lib/auth';
 import { ApiError, UserRole } from '@/types/api';
 import { useCancelOrder, useRefundOrder } from './api';
@@ -62,19 +62,19 @@ export const CancelOrderDialog = ({ open, orderId, onClose }: CancelDialogProps)
         </>
       }
     >
-      <div className="space-y-2">
-        <Label htmlFor="cancel-reason">
-          Reason <span className="text-destructive">*</span>
-        </Label>
-        <Textarea
-          id="cancel-reason"
+      <Stack spacing={2.5}>
+        {error && <Alert severity="error">{error}</Alert>}
+        <TextField
+          fullWidth
+          multiline
+          minRows={4}
+          label="Reason *"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           placeholder="Visible internally and to the buyer."
-          rows={4}
+          InputLabelProps={{ shrink: true }}
         />
-        {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+      </Stack>
     </Dialog>
   );
 };
@@ -162,7 +162,8 @@ export const RefundOrderDialog = ({ open, orderId, maxAmount, onClose }: RefundD
         </>
       }
     >
-      <div className="space-y-3">
+      <Stack spacing={2.5}>
+        {error && <Alert severity="error">{error}</Alert>}
         {isSupport && (
           <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
             Your refund authority: <span className="font-semibold">₹{perCapInr.toLocaleString('en-IN')}</span> per refund ·{' '}
@@ -170,31 +171,27 @@ export const RefundOrderDialog = ({ open, orderId, maxAmount, onClose }: RefundD
             these, escalate to a super admin.
           </div>
         )}
-        <div className="space-y-1.5">
-          <Label htmlFor="refund-amount">Amount (₹) — leave blank for full</Label>
-          <Input
-            id="refund-amount"
-            type="number"
-            min={1}
-            max={maxAmount}
-            step="0.01"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            placeholder={`up to ${maxAmount}`}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="refund-reason">Reason (optional)</Label>
-          <Textarea
-            id="refund-reason"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            placeholder="Recorded on the payment events log."
-            rows={3}
-          />
-        </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+        <TextField
+          fullWidth
+          type="number"
+          label="Amount (₹) — leave blank for full"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          placeholder={`up to ${maxAmount}`}
+          InputLabelProps={{ shrink: true }}
+          inputProps={{ min: 1, max: maxAmount, step: '0.01' }}
+        />
+        <TextField
+          fullWidth
+          multiline
+          minRows={3}
+          label="Reason (optional)"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="Recorded on the payment events log."
+          InputLabelProps={{ shrink: true }}
+        />
+      </Stack>
     </Dialog>
   );
 };

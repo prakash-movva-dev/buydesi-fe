@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
+import Stack from '@mui/material/Stack';
+import Alert from '@mui/material/Alert';
+import TextField from '@mui/material/TextField';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
-import { Label } from '@/components/ui/Label';
-import { Textarea } from '@/components/ui/Textarea';
 import { ApiError } from '@/types/api';
 
 export type StatusAction = 'approve' | 'reject' | 'suspend';
@@ -101,19 +102,19 @@ export const StatusReviewDialog = ({
         </>
       }
     >
-      <div className="space-y-2">
-        <Label htmlFor="product-notes">
-          Notes {cfg.notesRequired ? <span className="text-destructive">*</span> : '(optional)'}
-        </Label>
-        <Textarea
-          id="product-notes"
+      <Stack spacing={2.5}>
+        {error && <Alert severity="error">{error}</Alert>}
+        <TextField
+          fullWidth
+          multiline
+          minRows={4}
+          label={`Notes ${cfg.notesRequired ? '*' : '(optional)'}`}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Visible to the seller."
-          rows={4}
+          InputLabelProps={{ shrink: true }}
         />
-        {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+      </Stack>
     </Dialog>
   );
 };

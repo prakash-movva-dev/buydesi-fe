@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Alert from '@mui/material/Alert';
+import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+import { PhoneInput } from '@/components/phone-input';
 import { ClusterPicker } from '@/components/pickers/ClusterPicker';
 import { UserPicker } from '@/components/pickers/UserPicker';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
-import { Select } from '@/components/ui/Select';
 import { useAuth } from '@/lib/auth';
 import { ApiError, UserRole } from '@/types/api';
 import { useCreatePromoter, useUpdatePromoter } from './api';
@@ -89,7 +93,8 @@ export const PromoterFormDialog = ({ open, editing, onClose, onCreated }: Props)
           setError('Percent discount must be ≤ 100');
           return;
         }
-        if (mobile.trim() && !/^[6-9]\d{9}$/.test(mobile.trim())) {
+        // PhoneInput emits E.164 (e.g. +91XXXXXXXXXX); accept the +91/0 prefixes too.
+        if (mobile.trim() && !/^(?:\+?91|0)?[6-9]\d{9}$/.test(mobile.trim())) {
           setError('Mobile must be a valid 10-digit number');
           return;
         }
@@ -143,67 +148,80 @@ export const PromoterFormDialog = ({ open, editing, onClose, onCreated }: Props)
         </>
       }
     >
-      <div className="space-y-3">
-        <div className="space-y-1.5">
-          <Label htmlFor="prom-name">Display name *</Label>
-          <Input
-            id="prom-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            maxLength={40}
-            placeholder="e.g. Mumbai Influencers"
-          />
-        </div>
+      <Stack spacing={2.5}>
+        {error && <Alert severity="error">{error}</Alert>}
+
+        <TextField
+          id="prom-name"
+          fullWidth
+          label="Display name"
+          required
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="e.g. Mumbai Influencers"
+          InputLabelProps={{ shrink: true }}
+          inputProps={{ maxLength: 40 }}
+        />
 
         {isEdit ? (
-          <div className="space-y-1.5">
-            <Label htmlFor="prom-active">Status</Label>
-            <Select
-              id="prom-active"
-              value={active ? 'true' : 'false'}
-              onChange={(e) => setActive(e.target.value === 'true')}
-            >
-              <option value="true">Active</option>
-              <option value="false">Inactive (coupon disabled)</option>
-            </Select>
-          </div>
+          <TextField
+            id="prom-active"
+            select
+            fullWidth
+            label="Status"
+            value={active ? 'true' : 'false'}
+            onChange={(e) => setActive(e.target.value === 'true')}
+            InputLabelProps={{ shrink: true }}
+          >
+            <MenuItem value="true">Active</MenuItem>
+            <MenuItem value="false">Inactive (coupon disabled)</MenuItem>
+          </TextField>
         ) : (
           <>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="prom-mobile">Mobile</Label>
-                <Input
-                  id="prom-mobile"
-                  value={mobile}
-                  onChange={(e) => setMobile(e.target.value)}
-                  maxLength={10}
-                  placeholder="10-digit number"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="prom-email">Email</Label>
-                <Input
-                  id="prom-email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@example.com"
-                />
-              </div>
-            </div>
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 2.5,
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+              }}
+            >
+              <PhoneInput
+                fullWidth
+                label="Mobile"
+                value={mobile}
+                onChange={setMobile}
+                country="IN"
+              />
+              <TextField
+                id="prom-email"
+                fullWidth
+                type="email"
+                label="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@example.com"
+                InputLabelProps={{ shrink: true }}
+              />
+            </Box>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label>Linked user (optional)</Label>
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 2.5,
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+              }}
+            >
+              <Stack spacing={1}>
+                <Typography variant="subtitle2">Linked user (optional)</Typography>
                 <UserPicker
                   role={UserRole.PROMOTER}
                   value={userId || null}
                   onChange={(id) => setUserId(id ?? '')}
                   placeholder="Pick a PROMOTER user…"
                 />
-              </div>
-              <div className="space-y-1.5">
-                <Label>Cluster {isRegional ? '' : '*'}</Label>
+              </Stack>
+              <Stack spacing={1}>
+                <Typography variant="subtitle2">Cluster {isRegional ? '' : '*'}</Typography>
                 <ClusterPicker
                   value={clusterId || null}
                   onChange={(id) => setClusterId(id ?? '')}
@@ -211,79 +229,92 @@ export const PromoterFormDialog = ({ open, editing, onClose, onCreated }: Props)
                   placeholder={isRegional ? 'Your cluster' : 'Select a cluster…'}
                 />
                 {isRegional ? (
-                  <p className="text-xs text-muted-foreground">
+                  <Typography variant="caption" color="text.secondary">
                     Promoters are created in your own cluster.
-                  </p>
+                  </Typography>
                 ) : (
                   !clusterId.trim() && (
-                    <p className="text-xs text-destructive">Cluster is required.</p>
+                    <Typography variant="caption" color="error">
+                      Cluster is required.
+                    </Typography>
                   )
                 )}
-              </div>
-            </div>
+              </Stack>
+            </Box>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="prom-type">Discount type</Label>
-                <Select
-                  id="prom-type"
-                  value={discountType}
-                  onChange={(e) => setDiscountType(e.target.value as 'percent' | 'flat')}
-                >
-                  <option value="percent">Percent (%)</option>
-                  <option value="flat">Flat (₹)</option>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="prom-value">Discount value *</Label>
-                <Input
-                  id="prom-value"
-                  type="number"
-                  min={1}
-                  step={discountType === 'percent' ? '0.1' : '1'}
-                  value={discountValue}
-                  onChange={(e) => setDiscountValue(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="prom-max">Max discount ₹ (cap, optional)</Label>
-                <Input
-                  id="prom-max"
-                  type="number"
-                  min={0}
-                  value={maxDiscountInr}
-                  onChange={(e) => setMax(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="prom-min">Min subtotal ₹</Label>
-                <Input
-                  id="prom-min"
-                  type="number"
-                  min={0}
-                  value={minSubtotalInr}
-                  onChange={(e) => setMin(e.target.value)}
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="prom-expiry">Expires at (optional)</Label>
-              <Input
-                id="prom-expiry"
-                type="datetime-local"
-                value={expiresAt}
-                onChange={(e) => setExpiresAt(e.target.value)}
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 2.5,
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+              }}
+            >
+              <TextField
+                id="prom-type"
+                select
+                fullWidth
+                label="Discount type"
+                value={discountType}
+                onChange={(e) => setDiscountType(e.target.value as 'percent' | 'flat')}
+                InputLabelProps={{ shrink: true }}
+              >
+                <MenuItem value="percent">Percent (%)</MenuItem>
+                <MenuItem value="flat">Flat (₹)</MenuItem>
+              </TextField>
+              <TextField
+                id="prom-value"
+                fullWidth
+                type="number"
+                label="Discount value"
+                required
+                value={discountValue}
+                onChange={(e) => setDiscountValue(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ min: 1, step: discountType === 'percent' ? '0.1' : '1' }}
               />
-            </div>
+            </Box>
+
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 2.5,
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+              }}
+            >
+              <TextField
+                id="prom-max"
+                fullWidth
+                type="number"
+                label="Max discount ₹ (cap, optional)"
+                value={maxDiscountInr}
+                onChange={(e) => setMax(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ min: 0 }}
+              />
+              <TextField
+                id="prom-min"
+                fullWidth
+                type="number"
+                label="Min subtotal ₹"
+                value={minSubtotalInr}
+                onChange={(e) => setMin(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ min: 0 }}
+              />
+            </Box>
+
+            <TextField
+              id="prom-expiry"
+              fullWidth
+              type="datetime-local"
+              label="Expires at (optional)"
+              value={expiresAt}
+              onChange={(e) => setExpiresAt(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
           </>
         )}
-
-        {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+      </Stack>
     </Dialog>
   );
 };

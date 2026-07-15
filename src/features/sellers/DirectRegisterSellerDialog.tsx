@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
+import Alert from '@mui/material/Alert';
+import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { ClusterPicker } from '@/components/pickers/ClusterPicker';
+import { PhoneInput } from '@/components/phone-input';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
-import { Select } from '@/components/ui/Select';
 import { useAuth } from '@/lib/auth';
 import {
   validateEmail,
@@ -175,141 +176,158 @@ export const DirectRegisterSellerDialog = ({ open, onClose }: Props) => {
       }
       className="max-w-2xl"
     >
-      <Stack spacing={1.5}>
-        <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' } }}>
-          <div className="space-y-1.5">
-            <Label htmlFor="ds-name">Full name *</Label>
-            <Input id="ds-name" value={name} onChange={(e) => setName(e.target.value)} />
-            <FieldError show={showErrors} message={nameError} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="ds-farm">Farm name *</Label>
-            <Input id="ds-farm" value={farmName} onChange={(e) => setFarmName(e.target.value)} />
-            <FieldError show={showErrors} message={farmNameError} />
-          </div>
+      <Stack spacing={2.5}>
+        {error && <Alert severity="error">{error}</Alert>}
+
+        <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' } }}>
+          <TextField
+            fullWidth
+            label="Full name"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            error={showErrors && Boolean(nameError)}
+            helperText={showErrors ? nameError ?? undefined : undefined}
+          />
+          <TextField
+            fullWidth
+            label="Farm name"
+            required
+            value={farmName}
+            onChange={(e) => setFarmName(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            error={showErrors && Boolean(farmNameError)}
+            helperText={showErrors ? farmNameError ?? undefined : undefined}
+          />
         </Box>
 
-        <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' } }}>
-          <div className="space-y-1.5">
-            <Label htmlFor="ds-mobile">Mobile</Label>
-            <Input
-              id="ds-mobile"
-              value={mobile}
-              onChange={(e) => setMobile(e.target.value)}
-              inputMode="numeric"
-              maxLength={13}
-              placeholder="10-digit"
-            />
-            <FieldError show={showErrors} message={mobileError ?? contactError} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="ds-email">Email</Label>
-            <Input
-              id="ds-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <FieldError show={showErrors} message={emailError} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="ds-pass">Temp password *</Label>
-            <Input
-              id="ds-pass"
-              type="text"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="≥ 8 chars"
-            />
-            <FieldError show={showErrors} message={passwordError} />
-          </div>
+        <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' } }}>
+          <PhoneInput
+            fullWidth
+            label="Mobile"
+            value={mobile}
+            onChange={setMobile}
+            country="IN"
+            error={showErrors && Boolean(mobileError ?? contactError)}
+            helperText={showErrors ? (mobileError ?? contactError) ?? undefined : undefined}
+          />
+          <TextField
+            fullWidth
+            type="email"
+            label="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            error={showErrors && Boolean(emailError)}
+            helperText={showErrors ? emailError ?? undefined : undefined}
+          />
+          <TextField
+            fullWidth
+            type="text"
+            label="Temp password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="≥ 8 chars"
+            InputLabelProps={{ shrink: true }}
+            error={showErrors && Boolean(passwordError)}
+            helperText={showErrors ? passwordError ?? undefined : undefined}
+          />
         </Box>
 
-        <div className="space-y-1.5">
-          <Label htmlFor="ds-line1">Street address *</Label>
-          <Input id="ds-line1" value={line1} onChange={(e) => setLine1(e.target.value)} />
-          <FieldError show={showErrors} message={line1Error} />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="ds-line2">Address line 2 (optional)</Label>
-          <Input id="ds-line2" value={line2} onChange={(e) => setLine2(e.target.value)} />
-        </div>
+        <TextField
+          fullWidth
+          label="Street address"
+          required
+          value={line1}
+          onChange={(e) => setLine1(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+          error={showErrors && Boolean(line1Error)}
+          helperText={showErrors ? line1Error ?? undefined : undefined}
+        />
+        <TextField
+          fullWidth
+          label="Address line 2 (optional)"
+          value={line2}
+          onChange={(e) => setLine2(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
 
-        <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' } }}>
-          <div className="space-y-1.5">
-            <Label htmlFor="ds-state">State *</Label>
-            <Select
-              id="ds-state"
-              value={state}
-              onChange={(e) => {
-                setState(e.target.value);
-                setCity('');
-              }}
-            >
-              <option value="">Select…</option>
-              {INDIA_STATES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </Select>
-            <FieldError show={showErrors} message={stateError} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="ds-city">City / District *</Label>
-            <Input
-              id="ds-city"
-              list="ds-city-options"
-              value={city}
-              onChange={(e) => setCity(e.target.value)}
-              disabled={!state}
-              placeholder={state ? 'Pick or type…' : 'Select a state first'}
-            />
-            <datalist id="ds-city-options">
-              {districtsForState(state).map((d) => (
-                <option key={d} value={d} />
-              ))}
-            </datalist>
-            <FieldError show={showErrors} message={cityError} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="ds-pin">PIN code *</Label>
-            <Input
-              id="ds-pin"
-              value={pincode}
-              onChange={(e) => setPincode(e.target.value)}
-              inputMode="numeric"
-              maxLength={6}
-              placeholder="6 digits"
-            />
-            <FieldError show={showErrors} message={pincodeError} />
-          </div>
+        <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' } }}>
+          <TextField
+            select
+            fullWidth
+            label="State"
+            required
+            value={state}
+            onChange={(e) => {
+              setState(e.target.value);
+              setCity('');
+            }}
+            InputLabelProps={{ shrink: true }}
+            error={showErrors && Boolean(stateError)}
+            helperText={showErrors ? stateError ?? undefined : undefined}
+          >
+            <MenuItem value="">Select…</MenuItem>
+            {INDIA_STATES.map((s) => (
+              <MenuItem key={s} value={s}>
+                {s}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            fullWidth
+            label="City / District"
+            required
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            disabled={!state}
+            placeholder={state ? 'Pick or type…' : 'Select a state first'}
+            InputLabelProps={{ shrink: true }}
+            inputProps={{ list: 'ds-city-options' }}
+            error={showErrors && Boolean(cityError)}
+            helperText={showErrors ? cityError ?? undefined : undefined}
+          />
+          <datalist id="ds-city-options">
+            {districtsForState(state).map((d) => (
+              <option key={d} value={d} />
+            ))}
+          </datalist>
+          <TextField
+            fullWidth
+            label="PIN code"
+            required
+            value={pincode}
+            onChange={(e) => setPincode(e.target.value)}
+            placeholder="6 digits"
+            InputLabelProps={{ shrink: true }}
+            inputProps={{ inputMode: 'numeric', maxLength: 6 }}
+            error={showErrors && Boolean(pincodeError)}
+            helperText={showErrors ? pincodeError ?? undefined : undefined}
+          />
         </Box>
 
-        <div className="space-y-1.5">
-          <Label>Produce categories *</Label>
+        <Stack spacing={1}>
+          <Typography variant="subtitle2">Produce categories *</Typography>
           <CategoryPicker multi values={categoryIds} onChange={setCategoryIds} />
           <FieldError show={showErrors} message={categoryError} />
-        </div>
+        </Stack>
 
         {isSuperTier && (
-          <div className="space-y-1.5">
-            <Label>Cluster (optional — defaults from PIN code)</Label>
+          <Stack spacing={1}>
+            <Typography variant="subtitle2">Cluster (optional — defaults from PIN code)</Typography>
             <ClusterPicker value={clusterId} onChange={setClusterId} placeholder="Auto from PIN…" />
             {clusterMismatchError && (
-              <p className="rounded-md border border-destructive/40 bg-destructive/5 px-3 py-2 text-xs text-destructive">
-                {clusterMismatchError}
-              </p>
+              <Alert severity="error">{clusterMismatchError}</Alert>
             )}
-          </div>
+          </Stack>
         )}
 
         <Typography variant="caption" sx={{ color: 'text.secondary' }}>
           KYC documents can be uploaded by the seller from their portal after first login, or added
           later from the seller's profile.
         </Typography>
-
-        {error && <p className="text-sm text-destructive">{error}</p>}
       </Stack>
     </Dialog>
   );

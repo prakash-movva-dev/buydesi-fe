@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Alert from '@mui/material/Alert';
+import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { ProductPicker } from '@/components/pickers/ProductPicker';
 import { UserPicker } from '@/components/pickers/UserPicker';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
-import { Select } from '@/components/ui/Select';
-import { Textarea } from '@/components/ui/Textarea';
 import { ApiError, UserRole } from '@/types/api';
 import { useCreateCommissionRate, useUpdateCommissionRate } from './api';
 import type { CommissionRate, CommissionScope } from './types';
@@ -120,113 +121,116 @@ export const CommissionRateDialog = ({ open, editing, onClose }: Props) => {
         </>
       }
     >
-      <div className="space-y-3">
+      <Stack spacing={2.5}>
+        {error && <Alert severity="error">{error}</Alert>}
+
         {!isEdit && (
           <>
-            <div className="space-y-1.5">
-              <Label htmlFor="rate-scope">Scope *</Label>
-              <Select
-                id="rate-scope"
-                value={scope}
-                onChange={(e) => setScope(e.target.value as CommissionScope)}
-              >
-                <option value="category">Category</option>
-                <option value="product">Product</option>
-                <option value="seller">Seller</option>
-              </Select>
-            </div>
+            <TextField
+              id="rate-scope"
+              select
+              fullWidth
+              label="Scope"
+              required
+              value={scope}
+              onChange={(e) => setScope(e.target.value as CommissionScope)}
+              InputLabelProps={{ shrink: true }}
+            >
+              <MenuItem value="category">Category</MenuItem>
+              <MenuItem value="product">Product</MenuItem>
+              <MenuItem value="seller">Seller</MenuItem>
+            </TextField>
             {scope === 'category' && (
-              <div className="space-y-1.5">
-                <Label>Category *</Label>
+              <Stack spacing={1}>
+                <Typography variant="subtitle2">Category *</Typography>
                 <CategoryPicker value={categoryId || null} onChange={(id) => setCategoryId(id ?? '')} />
-              </div>
+              </Stack>
             )}
             {scope === 'product' && (
-              <div className="space-y-1.5">
-                <Label>Product *</Label>
+              <Stack spacing={1}>
+                <Typography variant="subtitle2">Product *</Typography>
                 <ProductPicker
                   status="LIVE"
                   value={productId || null}
                   onChange={(id) => setProductId(id ?? '')}
                 />
-              </div>
+              </Stack>
             )}
             {scope === 'seller' && (
-              <div className="space-y-1.5">
-                <Label>Seller *</Label>
+              <Stack spacing={1}>
+                <Typography variant="subtitle2">Seller *</Typography>
                 <UserPicker
                   role={UserRole.SELLER}
                   value={sellerId || null}
                   onChange={(id) => setSellerId(id ?? '')}
                 />
-              </div>
+              </Stack>
             )}
           </>
         )}
 
-        <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: 'repeat(2, 1fr)' }}>
-          <div className="space-y-1.5">
-            <Label htmlFor="rate-pct">Rate % *</Label>
-            <Input
-              id="rate-pct"
-              type="number"
-              min={0}
-              max={100}
-              step="0.1"
-              value={ratePercent}
-              onChange={(e) => setRatePercent(e.target.value)}
-            />
-          </div>
-          {isEdit && (
-            <div className="space-y-1.5">
-              <Label htmlFor="rate-active">Status</Label>
-              <Select
-                id="rate-active"
-                value={active ? 'true' : 'false'}
-                onChange={(e) => setActive(e.target.value === 'true')}
-              >
-                <option value="true">Active</option>
-                <option value="false">Inactive</option>
-              </Select>
-            </div>
-          )}
-        </Box>
-
-        <Box sx={{ display: 'grid', gap: 1.5, gridTemplateColumns: 'repeat(2, 1fr)' }}>
-          {!isEdit && (
-            <div className="space-y-1.5">
-              <Label htmlFor="rate-from">Effective from</Label>
-              <Input
-                id="rate-from"
-                type="date"
-                value={effectiveFrom}
-                onChange={(e) => setEffectiveFrom(e.target.value)}
-              />
-            </div>
-          )}
-          <div className="space-y-1.5">
-            <Label htmlFor="rate-to">Effective to (optional)</Label>
-            <Input
-              id="rate-to"
-              type="date"
-              value={effectiveTo}
-              onChange={(e) => setEffectiveTo(e.target.value)}
-            />
-          </div>
-        </Box>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="rate-notes">Notes</Label>
-          <Textarea
-            id="rate-notes"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={2}
+        <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: 'repeat(2, 1fr)' }}>
+          <TextField
+            id="rate-pct"
+            fullWidth
+            type="number"
+            label="Rate %"
+            required
+            value={ratePercent}
+            onChange={(e) => setRatePercent(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            inputProps={{ min: 0, max: 100, step: '0.1' }}
           />
-        </div>
+          {isEdit && (
+            <TextField
+              id="rate-active"
+              select
+              fullWidth
+              label="Status"
+              value={active ? 'true' : 'false'}
+              onChange={(e) => setActive(e.target.value === 'true')}
+              InputLabelProps={{ shrink: true }}
+            >
+              <MenuItem value="true">Active</MenuItem>
+              <MenuItem value="false">Inactive</MenuItem>
+            </TextField>
+          )}
+        </Box>
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+        <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: 'repeat(2, 1fr)' }}>
+          {!isEdit && (
+            <TextField
+              id="rate-from"
+              fullWidth
+              type="date"
+              label="Effective from"
+              value={effectiveFrom}
+              onChange={(e) => setEffectiveFrom(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+          )}
+          <TextField
+            id="rate-to"
+            fullWidth
+            type="date"
+            label="Effective to (optional)"
+            value={effectiveTo}
+            onChange={(e) => setEffectiveTo(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+          />
+        </Box>
+
+        <TextField
+          id="rate-notes"
+          fullWidth
+          multiline
+          minRows={2}
+          label="Notes"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
+      </Stack>
     </Dialog>
   );
 };

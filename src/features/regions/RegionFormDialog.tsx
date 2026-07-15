@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Alert from '@mui/material/Alert';
+import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
 import { ClusterPicker } from '@/components/pickers/ClusterPicker';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
-import { Select } from '@/components/ui/Select';
 import { INDIA_STATES } from '@/utils/india-geo';
 import { ApiError } from '@/types/api';
 import { useCreateRegion, useUpdateRegion } from './api';
@@ -84,43 +86,51 @@ export const RegionFormDialog = ({ open, editing, onClose }: Props) => {
       }
       className="max-w-2xl"
     >
-      <div className="space-y-3">
+      <Stack spacing={2.5}>
+        {error && <Alert severity="error">{error}</Alert>}
+
         <Box
           sx={{
             display: 'grid',
-            gap: 1.5,
+            gap: 2.5,
             gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
           }}
         >
-          <div className="space-y-1.5">
-            <Label htmlFor="rg-name">Name *</Label>
-            <Input id="rg-name" value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="rg-state">State (optional)</Label>
-            <Select id="rg-state" value={state} onChange={(e) => setState(e.target.value)}>
-              <option value="">No specific state…</option>
-              {INDIA_STATES.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </Select>
-          </div>
+          <TextField
+            fullWidth
+            label="Name"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+          />
+          <TextField
+            fullWidth
+            select
+            label="State (optional)"
+            value={state}
+            onChange={(e) => setState(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+          >
+            <MenuItem value="">No specific state…</MenuItem>
+            {INDIA_STATES.map((s) => (
+              <MenuItem key={s} value={s}>
+                {s}
+              </MenuItem>
+            ))}
+          </TextField>
         </Box>
 
-        <div className="space-y-1.5">
-          <Label>Clusters in this region</Label>
+        <Stack spacing={1}>
+          <Typography variant="subtitle2">Clusters in this region</Typography>
           <ClusterPicker
             multi
             values={clusterIds}
             onChange={setClusterIds}
             placeholder="Pick one or more clusters…"
           />
-        </div>
-
-        {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+        </Stack>
+      </Stack>
     </Dialog>
   );
 };

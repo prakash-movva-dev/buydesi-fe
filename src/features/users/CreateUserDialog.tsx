@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Alert from '@mui/material/Alert';
+import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { ClusterPicker } from '@/components/pickers/ClusterPicker';
+import { PhoneInput } from '@/components/phone-input';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
-import { Select } from '@/components/ui/Select';
 import { useRegionsList } from '@/features/regions/api';
 import { useAuth } from '@/lib/auth';
 import { validateEmail, validateMobile, validateName } from '@/lib/validation';
@@ -183,77 +187,81 @@ export const CreateUserDialog = ({ open, onClose }: Props) => {
       }
       className="max-w-2xl"
     >
-      <div className="space-y-3">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="cu-name">Name *</Label>
-            <Input id="cu-name" value={name} onChange={(e) => setName(e.target.value)} />
-            <FieldError show={showErrors} message={nameError} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="cu-role">Role *</Label>
-            <Select
-              id="cu-role"
-              value={role}
-              onChange={(e) => setRole(e.target.value as UserRole)}
-            >
-              {roleChoices.map((r) => (
-                <option key={r.value} value={r.value}>
-                  {r.label}
-                </option>
-              ))}
-            </Select>
-            {selectedRoleDesc && (
-              <p className="text-xs text-muted-foreground">{selectedRoleDesc}</p>
-            )}
-          </div>
-        </div>
+      <Stack spacing={2.5}>
+        {error && <Alert severity="error">{error}</Alert>}
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="cu-email">Email</Label>
-            <Input
-              id="cu-email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-            <FieldError show={showErrors} message={emailError} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="cu-mobile">Mobile</Label>
-            <Input
-              id="cu-mobile"
-              value={mobile}
-              onChange={(e) => setMobile(e.target.value)}
-              inputMode="numeric"
-              maxLength={13}
-              placeholder="+91…"
-            />
-            <FieldError show={showErrors} message={mobileError ?? contactError} />
-          </div>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label htmlFor="cu-password">Temporary password *</Label>
-          <Input
-            id="cu-password"
-            type="text"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            placeholder="At least 8 chars — share with the user securely"
+        <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' } }}>
+          <TextField
+            fullWidth
+            label="Name"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            error={showErrors && Boolean(nameError)}
+            helperText={showErrors ? nameError ?? undefined : undefined}
           />
-          <FieldError show={showErrors} message={passwordError} />
-          <p className="text-xs text-muted-foreground">
-            We don't email this. Copy it from here and send via your team's secure channel.
-            The user can change it from their profile after login.
-          </p>
-        </div>
+          <TextField
+            select
+            fullWidth
+            label="Role"
+            required
+            value={role}
+            onChange={(e) => setRole(e.target.value as UserRole)}
+            InputLabelProps={{ shrink: true }}
+            helperText={selectedRoleDesc || undefined}
+          >
+            {roleChoices.map((r) => (
+              <MenuItem key={r.value} value={r.value}>
+                {r.label}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Box>
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' } }}>
+          <TextField
+            fullWidth
+            type="email"
+            label="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            error={showErrors && Boolean(emailError)}
+            helperText={showErrors ? emailError ?? undefined : undefined}
+          />
+          <PhoneInput
+            fullWidth
+            label="Mobile"
+            value={mobile}
+            onChange={setMobile}
+            country="IN"
+            error={showErrors && Boolean(mobileError ?? contactError)}
+            helperText={showErrors ? (mobileError ?? contactError) ?? undefined : undefined}
+          />
+        </Box>
+
+        <TextField
+          fullWidth
+          type="text"
+          label="Temporary password"
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="At least 8 chars — share with the user securely"
+          InputLabelProps={{ shrink: true }}
+          error={showErrors && Boolean(passwordError)}
+          helperText={
+            showErrors && passwordError
+              ? passwordError
+              : "We don't email this. Copy it from here and send via your team's secure channel. The user can change it from their profile after login."
+          }
+        />
+
+        <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' } }}>
           {needsCluster && (
-            <div className="space-y-1.5">
-              <Label>Cluster {clusterRequired ? '*' : ''}</Label>
+            <Stack spacing={1}>
+              <Typography variant="subtitle2">Cluster {clusterRequired ? '*' : ''}</Typography>
               <ClusterPicker
                 value={clusterId}
                 onChange={setClusterId}
@@ -261,45 +269,50 @@ export const CreateUserDialog = ({ open, onClose }: Props) => {
                 placeholder="Pick a cluster…"
               />
               {!isSuperTier && (
-                <p className="text-xs text-muted-foreground">Pinned to your own cluster.</p>
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  Pinned to your own cluster.
+                </Typography>
               )}
               <FieldError show={showErrors} message={clusterError} />
-            </div>
+            </Stack>
           )}
           {needsRegion && (
-            <div className="space-y-1.5">
-              <Label htmlFor="cu-region">Region *</Label>
-              <Select
-                id="cu-region"
-                value={regionId ?? ''}
-                onChange={(e) => setRegionId(e.target.value || null)}
-              >
-                <option value="">Pick a region…</option>
-                {(regions ?? []).map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name}
-                    {r.state ? ` — ${r.state}` : ''}
-                  </option>
-                ))}
-              </Select>
-              <FieldError show={showErrors} message={regionError} />
-            </div>
+            <TextField
+              select
+              fullWidth
+              label="Region"
+              required
+              value={regionId ?? ''}
+              onChange={(e) => setRegionId(e.target.value || null)}
+              InputLabelProps={{ shrink: true }}
+              error={showErrors && Boolean(regionError)}
+              helperText={showErrors ? regionError ?? undefined : undefined}
+            >
+              <MenuItem value="">Pick a region…</MenuItem>
+              {(regions ?? []).map((r) => (
+                <MenuItem key={r.id} value={r.id}>
+                  {r.name}
+                  {r.state ? ` — ${r.state}` : ''}
+                </MenuItem>
+              ))}
+            </TextField>
           )}
           {needsCategory && (
-            <div className="space-y-1.5">
-              <Label>Category *</Label>
+            <Stack spacing={1}>
+              <Typography variant="subtitle2">Category *</Typography>
               <CategoryPicker value={categoryId} onChange={setCategoryId} />
               <FieldError show={showErrors} message={categoryError} />
-            </div>
+            </Stack>
           )}
-          <div className="space-y-1.5">
-            <Label htmlFor="cu-zone">Zone (optional)</Label>
-            <Input id="cu-zone" value={zone} onChange={(e) => setZone(e.target.value)} />
-          </div>
-        </div>
-
-        {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+          <TextField
+            fullWidth
+            label="Zone (optional)"
+            value={zone}
+            onChange={(e) => setZone(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+          />
+        </Box>
+      </Stack>
     </Dialog>
   );
 };

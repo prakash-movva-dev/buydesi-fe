@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import Stack from '@mui/material/Stack';
+import Alert from '@mui/material/Alert';
+import TextField from '@mui/material/TextField';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
-import { Label } from '@/components/ui/Label';
-import { Textarea } from '@/components/ui/Textarea';
 import { ApiError } from '@/types/api';
 
 export type DisciplinaryAction = 'warn' | 'suspend' | 'reactivate';
@@ -96,18 +96,19 @@ export const DisciplinaryDialog = ({
         </>
       }
     >
-      <Stack spacing={1}>
-        <Label htmlFor="disciplinary-reason">
-          Reason <span className="text-destructive">*</span>
-        </Label>
-        <Textarea
-          id="disciplinary-reason"
+      <Stack spacing={2.5}>
+        {error && <Alert severity="error">{error}</Alert>}
+        <TextField
+          fullWidth
+          multiline
+          minRows={4}
+          required
+          label="Reason"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           placeholder="Recorded in the disciplinary history. Be clear and actionable."
-          rows={4}
+          InputLabelProps={{ shrink: true }}
         />
-        {error && <p className="text-sm text-destructive">{error}</p>}
       </Stack>
     </Dialog>
   );

@@ -1,4 +1,10 @@
 import { useEffect, useState } from 'react';
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Alert from '@mui/material/Alert';
+import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
 import { ImageUploadField } from '@/components/ImageUploadField';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { ClusterPicker } from '@/components/pickers/ClusterPicker';
@@ -6,9 +12,6 @@ import { ProductPicker } from '@/components/pickers/ProductPicker';
 import { UserPicker } from '@/components/pickers/UserPicker';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
-import { Select } from '@/components/ui/Select';
 import { ApiError, UserRole } from '@/types/api';
 import { useCreatePromotion } from './api';
 import type { PromotionScope, PromotionType } from './types';
@@ -184,174 +187,226 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
       }
       className="max-w-2xl"
     >
-      <div className="space-y-3">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="p-type">Type</Label>
-            <Select id="p-type" value={type} onChange={(e) => setType(e.target.value as PromotionType)}>
-              <option value="banner">Banner</option>
-              <option value="coupon">Coupon</option>
-              <option value="featured">Featured slot</option>
-              <option value="sale_event">Sale event</option>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="p-name">Name *</Label>
-            <Input id="p-name" value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-        </div>
+      <Stack spacing={2.5}>
+        {error && <Alert severity="error">{error}</Alert>}
 
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="p-scope">Scope</Label>
-            <Select
-              id="p-scope"
-              value={scope}
-              onChange={(e) => setScope(e.target.value as PromotionScope)}
-            >
-              <option value="platform">Platform-wide</option>
-              <option value="cluster">Cluster</option>
-              <option value="category">Category</option>
-            </Select>
-          </div>
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 2.5,
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+          }}
+        >
+          <TextField
+            id="p-type"
+            select
+            fullWidth
+            label="Type"
+            value={type}
+            onChange={(e) => setType(e.target.value as PromotionType)}
+            InputLabelProps={{ shrink: true }}
+          >
+            <MenuItem value="banner">Banner</MenuItem>
+            <MenuItem value="coupon">Coupon</MenuItem>
+            <MenuItem value="featured">Featured slot</MenuItem>
+            <MenuItem value="sale_event">Sale event</MenuItem>
+          </TextField>
+          <TextField
+            id="p-name"
+            fullWidth
+            label="Name"
+            required
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+          />
+        </Box>
+
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 2.5,
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+          }}
+        >
+          <TextField
+            id="p-scope"
+            select
+            fullWidth
+            label="Scope"
+            value={scope}
+            onChange={(e) => setScope(e.target.value as PromotionScope)}
+            InputLabelProps={{ shrink: true }}
+          >
+            <MenuItem value="platform">Platform-wide</MenuItem>
+            <MenuItem value="cluster">Cluster</MenuItem>
+            <MenuItem value="category">Category</MenuItem>
+          </TextField>
           {scope === 'cluster' && (
-            <div className="space-y-1.5">
-              <Label>Cluster *</Label>
+            <Stack spacing={1}>
+              <Typography variant="subtitle2">Cluster *</Typography>
               <ClusterPicker value={clusterId || null} onChange={(id) => setClusterId(id ?? '')} />
-            </div>
+            </Stack>
           )}
           {scope === 'category' && (
-            <div className="space-y-1.5">
-              <Label>Category *</Label>
+            <Stack spacing={1}>
+              <Typography variant="subtitle2">Category *</Typography>
               <CategoryPicker
                 value={categoryId || null}
                 onChange={(id) => setCategoryId(id ?? '')}
               />
-            </div>
+            </Stack>
           )}
-        </div>
+        </Box>
 
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="p-start">Starts at *</Label>
-            <Input
-              id="p-start"
-              type="datetime-local"
-              value={startsAt}
-              onChange={(e) => setStartsAt(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="p-end">Ends at *</Label>
-            <Input
-              id="p-end"
-              type="datetime-local"
-              value={endsAt}
-              onChange={(e) => setEndsAt(e.target.value)}
-            />
-          </div>
-        </div>
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 2.5,
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+          }}
+        >
+          <TextField
+            id="p-start"
+            fullWidth
+            type="datetime-local"
+            label="Starts at"
+            required
+            value={startsAt}
+            onChange={(e) => setStartsAt(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+          />
+          <TextField
+            id="p-end"
+            fullWidth
+            type="datetime-local"
+            label="Ends at"
+            required
+            value={endsAt}
+            onChange={(e) => setEndsAt(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+          />
+        </Box>
 
         <hr className="border-border" />
 
         {type === 'banner' && (
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>Banner image</Label>
+          <Stack spacing={2.5}>
+            <Stack spacing={1}>
+              <Typography variant="subtitle2">Banner image</Typography>
               <ImageUploadField
                 value={imageUrl}
                 onChange={setImageUrl}
                 kind="promotion"
                 variant="wide"
               />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="p-target">Target URL</Label>
-              <Input
-                id="p-target"
-                value={targetUrl}
-                onChange={(e) => setTargetUrl(e.target.value)}
-                placeholder="https://… (where the banner click goes)"
-              />
-            </div>
-          </div>
+            </Stack>
+            <TextField
+              id="p-target"
+              fullWidth
+              label="Target URL"
+              value={targetUrl}
+              onChange={(e) => setTargetUrl(e.target.value)}
+              placeholder="https://… (where the banner click goes)"
+              InputLabelProps={{ shrink: true }}
+            />
+          </Stack>
         )}
 
         {type === 'coupon' && (
-          <div className="space-y-3">
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="p-code">Coupon code</Label>
-                <Input
-                  id="p-code"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.toUpperCase())}
-                  placeholder="e.g. WELCOME10"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="p-dt">Discount type</Label>
-                <Select
-                  id="p-dt"
-                  value={discountType}
-                  onChange={(e) => setDiscountType(e.target.value as 'percent' | 'flat')}
-                >
-                  <option value="percent">Percent (%)</option>
-                  <option value="flat">Flat (₹)</option>
-                </Select>
-              </div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="p-dv">Discount value</Label>
-                <Input
-                  id="p-dv"
-                  type="number"
-                  min={1}
-                  value={discountValue}
-                  onChange={(e) => setDiscountValue(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="p-max">Max discount cap ₹ (optional)</Label>
-                <Input
-                  id="p-max"
-                  type="number"
-                  min={0}
-                  value={maxDiscountInr}
-                  onChange={(e) => setMaxDiscountInr(e.target.value)}
-                />
-              </div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="p-min">Min order ₹</Label>
-                <Input
-                  id="p-min"
-                  type="number"
-                  min={0}
-                  value={minOrderInr}
-                  onChange={(e) => setMinOrderInr(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="p-uses">Max uses (0 = unlimited)</Label>
-                <Input
-                  id="p-uses"
-                  type="number"
-                  min={0}
-                  value={maxUses}
-                  onChange={(e) => setMaxUses(e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
+          <Stack spacing={2.5}>
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 2.5,
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+              }}
+            >
+              <TextField
+                id="p-code"
+                fullWidth
+                label="Coupon code"
+                value={code}
+                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                placeholder="e.g. WELCOME10"
+                InputLabelProps={{ shrink: true }}
+              />
+              <TextField
+                id="p-dt"
+                select
+                fullWidth
+                label="Discount type"
+                value={discountType}
+                onChange={(e) => setDiscountType(e.target.value as 'percent' | 'flat')}
+                InputLabelProps={{ shrink: true }}
+              >
+                <MenuItem value="percent">Percent (%)</MenuItem>
+                <MenuItem value="flat">Flat (₹)</MenuItem>
+              </TextField>
+            </Box>
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 2.5,
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+              }}
+            >
+              <TextField
+                id="p-dv"
+                fullWidth
+                type="number"
+                label="Discount value"
+                value={discountValue}
+                onChange={(e) => setDiscountValue(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ min: 1 }}
+              />
+              <TextField
+                id="p-max"
+                fullWidth
+                type="number"
+                label="Max discount cap ₹ (optional)"
+                value={maxDiscountInr}
+                onChange={(e) => setMaxDiscountInr(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ min: 0 }}
+              />
+            </Box>
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 2.5,
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+              }}
+            >
+              <TextField
+                id="p-min"
+                fullWidth
+                type="number"
+                label="Min order ₹"
+                value={minOrderInr}
+                onChange={(e) => setMinOrderInr(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ min: 0 }}
+              />
+              <TextField
+                id="p-uses"
+                fullWidth
+                type="number"
+                label="Max uses (0 = unlimited)"
+                value={maxUses}
+                onChange={(e) => setMaxUses(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ min: 0 }}
+              />
+            </Box>
+          </Stack>
         )}
 
         {type === 'featured' && (
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>Products</Label>
+          <Stack spacing={2.5}>
+            <Stack spacing={1}>
+              <Typography variant="subtitle2">Products</Typography>
               <ProductPicker
                 multi
                 status="LIVE"
@@ -359,9 +414,9 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
                 onChange={setProductIds}
                 placeholder="Pick products to feature…"
               />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Storefronts (sellers)</Label>
+            </Stack>
+            <Stack spacing={1}>
+              <Typography variant="subtitle2">Storefronts (sellers)</Typography>
               <UserPicker
                 multi
                 role={UserRole.SELLER}
@@ -369,60 +424,62 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
                 onChange={setStorefrontUserIds}
                 placeholder="Pick sellers whose storefronts to feature…"
               />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="p-slot">Slot position</Label>
-              <Input
-                id="p-slot"
-                type="number"
-                min={0}
-                value={slotPosition}
-                onChange={(e) => setSlotPosition(e.target.value)}
-              />
-            </div>
-          </div>
+            </Stack>
+            <TextField
+              id="p-slot"
+              fullWidth
+              type="number"
+              label="Slot position"
+              value={slotPosition}
+              onChange={(e) => setSlotPosition(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ min: 0 }}
+            />
+          </Stack>
         )}
 
         {type === 'sale_event' && (
-          <div className="space-y-3">
-            <div className="space-y-1.5">
-              <Label>Eligible categories</Label>
+          <Stack spacing={2.5}>
+            <Stack spacing={1}>
+              <Typography variant="subtitle2">Eligible categories</Typography>
               <CategoryPicker
                 multi
                 values={eligibleCategoryIds}
                 onChange={setEligibleCategoryIds}
                 placeholder="Pick categories included in the sale…"
               />
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="p-min%">Min discount %</Label>
-                <Input
-                  id="p-min%"
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={discountMinPercent}
-                  onChange={(e) => setDiscountMinPercent(e.target.value)}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="p-max%">Max discount %</Label>
-                <Input
-                  id="p-max%"
-                  type="number"
-                  min={0}
-                  max={100}
-                  value={discountMaxPercent}
-                  onChange={(e) => setDiscountMaxPercent(e.target.value)}
-                />
-              </div>
-            </div>
-          </div>
+            </Stack>
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 2.5,
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+              }}
+            >
+              <TextField
+                id="p-min%"
+                fullWidth
+                type="number"
+                label="Min discount %"
+                value={discountMinPercent}
+                onChange={(e) => setDiscountMinPercent(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ min: 0, max: 100 }}
+              />
+              <TextField
+                id="p-max%"
+                fullWidth
+                type="number"
+                label="Max discount %"
+                value={discountMaxPercent}
+                onChange={(e) => setDiscountMaxPercent(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ min: 0, max: 100 }}
+              />
+            </Box>
+          </Stack>
         )}
-
-        {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+      </Stack>
     </Dialog>
   );
 };

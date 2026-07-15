@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
+import Stack from '@mui/material/Stack';
+import Alert from '@mui/material/Alert';
+import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
-import { Label } from '@/components/ui/Label';
-import { Select } from '@/components/ui/Select';
-import { Textarea } from '@/components/ui/Textarea';
 import { ApiError } from '@/types/api';
 import { useUpdateUserStatus } from './api';
 import type { SafeUser, UserStatus } from './types';
@@ -64,32 +65,31 @@ export const UserStatusDialog = ({ open, user, onClose }: Props) => {
         </>
       }
     >
-      <div className="space-y-3">
-        <div className="space-y-1.5">
-          <Label htmlFor="u-status">Status</Label>
-          <Select
-            id="u-status"
-            value={status}
-            onChange={(e) => setStatus(e.target.value as UserStatus)}
-          >
-            <option value="active">Active</option>
-            <option value="pending">Pending (OTP not yet verified)</option>
-            <option value="suspended">Suspended</option>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="u-reason">
-            Reason {status === 'suspended' ? <span className="text-destructive">*</span> : '(optional)'}
-          </Label>
-          <Textarea
-            id="u-reason"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            rows={3}
-          />
-        </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+      <Stack spacing={2.5}>
+        {error && <Alert severity="error">{error}</Alert>}
+        <TextField
+          select
+          fullWidth
+          label="Status"
+          value={status}
+          onChange={(e) => setStatus(e.target.value as UserStatus)}
+          InputLabelProps={{ shrink: true }}
+        >
+          <MenuItem value="active">Active</MenuItem>
+          <MenuItem value="pending">Pending (OTP not yet verified)</MenuItem>
+          <MenuItem value="suspended">Suspended</MenuItem>
+        </TextField>
+        <TextField
+          fullWidth
+          multiline
+          minRows={3}
+          required={status === 'suspended'}
+          label={status === 'suspended' ? 'Reason' : 'Reason (optional)'}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
+      </Stack>
     </Dialog>
   );
 };
