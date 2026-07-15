@@ -1,13 +1,17 @@
 import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 import { Check, MapPin, X } from 'lucide-react';
 import Box from '@mui/material/Box';
+import Alert from '@mui/material/Alert';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import MenuItem from '@mui/material/MenuItem';
+import Switch from '@mui/material/Switch';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
+import { PhoneInput } from '@/components/phone-input';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
-import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
-import { Select } from '@/components/ui/Select';
-import { Textarea } from '@/components/ui/Textarea';
 import { cn } from '@/lib/cn';
 import { useRegionsList } from '@/features/regions/api';
 import { INDIA_STATES, districtsForState } from '@/utils/india-geo';
@@ -249,55 +253,57 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
             <Box
               sx={{
                 display: 'grid',
-                gap: 1.5,
+                gap: 2.5,
                 gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
               }}
             >
-              <div className="space-y-1.5">
-                <Label htmlFor="cl-name">Name *</Label>
-                <Input
-                  id="cl-name"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Bengaluru Urban"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="cl-state">State *</Label>
-                <Select
-                  id="cl-state"
-                  value={state}
-                  onChange={(e) => {
-                    setState(e.target.value);
-                    setDistrict('');
-                  }}
-                >
-                  <option value="">Select a state…</option>
-                  {INDIA_STATES.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="cl-district">District *</Label>
-                <Select
-                  id="cl-district"
-                  value={district}
-                  onChange={(e) => setDistrict(e.target.value)}
-                  disabled={!state}
-                >
-                  <option value="">
-                    {state ? 'Select a district…' : 'Select a state first'}
-                  </option>
-                  {districtsForState(state).map((d) => (
-                    <option key={d} value={d}>
-                      {d}
-                    </option>
-                  ))}
-                </Select>
-              </div>
+              <TextField
+                fullWidth
+                label="Name"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Bengaluru Urban"
+                InputLabelProps={{ shrink: true }}
+              />
+              <TextField
+                select
+                fullWidth
+                label="State"
+                required
+                value={state}
+                onChange={(e) => {
+                  setState(e.target.value);
+                  setDistrict('');
+                }}
+                InputLabelProps={{ shrink: true }}
+              >
+                <MenuItem value="">Select a state…</MenuItem>
+                {INDIA_STATES.map((s) => (
+                  <MenuItem key={s} value={s}>
+                    {s}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                select
+                fullWidth
+                label="District"
+                required
+                value={district}
+                onChange={(e) => setDistrict(e.target.value)}
+                disabled={!state}
+                InputLabelProps={{ shrink: true }}
+              >
+                <MenuItem value="">
+                  {state ? 'Select a district…' : 'Select a state first'}
+                </MenuItem>
+                {districtsForState(state).map((d) => (
+                  <MenuItem key={d} value={d}>
+                    {d}
+                  </MenuItem>
+                ))}
+              </TextField>
             </Box>
 
             {/* PIN codes — the defining attribute of a cluster. Mandatory. */}
@@ -311,41 +317,40 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
             <Box
               sx={{
                 display: 'grid',
-                gap: 1.5,
+                gap: 2.5,
                 gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
               }}
             >
-              <div className="space-y-1.5">
-                <Label htmlFor="cl-region">Region (optional)</Label>
-                <Select
-                  id="cl-region"
-                  value={regionId}
-                  onChange={(e) => setRegionId(e.target.value)}
-                >
-                  <option value="">— No region —</option>
-                  {(regions.data ?? []).map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.name}
-                    </option>
-                  ))}
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Groups this cluster under a Regional Admin's region.
-                </p>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="cl-zone">Zone (optional)</Label>
-                <Input
-                  id="cl-zone"
-                  value={zone}
-                  onChange={(e) => setZone(e.target.value)}
-                  placeholder="e.g. South"
-                />
-              </div>
+              <TextField
+                select
+                fullWidth
+                label="Region (optional)"
+                value={regionId}
+                onChange={(e) => setRegionId(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+                helperText="Groups this cluster under a Regional Admin's region."
+              >
+                <MenuItem value="">— No region —</MenuItem>
+                {(regions.data ?? []).map((r) => (
+                  <MenuItem key={r.id} value={r.id}>
+                    {r.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                fullWidth
+                label="Zone (optional)"
+                value={zone}
+                onChange={(e) => setZone(e.target.value)}
+                placeholder="e.g. South"
+                InputLabelProps={{ shrink: true }}
+              />
             </Box>
 
-            <div className="space-y-1.5">
-              <Label>Active categories (optional)</Label>
+            <Box>
+              <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                Active categories (optional)
+              </Typography>
               <CategoryPicker
                 multi
                 values={activeCategories}
@@ -356,7 +361,7 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
                 Reflect the cluster's local produce (e.g. a Coorg cluster carries Coffee &amp;
                 Spices).
               </p>
-            </div>
+            </Box>
           </>
         )}
 
@@ -366,71 +371,65 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
             <Box
               sx={{
                 display: 'grid',
-                gap: 1.5,
+                gap: 2.5,
                 gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
               }}
             >
-              <div className="space-y-1.5">
-                <Label htmlFor="cl-code">Cluster code</Label>
-                <Input
-                  id="cl-code"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.toUpperCase())}
-                  placeholder="e.g. KA-BLR-01"
-                  maxLength={40}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="cl-launch">Launch date</Label>
-                <Input
-                  id="cl-launch"
-                  type="date"
-                  value={launchDate}
-                  onChange={(e) => setLaunchDate(e.target.value)}
-                />
-              </div>
+              <TextField
+                fullWidth
+                label="Cluster code"
+                value={code}
+                onChange={(e) => setCode(e.target.value.toUpperCase())}
+                placeholder="e.g. KA-BLR-01"
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ maxLength: 40 }}
+              />
+              <TextField
+                fullWidth
+                type="date"
+                label="Launch date"
+                value={launchDate}
+                onChange={(e) => setLaunchDate(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
             </Box>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="cl-desc">Description</Label>
-              <Textarea
-                id="cl-desc"
-                rows={3}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                maxLength={2000}
-                placeholder="What this cluster covers, its produce and story…"
-              />
-            </div>
+            <TextField
+              fullWidth
+              multiline
+              minRows={3}
+              label="Description"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="What this cluster covers, its produce and story…"
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ maxLength: 2000 }}
+            />
 
             <Box
               sx={{
                 display: 'grid',
-                gap: 1.5,
+                gap: 2.5,
                 gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
               }}
             >
-              <div className="space-y-1.5">
-                <Label htmlFor="cl-phone">Contact phone</Label>
-                <Input
-                  id="cl-phone"
-                  value={contactPhone}
-                  onChange={(e) => setContactPhone(e.target.value)}
-                  placeholder="+91…"
-                  maxLength={20}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="cl-email">Contact email</Label>
-                <Input
-                  id="cl-email"
-                  type="email"
-                  value={contactEmail}
-                  onChange={(e) => setContactEmail(e.target.value)}
-                  placeholder="ops@…"
-                  maxLength={200}
-                />
-              </div>
+              <PhoneInput
+                fullWidth
+                label="Contact phone"
+                value={contactPhone}
+                onChange={setContactPhone}
+                country="IN"
+              />
+              <TextField
+                fullWidth
+                type="email"
+                label="Contact email"
+                value={contactEmail}
+                onChange={(e) => setContactEmail(e.target.value)}
+                placeholder="ops@…"
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ maxLength: 200 }}
+              />
             </Box>
           </>
         )}
@@ -438,94 +437,88 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
         {step === 3 && (
           <>
             <p className="text-xs text-muted-foreground">{STEPS[3].hint}</p>
-            <div className="space-y-1.5">
-              <Label htmlFor="cl-hub">Pickup hub address</Label>
-              <Textarea
-                id="cl-hub"
-                rows={2}
-                value={hubAddress}
-                onChange={(e) => setHubAddress(e.target.value)}
-                maxLength={500}
-                placeholder="Delhivery pickup origin for this cluster's sellers"
-              />
-            </div>
+            <TextField
+              fullWidth
+              multiline
+              minRows={3}
+              label="Pickup hub address"
+              value={hubAddress}
+              onChange={(e) => setHubAddress(e.target.value)}
+              placeholder="Delhivery pickup origin for this cluster's sellers"
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ maxLength: 500 }}
+            />
 
             <Box
               sx={{
                 display: 'grid',
-                gap: 1.5,
+                gap: 2.5,
                 gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+                alignItems: 'center',
               }}
             >
-              <div className="space-y-1.5">
-                <Label htmlFor="cl-hubpin">Hub PIN code</Label>
-                <Input
-                  id="cl-hubpin"
-                  inputMode="numeric"
-                  value={hubPincode}
-                  onChange={(e) =>
-                    setHubPincode(e.target.value.replace(/\D/g, '').slice(0, 6))
-                  }
-                  placeholder="6-digit"
-                  maxLength={6}
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="cl-minorder">Min order value (₹)</Label>
-                <Input
-                  id="cl-minorder"
-                  type="number"
-                  min={0}
-                  value={minOrderValue}
-                  onChange={(e) => setMinOrderValue(e.target.value)}
-                  placeholder="Optional"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="cl-cod">Cash on Delivery</Label>
-                <label className="flex h-10 items-center gap-2 rounded-md border border-input px-3">
-                  <input
-                    id="cl-cod"
-                    type="checkbox"
-                    className="h-4 w-4"
+              <TextField
+                fullWidth
+                label="Hub PIN code"
+                value={hubPincode}
+                onChange={(e) =>
+                  setHubPincode(e.target.value.replace(/\D/g, '').slice(0, 6))
+                }
+                placeholder="6-digit"
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ inputMode: 'numeric', maxLength: 6 }}
+              />
+              <TextField
+                fullWidth
+                type="number"
+                label="Min order value (₹)"
+                value={minOrderValue}
+                onChange={(e) => setMinOrderValue(e.target.value)}
+                placeholder="Optional"
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ min: 0 }}
+              />
+              <FormControlLabel
+                control={
+                  <Switch
                     checked={codAllowed}
                     onChange={(e) => setCodAllowed(e.target.checked)}
                   />
-                  <span className="text-sm">{codAllowed ? 'Allowed' : 'Disabled'}</span>
-                </label>
-              </div>
+                }
+                label={`Cash on Delivery ${codAllowed ? '(Allowed)' : '(Disabled)'}`}
+              />
             </Box>
 
             <Box
               sx={{
                 display: 'grid',
-                gap: 1.5,
+                gap: 2.5,
                 gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
               }}
             >
-              <div className="space-y-1.5">
-                <Label htmlFor="cl-status">Status</Label>
-                <Select
-                  id="cl-status"
-                  value={statusVal}
-                  onChange={(e) => setStatusVal(e.target.value as ClusterStatus)}
-                >
-                  <option value="active">Active</option>
-                  <option value="pending">Pending</option>
-                  <option value="inactive">Inactive</option>
-                </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="cl-transport">Default trade transport</Label>
-                <Select
-                  id="cl-transport"
-                  value={defaultTradeTransport}
-                  onChange={(e) => setTransport(e.target.value as TradeTransportMode)}
-                >
-                  <option value="LOCAL">Local (within cluster)</option>
-                  <option value="DELHIVERY">Delhivery (inter-cluster)</option>
-                </Select>
-              </div>
+              <TextField
+                select
+                fullWidth
+                label="Status"
+                value={statusVal}
+                onChange={(e) => setStatusVal(e.target.value as ClusterStatus)}
+                InputLabelProps={{ shrink: true }}
+              >
+                <MenuItem value="active">Active</MenuItem>
+                <MenuItem value="pending">Pending</MenuItem>
+                <MenuItem value="inactive">Inactive</MenuItem>
+              </TextField>
+              <TextField
+                select
+                fullWidth
+                label="Default trade transport"
+                value={defaultTradeTransport}
+                onChange={(e) => setTransport(e.target.value as TradeTransportMode)}
+                InputLabelProps={{ shrink: true }}
+              >
+                <MenuItem value="LOCAL">Local (within cluster)</MenuItem>
+                <MenuItem value="DELHIVERY">Delhivery (inter-cluster)</MenuItem>
+              </TextField>
             </Box>
 
             {isEdit && (
@@ -537,7 +530,7 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
           </>
         )}
 
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && <Alert severity="error">{error}</Alert>}
       </div>
     </Dialog>
   );

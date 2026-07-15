@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 import { Check, Pencil, X } from 'lucide-react';
 import Stack from '@mui/material/Stack';
+import Alert from '@mui/material/Alert';
+import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { cn } from '@/lib/cn';
 import { formatDateTime } from '@/lib/format';
@@ -176,7 +177,11 @@ const SettingRow = ({ setting }: { setting: PlatformSetting }) => {
               <X className="h-4 w-4" />
               Cancel
             </Button>
-            {error && <p className="basis-full text-xs text-destructive">{error}</p>}
+            {error && (
+              <Alert severity="error" sx={{ flexBasis: '100%' }}>
+                {error}
+              </Alert>
+            )}
           </div>
         ) : (
           <div className="flex items-center gap-3 text-sm">
@@ -207,32 +212,39 @@ const Editor = ({
 }) => {
   if (valueType === 'boolean') {
     return (
-      <Select
+      <TextField
+        select
+        size="small"
         value={draft}
         onChange={(e) => onChange(e.target.value)}
-        className="w-40"
+        sx={{ width: 160 }}
+        InputLabelProps={{ shrink: true }}
       >
-        <option value="true">Enabled</option>
-        <option value="false">Disabled</option>
-      </Select>
+        <MenuItem value="true">Enabled</MenuItem>
+        <MenuItem value="false">Disabled</MenuItem>
+      </TextField>
     );
   }
-  const inputProps =
-    valueType === 'integer' || valueType === 'duration_hours' || valueType === 'number'
-      ? {
-          type: 'number' as const,
-          inputMode: 'numeric' as const,
-          min: min ?? undefined,
-          max: max ?? undefined,
-          step: valueType === 'number' ? '0.01' : '1',
-        }
-      : { type: 'text' as const };
+  const isNumber =
+    valueType === 'integer' || valueType === 'duration_hours' || valueType === 'number';
+  const fieldType = isNumber ? ('number' as const) : ('text' as const);
+  const numberInputProps = isNumber
+    ? {
+        inputMode: 'numeric' as const,
+        min: min ?? undefined,
+        max: max ?? undefined,
+        step: valueType === 'number' ? '0.01' : '1',
+      }
+    : {};
   return (
-    <Input
-      {...inputProps}
+    <TextField
+      type={fieldType}
+      size="small"
       value={draft}
       onChange={(e) => onChange(e.target.value)}
-      className="w-64"
+      sx={{ width: 256 }}
+      InputLabelProps={{ shrink: true }}
+      inputProps={numberInputProps}
     />
   );
 };

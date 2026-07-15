@@ -14,14 +14,16 @@ import {
 } from 'lucide-react';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+import Alert from '@mui/material/Alert';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
-import { Select } from '@/components/ui/Select';
-import { Textarea } from '@/components/ui/Textarea';
 import { useAuth } from '@/lib/auth';
 import { uploadToPresignedUrl } from '@/lib/s3-upload';
 import { INDIA_STATES, districtsForState } from '@/utils/india-geo';
@@ -499,68 +501,100 @@ export const SellerOnboardingPage = () => {
               <>
                 <Typography variant="h6">Business details</Typography>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Farm / business name *">
-                    <Input value={form.farmName} onChange={(e) => set('farmName', e.target.value)} maxLength={200} />
-                  </Field>
-                  <Field label="Business type">
-                    <Select value={form.businessType} onChange={(e) => set('businessType', e.target.value)}>
-                      <option value="">Select…</option>
-                      {BUSINESS_TYPES.map((b) => (
-                        <option key={b.value} value={b.value}>
-                          {b.label}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-                </div>
-                <Field label="GST number (optional)">
-                  <Input
-                    value={form.gstNumber}
-                    onChange={(e) => set('gstNumber', e.target.value.toUpperCase())}
-                    maxLength={15}
-                    placeholder="15-character GSTIN (leave blank if exempt)"
+                  <TextField
+                    fullWidth
+                    label="Farm / business name"
+                    required
+                    value={form.farmName}
+                    onChange={(e) => set('farmName', e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ maxLength: 200 }}
                   />
-                </Field>
-                <Field label="Address line 1 *">
-                  <Input value={form.line1} onChange={(e) => set('line1', e.target.value)} />
-                </Field>
-                <Field label="Address line 2 (optional)">
-                  <Input value={form.line2} onChange={(e) => set('line2', e.target.value)} />
-                </Field>
+                  <TextField
+                    select
+                    fullWidth
+                    label="Business type"
+                    value={form.businessType}
+                    onChange={(e) => set('businessType', e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                  >
+                    <MenuItem value="">Select…</MenuItem>
+                    {BUSINESS_TYPES.map((b) => (
+                      <MenuItem key={b.value} value={b.value}>
+                        {b.label}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                </div>
+                <TextField
+                  fullWidth
+                  label="GST number (optional)"
+                  value={form.gstNumber}
+                  onChange={(e) => set('gstNumber', e.target.value.toUpperCase())}
+                  placeholder="15-character GSTIN (leave blank if exempt)"
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ maxLength: 15 }}
+                />
+                <TextField
+                  fullWidth
+                  label="Address line 1"
+                  required
+                  value={form.line1}
+                  onChange={(e) => set('line1', e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
+                <TextField
+                  fullWidth
+                  label="Address line 2 (optional)"
+                  value={form.line2}
+                  onChange={(e) => set('line2', e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <Field label="State *">
-                    <Select
-                      value={form.state}
-                      onChange={(e) => {
-                        set('state', e.target.value);
-                        set('city', '');
-                      }}
-                    >
-                      <option value="">Select…</option>
-                      {INDIA_STATES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-                  <Field label="City / District *">
-                    <Input
-                      list="ob-city-list"
-                      value={form.city}
-                      onChange={(e) => set('city', e.target.value)}
-                      disabled={!form.state}
-                      placeholder={form.state ? 'Pick or type…' : 'Select a state first'}
-                    />
-                    <datalist id="ob-city-list">
-                      {districtsForState(form.state).map((d) => (
-                        <option key={d} value={d} />
-                      ))}
-                    </datalist>
-                  </Field>
-                  <Field label="Pincode *">
-                    <Input value={form.pincode} onChange={(e) => set('pincode', e.target.value)} maxLength={6} />
-                  </Field>
+                  <TextField
+                    select
+                    fullWidth
+                    label="State"
+                    required
+                    value={form.state}
+                    onChange={(e) => {
+                      set('state', e.target.value);
+                      set('city', '');
+                    }}
+                    InputLabelProps={{ shrink: true }}
+                  >
+                    <MenuItem value="">Select…</MenuItem>
+                    {INDIA_STATES.map((s) => (
+                      <MenuItem key={s} value={s}>
+                        {s}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                  <TextField
+                    fullWidth
+                    label="City / District"
+                    required
+                    value={form.city}
+                    onChange={(e) => set('city', e.target.value)}
+                    disabled={!form.state}
+                    placeholder={form.state ? 'Pick or type…' : 'Select a state first'}
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ list: 'ob-city-list' }}
+                  />
+                  <datalist id="ob-city-list">
+                    {districtsForState(form.state).map((d) => (
+                      <option key={d} value={d} />
+                    ))}
+                  </datalist>
+                  <TextField
+                    fullWidth
+                    label="Pincode"
+                    required
+                    value={form.pincode}
+                    onChange={(e) => set('pincode', e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ maxLength: 6 }}
+                  />
                 </div>
               </>
             )}
@@ -569,53 +603,66 @@ export const SellerOnboardingPage = () => {
             {step === 2 && (
               <>
                 <Typography variant="h6">Products & categories</Typography>
-                <Field label="Categories you'll sell in *">
+                <div>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Categories you'll sell in *
+                  </Typography>
                   <CategoryPicker
                     multi
                     values={form.categoryIds}
                     onChange={(v) => set('categoryIds', v)}
                     placeholder="Pick one or more categories…"
                   />
-                </Field>
+                </div>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Do you own a brand?">
-                    <Select value={form.ownsBrand} onChange={(e) => set('ownsBrand', e.target.value)}>
-                      <option value="">Select…</option>
-                      <option value="no">No — I resell / sell my produce</option>
-                      <option value="yes">Yes — I have my own brand</option>
-                    </Select>
-                  </Field>
-                  <Field label="Expected monthly listings">
-                    <Select
-                      value={form.expectedMonthlyListings}
-                      onChange={(e) => set('expectedMonthlyListings', e.target.value)}
-                    >
-                      <option value="">Select…</option>
-                      {LISTING_BUCKETS.map((b) => (
-                        <option key={b} value={b}>
-                          {b}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
-                  <Field label="Average product price (₹)">
-                    <Input
-                      type="number"
-                      min={0}
-                      value={form.averagePriceInr}
-                      onChange={(e) => set('averagePriceInr', e.target.value)}
-                    />
-                  </Field>
-                  <Field label="Fulfilment preference">
-                    <Select
-                      value={form.fulfillmentPreference}
-                      onChange={(e) => set('fulfillmentPreference', e.target.value)}
-                    >
-                      <option value="">Select…</option>
-                      <option value="delhivery_pickup">Delhivery pickup from my address</option>
-                      <option value="self_drop">Self-drop at a Delhivery centre</option>
-                    </Select>
-                  </Field>
+                  <TextField
+                    select
+                    fullWidth
+                    label="Do you own a brand?"
+                    value={form.ownsBrand}
+                    onChange={(e) => set('ownsBrand', e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                  >
+                    <MenuItem value="">Select…</MenuItem>
+                    <MenuItem value="no">No — I resell / sell my produce</MenuItem>
+                    <MenuItem value="yes">Yes — I have my own brand</MenuItem>
+                  </TextField>
+                  <TextField
+                    select
+                    fullWidth
+                    label="Expected monthly listings"
+                    value={form.expectedMonthlyListings}
+                    onChange={(e) => set('expectedMonthlyListings', e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                  >
+                    <MenuItem value="">Select…</MenuItem>
+                    {LISTING_BUCKETS.map((b) => (
+                      <MenuItem key={b} value={b}>
+                        {b}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Average product price (₹)"
+                    value={form.averagePriceInr}
+                    onChange={(e) => set('averagePriceInr', e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ min: 0 }}
+                  />
+                  <TextField
+                    select
+                    fullWidth
+                    label="Fulfilment preference"
+                    value={form.fulfillmentPreference}
+                    onChange={(e) => set('fulfillmentPreference', e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                  >
+                    <MenuItem value="">Select…</MenuItem>
+                    <MenuItem value="delhivery_pickup">Delhivery pickup from my address</MenuItem>
+                    <MenuItem value="self_drop">Self-drop at a Delhivery centre</MenuItem>
+                  </TextField>
                 </div>
               </>
             )}
@@ -697,54 +744,72 @@ export const SellerOnboardingPage = () => {
                   Where should we deposit your earnings? The account should be in your business name.
                 </p>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Account holder name *">
-                    <Input
-                      value={form.accountHolderName}
-                      onChange={(e) => set('accountHolderName', e.target.value)}
-                    />
-                  </Field>
-                  <Field label="Bank name *">
-                    <Input value={form.bankName} onChange={(e) => set('bankName', e.target.value)} />
-                  </Field>
-                  <Field label="Account number *">
-                    <Input value={form.accountNumber} onChange={(e) => set('accountNumber', e.target.value)} />
-                    {accountNumInvalid && (
-                      <p className="text-xs text-destructive">Account number must be 9–18 digits.</p>
-                    )}
-                  </Field>
-                  <Field label="Re-enter account number *">
-                    <Input
-                      value={form.reAccountNumber}
-                      onChange={(e) => set('reAccountNumber', e.target.value)}
-                    />
-                  </Field>
-                  <Field label="IFSC code *">
-                    <Input
-                      value={form.ifsc}
-                      onChange={(e) => set('ifsc', e.target.value.toUpperCase())}
-                      maxLength={11}
-                      placeholder="ICIC0006515"
-                    />
-                    {ifscInvalid ? (
-                      <p className="text-xs text-destructive">
-                        Invalid IFSC. Format: 4 letters + “0” + 6 characters (e.g. ICIC0006515).
-                      </p>
-                    ) : (
-                      <p className="text-xs text-muted-foreground">
-                        11 characters — 4 bank letters, then 0, then the branch code.
-                      </p>
-                    )}
-                  </Field>
-                  <Field label="Account type *">
-                    <Select value={form.accountType} onChange={(e) => set('accountType', e.target.value)}>
-                      <option value="">Select…</option>
-                      <option value="current">Current</option>
-                      <option value="savings">Savings</option>
-                    </Select>
-                  </Field>
+                  <TextField
+                    fullWidth
+                    label="Account holder name"
+                    required
+                    value={form.accountHolderName}
+                    onChange={(e) => set('accountHolderName', e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                  <TextField
+                    fullWidth
+                    label="Bank name"
+                    required
+                    value={form.bankName}
+                    onChange={(e) => set('bankName', e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                  <TextField
+                    fullWidth
+                    label="Account number"
+                    required
+                    value={form.accountNumber}
+                    onChange={(e) => set('accountNumber', e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    error={accountNumInvalid}
+                    helperText={accountNumInvalid ? 'Account number must be 9–18 digits.' : undefined}
+                  />
+                  <TextField
+                    fullWidth
+                    label="Re-enter account number"
+                    required
+                    value={form.reAccountNumber}
+                    onChange={(e) => set('reAccountNumber', e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                  />
+                  <TextField
+                    fullWidth
+                    label="IFSC code"
+                    required
+                    value={form.ifsc}
+                    onChange={(e) => set('ifsc', e.target.value.toUpperCase())}
+                    placeholder="ICIC0006515"
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ maxLength: 11 }}
+                    error={ifscInvalid}
+                    helperText={
+                      ifscInvalid
+                        ? 'Invalid IFSC. Format: 4 letters + “0” + 6 characters (e.g. ICIC0006515).'
+                        : '11 characters — 4 bank letters, then 0, then the branch code.'
+                    }
+                  />
+                  <TextField
+                    select
+                    fullWidth
+                    label="Account type"
+                    required
+                    value={form.accountType}
+                    onChange={(e) => set('accountType', e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                  >
+                    <MenuItem value="">Select…</MenuItem>
+                    <MenuItem value="current">Current</MenuItem>
+                    <MenuItem value="savings">Savings</MenuItem>
+                  </TextField>
                 </div>
                 {form.accountNumber && form.reAccountNumber && form.accountNumber !== form.reAccountNumber && (
-                  <p className="text-sm text-destructive">Account numbers don't match.</p>
+                  <Alert severity="error">Account numbers don't match.</Alert>
                 )}
               </>
             )}
@@ -754,41 +819,51 @@ export const SellerOnboardingPage = () => {
               <>
                 <Typography variant="h6">Set up your storefront</Typography>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Store / display name *">
-                    <Input
-                      value={form.displayName}
-                      onChange={(e) => set('displayName', e.target.value)}
-                      maxLength={50}
-                      placeholder="What buyers will see"
-                    />
-                  </Field>
-                  <Field label="Store language">
-                    <Select value={form.storeLanguage} onChange={(e) => set('storeLanguage', e.target.value)}>
-                      {STORE_LANGUAGES.map((l) => (
-                        <option key={l} value={l}>
-                          {l}
-                        </option>
-                      ))}
-                    </Select>
-                  </Field>
+                  <TextField
+                    fullWidth
+                    label="Store / display name"
+                    required
+                    value={form.displayName}
+                    onChange={(e) => set('displayName', e.target.value)}
+                    placeholder="What buyers will see"
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ maxLength: 50 }}
+                  />
+                  <TextField
+                    select
+                    fullWidth
+                    label="Store language"
+                    value={form.storeLanguage}
+                    onChange={(e) => set('storeLanguage', e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                  >
+                    {STORE_LANGUAGES.map((l) => (
+                      <MenuItem key={l} value={l}>
+                        {l}
+                      </MenuItem>
+                    ))}
+                  </TextField>
                 </div>
-                <Field label="Customer service email">
-                  <Input
-                    type="email"
-                    value={form.supportEmail}
-                    onChange={(e) => set('supportEmail', e.target.value)}
-                    placeholder="support@yourbrand.com"
-                  />
-                </Field>
-                <Field label="Store description">
-                  <Textarea
-                    rows={3}
-                    value={form.description}
-                    onChange={(e) => set('description', e.target.value)}
-                    maxLength={2000}
-                    placeholder="Tell customers about your farm, produce and what makes you unique…"
-                  />
-                </Field>
+                <TextField
+                  fullWidth
+                  type="email"
+                  label="Customer service email"
+                  value={form.supportEmail}
+                  onChange={(e) => set('supportEmail', e.target.value)}
+                  placeholder="support@yourbrand.com"
+                  InputLabelProps={{ shrink: true }}
+                />
+                <TextField
+                  fullWidth
+                  multiline
+                  minRows={3}
+                  label="Store description"
+                  value={form.description}
+                  onChange={(e) => set('description', e.target.value)}
+                  placeholder="Tell customers about your farm, produce and what makes you unique…"
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ maxLength: 2000 }}
+                />
                 <Field label="Store logo (optional)">
                   <div className="flex items-center gap-3">
                     <label className="inline-flex h-9 cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent">
@@ -806,13 +881,22 @@ export const SellerOnboardingPage = () => {
                   </div>
                 </Field>
                 <div className="grid gap-3 sm:grid-cols-3">
-                  <Field label="Returns PIN code">
-                    <Input value={form.returnsPincode} onChange={(e) => set('returnsPincode', e.target.value)} maxLength={6} />
-                  </Field>
+                  <TextField
+                    fullWidth
+                    label="Returns PIN code"
+                    value={form.returnsPincode}
+                    onChange={(e) => set('returnsPincode', e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ maxLength: 6 }}
+                  />
                   <div className="sm:col-span-2">
-                    <Field label="Returns address">
-                      <Input value={form.returnsLine} onChange={(e) => set('returnsLine', e.target.value)} />
-                    </Field>
+                    <TextField
+                      fullWidth
+                      label="Returns address"
+                      value={form.returnsLine}
+                      onChange={(e) => set('returnsLine', e.target.value)}
+                      InputLabelProps={{ shrink: true }}
+                    />
                   </div>
                 </div>
               </>
@@ -830,33 +914,42 @@ export const SellerOnboardingPage = () => {
                     ['agBackgroundCheck', 'I understand Buy Desi may conduct verification and contact regulatory authorities to validate my details.'],
                     ['agFeeTerms', 'I agree to the commission / fee schedule, delivery terms and disbursement policy.'],
                   ].map(([key, text]) => (
-                    <label key={key} className="flex items-start gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        className="mt-0.5 h-4 w-4"
-                        checked={form[key as keyof WizardForm] as boolean}
-                        onChange={(e) => set(key as keyof WizardForm, e.target.checked as never)}
-                      />
-                      <span>{text}</span>
-                    </label>
+                    <FormControlLabel
+                      key={key}
+                      sx={{ alignItems: 'flex-start', display: 'flex', m: 0 }}
+                      control={
+                        <Checkbox
+                          sx={{ py: 0 }}
+                          checked={form[key as keyof WizardForm] as boolean}
+                          onChange={(e) => set(key as keyof WizardForm, e.target.checked as never)}
+                        />
+                      }
+                      label={<span className="text-sm">{text}</span>}
+                    />
                   ))}
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <Field label="Full legal name (e-signature) *">
-                    <Input
-                      value={form.legalName}
-                      onChange={(e) => set('legalName', e.target.value)}
-                      placeholder="Sign by typing your legal name"
-                    />
-                  </Field>
-                  <Field label="Date">
-                    <Input value={new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })} disabled />
-                  </Field>
+                  <TextField
+                    fullWidth
+                    label="Full legal name (e-signature)"
+                    required
+                    value={form.legalName}
+                    onChange={(e) => set('legalName', e.target.value)}
+                    placeholder="Sign by typing your legal name"
+                    InputLabelProps={{ shrink: true }}
+                  />
+                  <TextField
+                    fullWidth
+                    label="Date"
+                    value={new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    disabled
+                    InputLabelProps={{ shrink: true }}
+                  />
                 </div>
               </>
             )}
 
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && <Alert severity="error">{error}</Alert>}
 
             {/* Nav */}
             <div className="flex items-center justify-between gap-4 border-t border-border pt-4">

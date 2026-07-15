@@ -22,15 +22,17 @@ import {
 } from 'lucide-react';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
+import Alert from '@mui/material/Alert';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { Textarea } from '@/components/ui/Textarea';
 import { useAuth } from '@/lib/auth';
 import { useProduct } from '@/features/products/api';
 import { uploadToPresignedUrl } from '@/lib/s3-upload';
@@ -380,42 +382,68 @@ export const SellerProductFormPage = () => {
             <>
               <Typography variant="h6">Basic information</Typography>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Product name *">
-                  <Input value={form.name} onChange={(e) => set('name', e.target.value)} maxLength={200} />
-                </Field>
-                <Field label="Category *">
-                  <CategoryPicker value={form.categoryId} onChange={(v) => set('categoryId', v)} />
-                </Field>
-              </div>
-              <Field label="Description *">
-                <Textarea
-                  rows={5}
-                  value={form.description}
-                  onChange={(e) => set('description', e.target.value)}
-                  maxLength={5000}
-                  placeholder="Describe the product, origin, quality, how it's grown / made…"
+                <TextField
+                  fullWidth
+                  label="Product name"
+                  required
+                  value={form.name}
+                  onChange={(e) => set('name', e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ maxLength: 200 }}
                 />
-              </Field>
+                <div>
+                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
+                    Category *
+                  </Typography>
+                  <CategoryPicker value={form.categoryId} onChange={(v) => set('categoryId', v)} />
+                </div>
+              </div>
+              <TextField
+                fullWidth
+                multiline
+                minRows={5}
+                label="Description"
+                required
+                value={form.description}
+                onChange={(e) => set('description', e.target.value)}
+                placeholder="Describe the product, origin, quality, how it's grown / made…"
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ maxLength: 5000 }}
+              />
               <div className="grid gap-3 sm:grid-cols-3">
-                <Field label="Unit *">
-                  <Input
-                    list="pf-unit-list"
+                <div>
+                  <TextField
+                    fullWidth
+                    label="Unit"
+                    required
                     value={form.unit}
                     onChange={(e) => set('unit', e.target.value)}
                     placeholder="kg / piece / litre"
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ list: 'pf-unit-list' }}
                   />
                   <datalist id="pf-unit-list">
                     {UNIT_OPTIONS.map((u) => (
                       <option key={u} value={u} />
                     ))}
                   </datalist>
-                </Field>
-                <Field label="Brand">
-                  <Input value={form.brand} onChange={(e) => set('brand', e.target.value)} maxLength={120} />
-                </Field>
-                <Field label="SKU / product code">
-                  <Input value={form.sku} onChange={(e) => set('sku', e.target.value)} maxLength={60} />
-                </Field>
+                </div>
+                <TextField
+                  fullWidth
+                  label="Brand"
+                  value={form.brand}
+                  onChange={(e) => set('brand', e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ maxLength: 120 }}
+                />
+                <TextField
+                  fullWidth
+                  label="SKU / product code"
+                  value={form.sku}
+                  onChange={(e) => set('sku', e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ maxLength: 60 }}
+                />
               </div>
               <Field label="Key highlights">
                 <ChipInput
@@ -456,14 +484,15 @@ export const SellerProductFormPage = () => {
                 />
               </div>
               {form.organicCertified && (
-                <Field label="Organic certification (body / number)">
-                  <Input
-                    value={form.organicCertification}
-                    onChange={(e) => set('organicCertification', e.target.value)}
-                    maxLength={200}
-                    placeholder="e.g. India Organic / NPOP — Cert #12345"
-                  />
-                </Field>
+                <TextField
+                  fullWidth
+                  label="Organic certification (body / number)"
+                  value={form.organicCertification}
+                  onChange={(e) => set('organicCertification', e.target.value)}
+                  placeholder="e.g. India Organic / NPOP — Cert #12345"
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ maxLength: 200 }}
+                />
               )}
             </>
           )}
@@ -477,46 +506,81 @@ export const SellerProductFormPage = () => {
                 premium accounts see it.
               </p>
               <div className="grid gap-3 sm:grid-cols-3">
-                <Field label={`Standard ₹ / ${form.unit || 'unit'}`}>
-                  <Input type="number" min={0} step="0.5" value={form.standard} onChange={(e) => set('standard', e.target.value)} />
-                </Field>
-                <Field label={`Organic ₹ / ${form.unit || 'unit'}`}>
-                  <Input type="number" min={0} step="0.5" value={form.organic} onChange={(e) => set('organic', e.target.value)} />
-                </Field>
-                <Field label={`Premium ₹ / ${form.unit || 'unit'}`}>
-                  <Input type="number" min={0} step="0.5" value={form.premium} onChange={(e) => set('premium', e.target.value)} />
-                </Field>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label={`Standard ₹ / ${form.unit || 'unit'}`}
+                  value={form.standard}
+                  onChange={(e) => set('standard', e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ min: 0, step: '0.5' }}
+                />
+                <TextField
+                  fullWidth
+                  type="number"
+                  label={`Organic ₹ / ${form.unit || 'unit'}`}
+                  value={form.organic}
+                  onChange={(e) => set('organic', e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ min: 0, step: '0.5' }}
+                />
+                <TextField
+                  fullWidth
+                  type="number"
+                  label={`Premium ₹ / ${form.unit || 'unit'}`}
+                  value={form.premium}
+                  onChange={(e) => set('premium', e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ min: 0, step: '0.5' }}
+                />
               </div>
 
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="On-hand quantity">
-                  <Input type="number" min={0} value={form.quantity} onChange={(e) => set('quantity', e.target.value)} />
-                </Field>
-                <Field label="Low-stock threshold">
-                  <Input type="number" min={0} value={form.threshold} onChange={(e) => set('threshold', e.target.value)} />
-                  <p className="text-xs text-muted-foreground">
-                    You and your Category Admin get an alert when stock drops here.
-                  </p>
-                </Field>
-                <Field label="Minimum order quantity">
-                  <Input type="number" min={1} value={form.minOrderQty} onChange={(e) => set('minOrderQty', e.target.value)} />
-                </Field>
-                <Field label="Maximum order quantity (per order)">
-                  <Input
-                    type="number"
-                    min={1}
-                    value={form.maxOrderQty}
-                    onChange={(e) => set('maxOrderQty', e.target.value)}
-                    placeholder="Leave blank for no cap"
-                  />
-                </Field>
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="On-hand quantity"
+                  value={form.quantity}
+                  onChange={(e) => set('quantity', e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ min: 0 }}
+                />
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Low-stock threshold"
+                  value={form.threshold}
+                  onChange={(e) => set('threshold', e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ min: 0 }}
+                  helperText="You and your Category Admin get an alert when stock drops here."
+                />
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Minimum order quantity"
+                  value={form.minOrderQty}
+                  onChange={(e) => set('minOrderQty', e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ min: 1 }}
+                />
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Maximum order quantity (per order)"
+                  value={form.maxOrderQty}
+                  onChange={(e) => set('maxOrderQty', e.target.value)}
+                  placeholder="Leave blank for no cap"
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ min: 1 }}
+                />
               </div>
               {form.minOrderQty &&
                 form.maxOrderQty &&
                 Number(form.maxOrderQty) < Number(form.minOrderQty) && (
-                  <p className="text-sm text-destructive">
+                  <Alert severity="error">
                     Maximum order quantity must be greater than or equal to the minimum.
-                  </p>
+                  </Alert>
                 )}
 
               <div className="grid gap-3 sm:grid-cols-2">
@@ -533,9 +597,15 @@ export const SellerProductFormPage = () => {
                   onChange={(v) => set('returnEligible', v)}
                 />
               </div>
-              <Field label="HSN code (tax)">
-                <Input value={form.hsnCode} onChange={(e) => set('hsnCode', e.target.value)} maxLength={20} placeholder="Optional — for GST invoicing" />
-              </Field>
+              <TextField
+                fullWidth
+                label="HSN code (tax)"
+                value={form.hsnCode}
+                onChange={(e) => set('hsnCode', e.target.value)}
+                placeholder="Optional — for GST invoicing"
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ maxLength: 20 }}
+              />
             </>
           )}
 
@@ -547,26 +617,48 @@ export const SellerProductFormPage = () => {
                 Optional details that help buyers and shipping. Useful for fresh / perishable goods.
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
-                <Field label="Harvest / packed date">
-                  <Input type="date" value={form.harvestDate} onChange={(e) => set('harvestDate', e.target.value)} />
-                </Field>
-                <Field label="Shelf life (days)">
-                  <Input type="number" min={0} value={form.shelfLifeDays} onChange={(e) => set('shelfLifeDays', e.target.value)} />
-                </Field>
-                <Field label="Weight per unit (grams)">
-                  <Input type="number" min={0} value={form.weightGrams} onChange={(e) => set('weightGrams', e.target.value)} />
-                  <p className="text-xs text-muted-foreground">Used to compute delivery charges.</p>
-                </Field>
-                <Field label="Packaging type">
-                  <Select value={form.packagingType} onChange={(e) => set('packagingType', e.target.value)}>
-                    <option value="">Select…</option>
-                    {PACKAGING_OPTIONS.map((p) => (
-                      <option key={p} value={p}>
-                        {p}
-                      </option>
-                    ))}
-                  </Select>
-                </Field>
+                <TextField
+                  fullWidth
+                  type="date"
+                  label="Harvest / packed date"
+                  value={form.harvestDate}
+                  onChange={(e) => set('harvestDate', e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Shelf life (days)"
+                  value={form.shelfLifeDays}
+                  onChange={(e) => set('shelfLifeDays', e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ min: 0 }}
+                />
+                <TextField
+                  fullWidth
+                  type="number"
+                  label="Weight per unit (grams)"
+                  value={form.weightGrams}
+                  onChange={(e) => set('weightGrams', e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ min: 0 }}
+                  helperText="Used to compute delivery charges."
+                />
+                <TextField
+                  select
+                  fullWidth
+                  label="Packaging type"
+                  value={form.packagingType}
+                  onChange={(e) => set('packagingType', e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                >
+                  <MenuItem value="">Select…</MenuItem>
+                  {PACKAGING_OPTIONS.map((p) => (
+                    <MenuItem key={p} value={p}>
+                      {p}
+                    </MenuItem>
+                  ))}
+                </TextField>
               </div>
             </>
           )}
@@ -605,17 +697,16 @@ export const SellerProductFormPage = () => {
                   ))}
                 </div>
               )}
-              <Field label="Product video (YouTube link or MP4 URL)">
-                <Input
-                  value={form.videoUrl}
-                  onChange={(e) => set('videoUrl', e.target.value)}
-                  placeholder="https://youtube.com/watch?v=… or https://…/clip.mp4"
-                  maxLength={500}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Shown on the product page. A short clip of the produce or process builds trust.
-                </p>
-              </Field>
+              <TextField
+                fullWidth
+                label="Product video (YouTube link or MP4 URL)"
+                value={form.videoUrl}
+                onChange={(e) => set('videoUrl', e.target.value)}
+                placeholder="https://youtube.com/watch?v=… or https://…/clip.mp4"
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ maxLength: 500 }}
+                helperText="Shown on the product page. A short clip of the produce or process builds trust."
+              />
             </>
           )}
 
@@ -661,7 +752,7 @@ export const SellerProductFormPage = () => {
             </>
           )}
 
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          {error && <Alert severity="error">{error}</Alert>}
 
           {/* Nav */}
           <div className="flex items-center justify-between gap-4 border-t border-border pt-4">
@@ -714,18 +805,23 @@ const CheckboxCard = ({
   checked: boolean;
   onChange: (v: boolean) => void;
 }) => (
-  <label className="flex cursor-pointer items-start gap-2 rounded-md border border-border p-3 hover:bg-accent/50">
-    <input
-      type="checkbox"
-      className="mt-0.5 h-4 w-4"
-      checked={checked}
-      onChange={(e) => onChange(e.target.checked)}
-    />
-    <span>
-      <span className="block text-sm font-medium">{label}</span>
-      <span className="block text-xs text-muted-foreground">{hint}</span>
-    </span>
-  </label>
+  <FormControlLabel
+    className="rounded-md border border-border p-3 hover:bg-accent/50"
+    sx={{ alignItems: 'flex-start', display: 'flex', m: 0 }}
+    control={
+      <Checkbox
+        sx={{ py: 0 }}
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+      />
+    }
+    label={
+      <span>
+        <span className="block text-sm font-medium">{label}</span>
+        <span className="block text-xs text-muted-foreground">{hint}</span>
+      </span>
+    }
+  />
 );
 
 const ChipInput = ({
