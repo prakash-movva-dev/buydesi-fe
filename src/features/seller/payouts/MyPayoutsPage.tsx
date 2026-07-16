@@ -21,14 +21,6 @@ import {
 } from '@/components/ui/Card';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
 import { Scrollbar } from '@/components/scrollbar';
 import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
 import { useSellerMe, useSetPayoutPreference } from '@/features/seller/profile/api';
@@ -208,32 +200,38 @@ export const MyPayoutsPage = () => {
                                   </CardDescription>
                                 </CardHeader>
                                 <CardContent className="p-0">
-                                  <Table>
-                                    <TableHeader>
-                                      <TableRow>
-                                        <TableHead>Product</TableHead>
-                                        <TableHead className="text-right">Gross</TableHead>
-                                        <TableHead className="text-right">Rate %</TableHead>
-                                        <TableHead>Source</TableHead>
-                                        <TableHead className="text-right">Net</TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
+                                  <MuiTable size="small">
+                                    <TableHeadCustom
+                                      headLabel={[
+                                        { id: 'product', label: 'Product' },
+                                        { id: 'gross', label: 'Gross', align: 'right' },
+                                        { id: 'rate', label: 'Rate %', align: 'right' },
+                                        { id: 'source', label: 'Source' },
+                                        { id: 'net', label: 'Net', align: 'right' },
+                                      ]}
+                                    />
+                                    <MuiTableBody>
                                       {p.lineItems.map((li, i) => (
-                                        <TableRow key={`${li.orderId}-${i}`}>
-                                          <TableCell className="font-medium">{li.productName}</TableCell>
-                                          <TableCell className="text-right">{formatInr(li.grossInr)}</TableCell>
-                                          <TableCell className="text-right">{li.commissionRatePercent}%</TableCell>
-                                          <TableCell>
+                                        <MuiTableRow key={`${li.orderId}-${i}`}>
+                                          <MuiTableCell sx={{ fontWeight: 600 }}>
+                                            {li.productName}
+                                          </MuiTableCell>
+                                          <MuiTableCell align="right">
+                                            {formatInr(li.grossInr)}
+                                          </MuiTableCell>
+                                          <MuiTableCell align="right">
+                                            {li.commissionRatePercent}%
+                                          </MuiTableCell>
+                                          <MuiTableCell>
                                             <Badge variant="muted">{li.commissionSource}</Badge>
-                                          </TableCell>
-                                          <TableCell className="text-right font-medium">
+                                          </MuiTableCell>
+                                          <MuiTableCell align="right" sx={{ fontWeight: 600 }}>
                                             {formatInr(li.netInr)}
-                                          </TableCell>
-                                        </TableRow>
+                                          </MuiTableCell>
+                                        </MuiTableRow>
                                       ))}
-                                    </TableBody>
-                                  </Table>
+                                    </MuiTableBody>
+                                  </MuiTable>
                                 </CardContent>
                               </Card>
                             </MuiTableCell>

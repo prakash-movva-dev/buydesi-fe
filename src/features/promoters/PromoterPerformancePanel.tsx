@@ -8,14 +8,12 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatCard } from '@/components/ui/StatCard';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import Table from '@mui/material/Table';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData } from '@/components/table';
 import { useAuth } from '@/lib/auth';
 import { formatInr } from '@/lib/format';
 import { UserRole } from '@/types/api';
@@ -108,36 +106,27 @@ export const PromoterPerformancePanel = () => {
               <Typography variant="h6" sx={{ mb: 1 }}>
                 Top performers
               </Typography>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Promoter</TableHead>
-                    <TableHead className="text-right">Uses</TableHead>
-                    <TableHead className="text-right">Discount given</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.topPerformers.map((p) => (
-                    <TableRow key={p.promoterId}>
-                      <TableCell className="font-medium">{p.name}</TableCell>
-                      <TableCell className="text-right">{p.uses}</TableCell>
-                      <TableCell className="text-right">
-                        {formatInr(p.totalDiscountInr)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {data.topPerformers.length === 0 && (
-                    <TableRow>
-                      <TableCell
-                        colSpan={3}
-                        className="py-8 text-center text-sm text-muted-foreground"
-                      >
-                        No coupon usage yet.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+              <Scrollbar>
+                <Table sx={{ minWidth: 480 }}>
+                  <TableHeadCustom
+                    headLabel={[
+                      { id: 'promoter', label: 'Promoter' },
+                      { id: 'uses', label: 'Uses', align: 'right' },
+                      { id: 'discount', label: 'Discount given', align: 'right' },
+                    ]}
+                  />
+                  <TableBody>
+                    {data.topPerformers.map((p) => (
+                      <TableRow key={p.promoterId} hover>
+                        <TableCell sx={{ fontWeight: 600 }}>{p.name}</TableCell>
+                        <TableCell align="right">{p.uses}</TableCell>
+                        <TableCell align="right">{formatInr(p.totalDiscountInr)}</TableCell>
+                      </TableRow>
+                    ))}
+                    <TableNoData notFound={data.topPerformers.length === 0} />
+                  </TableBody>
+                </Table>
+              </Scrollbar>
             </div>
           </>
         )}

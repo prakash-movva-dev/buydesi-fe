@@ -17,14 +17,12 @@ import {
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import Table from '@mui/material/Table';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData } from '@/components/table';
 import { useAuth } from '@/lib/auth';
 import { formatInr } from '@/lib/format';
 import { ApiError, UserRole } from '@/types/api';
@@ -334,55 +332,63 @@ export const ReportsPage = () => {
               <p className="mb-3 text-sm text-destructive">{clusterDownloadError}</p>
             )}
             {!clusterPerf.isLoading && !clusterPerfError && (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Cluster</TableHead>
-                    <TableHead>State</TableHead>
-                    <TableHead className="text-right">Sellers</TableHead>
-                    <TableHead className="text-right">Live listings</TableHead>
-                    <TableHead className="text-right">Orders</TableHead>
-                    <TableHead className="text-right">
-                      <button
-                        type="button"
-                        onClick={() => setSortDesc((d) => !d)}
-                        className="ml-auto inline-flex items-center gap-1 hover:text-foreground"
-                      >
-                        Revenue
-                        <ArrowUpDown className="h-3.5 w-3.5" />
-                      </button>
-                    </TableHead>
-                    <TableHead className="text-right">Open tickets</TableHead>
-                    <TableHead className="text-right">Avg delivery</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sortedRows.map((r) => (
-                    <TableRow key={r.clusterId}>
-                      <TableCell className="font-medium">{r.clusterName}</TableCell>
-                      <TableCell>{r.state}</TableCell>
-                      <TableCell className="text-right">{r.sellers}</TableCell>
-                      <TableCell className="text-right">{r.liveListings}</TableCell>
-                      <TableCell className="text-right">{r.orders}</TableCell>
-                      <TableCell className="text-right">{formatInr(r.revenueInr)}</TableCell>
-                      <TableCell className="text-right">{r.openTickets}</TableCell>
-                      <TableCell className="text-right">
-                        {r.avgDeliveryHours ? `${r.avgDeliveryHours.toFixed(1)} h` : '—'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {sortedRows.length === 0 && (
-                    <TableRow>
-                      <TableCell
-                        colSpan={8}
-                        className="py-10 text-center text-sm text-muted-foreground"
-                      >
-                        No cluster activity in the selected range.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+              <Scrollbar>
+                <Table sx={{ minWidth: 900 }}>
+                  <TableHeadCustom
+                    headLabel={[
+                      { id: 'cluster', label: 'Cluster' },
+                      { id: 'state', label: 'State' },
+                      { id: 'sellers', label: 'Sellers', align: 'right' },
+                      { id: 'listings', label: 'Live listings', align: 'right' },
+                      { id: 'orders', label: 'Orders', align: 'right' },
+                      {
+                        id: 'revenue',
+                        align: 'right',
+                        label: (
+                          <Box
+                            component="button"
+                            type="button"
+                            onClick={() => setSortDesc((d) => !d)}
+                            sx={{
+                              ml: 'auto',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 0.5,
+                              border: 0,
+                              bgcolor: 'transparent',
+                              cursor: 'pointer',
+                              font: 'inherit',
+                              color: 'inherit',
+                            }}
+                          >
+                            Revenue
+                            <ArrowUpDown className="h-3.5 w-3.5" />
+                          </Box>
+                        ),
+                      },
+                      { id: 'tickets', label: 'Open tickets', align: 'right' },
+                      { id: 'delivery', label: 'Avg delivery', align: 'right' },
+                    ]}
+                  />
+                  <TableBody>
+                    {sortedRows.map((r) => (
+                      <TableRow key={r.clusterId} hover>
+                        <TableCell sx={{ fontWeight: 600 }}>{r.clusterName}</TableCell>
+                        <TableCell>{r.state}</TableCell>
+                        <TableCell align="right">{r.sellers}</TableCell>
+                        <TableCell align="right">{r.liveListings}</TableCell>
+                        <TableCell align="right">{r.orders}</TableCell>
+                        <TableCell align="right">{formatInr(r.revenueInr)}</TableCell>
+                        <TableCell align="right">{r.openTickets}</TableCell>
+                        <TableCell align="right">
+                          {r.avgDeliveryHours ? `${r.avgDeliveryHours.toFixed(1)} h` : '—'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableNoData notFound={sortedRows.length === 0} />
+                  </TableBody>
+                </Table>
+              </Scrollbar>
             )}
           </CardContent>
         </Card>
