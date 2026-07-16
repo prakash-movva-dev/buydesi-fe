@@ -12,10 +12,12 @@ export interface SafeRegion {
   updatedAt: string;
 }
 
+// A region no longer owns its cluster list — clusters point to a region via
+// `cluster.regionId`, and the region derives its members from the API. So the
+// create/update payload only carries the region's own fields.
 export interface CreateRegionInput {
   name: string;
   state?: string;
-  clusterIds: string[];
 }
 
 export type UpdateRegionInput = Partial<CreateRegionInput>;

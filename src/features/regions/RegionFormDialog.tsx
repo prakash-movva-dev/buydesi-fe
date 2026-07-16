@@ -5,7 +5,6 @@ import Alert from '@mui/material/Alert';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { ClusterPicker } from '@/components/pickers/ClusterPicker';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
 import { INDIA_STATES } from '@/utils/india-geo';
@@ -26,7 +25,6 @@ export const RegionFormDialog = ({ open, editing, onClose }: Props) => {
 
   const [name, setName] = useState('');
   const [state, setState] = useState('');
-  const [clusterIds, setClusterIds] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -35,11 +33,9 @@ export const RegionFormDialog = ({ open, editing, onClose }: Props) => {
     if (editing) {
       setName(editing.name);
       setState(editing.state ?? '');
-      setClusterIds(editing.clusterIds ?? []);
     } else {
       setName('');
       setState('');
-      setClusterIds([]);
     }
   }, [open, editing]);
 
@@ -53,7 +49,6 @@ export const RegionFormDialog = ({ open, editing, onClose }: Props) => {
       const payload = {
         name: name.trim(),
         state: state.trim() || undefined,
-        clusterIds,
       };
       if (editing) {
         await updateMut.mutateAsync({ id: editing.id, patch: payload });
@@ -121,15 +116,10 @@ export const RegionFormDialog = ({ open, editing, onClose }: Props) => {
           </TextField>
         </Box>
 
-        <Stack spacing={1}>
-          <Typography variant="subtitle2">Clusters in this region</Typography>
-          <ClusterPicker
-            multi
-            values={clusterIds}
-            onChange={setClusterIds}
-            placeholder="Pick one or more clusters…"
-          />
-        </Stack>
+        <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+          Clusters aren't attached here. Open a cluster and set its <b>Region</b> field — the
+          cluster owns that link, and this region lists whichever clusters point to it.
+        </Typography>
       </Stack>
     </Dialog>
   );
