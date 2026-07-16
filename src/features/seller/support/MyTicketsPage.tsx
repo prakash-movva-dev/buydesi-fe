@@ -11,14 +11,11 @@ import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TextField from '@mui/material/TextField';
 import Box from '@mui/material/Box';
+import Alert from '@mui/material/Alert';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { Textarea } from '@/components/ui/Textarea';
 import { Scrollbar } from '@/components/scrollbar';
 import { TableHeadCustom, TableNoData } from '@/components/table';
 import { useTicketsList, ticketKeys } from '@/features/support/api';
@@ -242,46 +239,48 @@ const NewTicketDialog = ({ open, onClose }: { open: boolean; onClose: () => void
       }
     >
       <div className="space-y-3">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="tk-cat">Category *</Label>
-            <Select
-              id="tk-cat"
-              value={category}
-              onChange={(e) => setCategory(e.target.value as SupportCategory)}
-            >
-              {CATEGORY_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="tk-order">Linked order id (optional)</Label>
-            <Input id="tk-order" value={orderId} onChange={(e) => setOrderId(e.target.value)} />
-          </div>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="tk-subj">Subject *</Label>
-          <Input
-            id="tk-subj"
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            maxLength={200}
+        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { sm: 'repeat(2,1fr)' } }}>
+          <TextField
+            select
+            fullWidth
+            label="Category *"
+            value={category}
+            onChange={(e) => setCategory(e.target.value as SupportCategory)}
+            InputLabelProps={{ shrink: true }}
+          >
+            {CATEGORY_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            fullWidth
+            label="Linked order id (optional)"
+            value={orderId}
+            onChange={(e) => setOrderId(e.target.value)}
+            InputLabelProps={{ shrink: true }}
           />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="tk-desc">Description *</Label>
-          <Textarea
-            id="tk-desc"
-            rows={5}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            maxLength={5000}
-          />
-        </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        </Box>
+        <TextField
+          fullWidth
+          label="Subject *"
+          value={subject}
+          onChange={(e) => setSubject(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+          inputProps={{ maxLength: 200 }}
+        />
+        <TextField
+          fullWidth
+          multiline
+          minRows={5}
+          label="Description *"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+          inputProps={{ maxLength: 5000 }}
+        />
+        {error && <Alert severity="error">{error}</Alert>}
       </div>
     </Dialog>
   );

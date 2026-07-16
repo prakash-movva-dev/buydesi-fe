@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import { CheckCircle2, Copy, MessageCircle, Sparkles } from 'lucide-react';
+import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -12,9 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/Card';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { Textarea } from '@/components/ui/Textarea';
 import { useMyPromoterDashboard } from '../api';
 import {
   buildShareLink,
@@ -158,23 +158,28 @@ export const PromoterSharePage = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <Select
+          <TextField
+            select
+            label="Language"
             value={locale}
             onChange={(e) => setLocale(e.target.value)}
-            className="w-56"
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 224 }}
           >
             {MESSAGE_TEMPLATES.map((t) => (
-              <option key={t.locale} value={t.locale}>
+              <MenuItem key={t.locale} value={t.locale}>
                 {t.label}
-              </option>
+              </MenuItem>
             ))}
-          </Select>
-          <Textarea
+          </TextField>
+          <TextField
+            fullWidth
+            multiline
+            minRows={4}
             value={message}
-            readOnly
-            rows={4}
-            className="font-mono text-sm"
             onClick={(e) => (e.target as HTMLTextAreaElement).select()}
+            InputProps={{ readOnly: true }}
+            inputProps={{ sx: { fontFamily: 'monospace', fontSize: '0.875rem' } }}
           />
           <div className="flex flex-wrap gap-2">
             <Button variant="outline" onClick={() => copy(message, 'message')}>

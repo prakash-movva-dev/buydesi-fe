@@ -16,8 +16,11 @@ import {
   Send,
   Truck,
 } from 'lucide-react';
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
+import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -30,10 +33,7 @@ import {
 } from '@/components/ui/Card';
 import { Dialog } from '@/components/ui/Dialog';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Label } from '@/components/ui/Label';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { Textarea } from '@/components/ui/Textarea';
 import { useOrder } from '@/features/orders/api';
 import {
   readBoolean,
@@ -244,29 +244,34 @@ export const TicketDetailPage = () => {
           </>
         }
       >
-        <div className="space-y-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="ovr-status">New status</Label>
-            <Select id="ovr-status" value={ovrStatus} onChange={(e) => setOvrStatus(e.target.value)}>
-              <option value="OPEN">Open (reopen)</option>
-              <option value="IN_PROGRESS">In progress</option>
-              <option value="ESCALATED">Escalated</option>
-              <option value="RESOLVED">Resolved</option>
-              <option value="CLOSED">Closed</option>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="ovr-reason">Reason *</Label>
-            <Textarea
-              id="ovr-reason"
-              rows={3}
-              value={ovrReason}
-              onChange={(e) => setOvrReason(e.target.value)}
-              placeholder="Why is this decision being overridden?"
-            />
-          </div>
-          {ovrErr && <p className="text-sm text-destructive">{ovrErr}</p>}
-        </div>
+        <Stack spacing={2}>
+          <TextField
+            select
+            fullWidth
+            label="New status"
+            value={ovrStatus}
+            onChange={(e) => setOvrStatus(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+          >
+            <MenuItem value="OPEN">Open (reopen)</MenuItem>
+            <MenuItem value="IN_PROGRESS">In progress</MenuItem>
+            <MenuItem value="ESCALATED">Escalated</MenuItem>
+            <MenuItem value="RESOLVED">Resolved</MenuItem>
+            <MenuItem value="CLOSED">Closed</MenuItem>
+          </TextField>
+          <TextField
+            fullWidth
+            multiline
+            minRows={3}
+            label="Reason"
+            required
+            value={ovrReason}
+            onChange={(e) => setOvrReason(e.target.value)}
+            placeholder="Why is this decision being overridden?"
+            InputLabelProps={{ shrink: true }}
+          />
+          {ovrErr && <Alert severity="error">{ovrErr}</Alert>}
+        </Stack>
       </Dialog>
 
       <div className="grid gap-6 lg:grid-cols-3">
@@ -510,10 +515,12 @@ const ConversationCard = ({
 
         {active ? (
           <div className="space-y-2 border-t border-border pt-4">
-            <Textarea
+            <TextField
+              fullWidth
+              multiline
+              minRows={3}
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              rows={3}
               placeholder={
                 isInternal
                   ? 'Internal note — visible to staff only…'
@@ -523,7 +530,7 @@ const ConversationCard = ({
                       ? 'Call-log note — what was discussed on the call…'
                       : 'Reply to the customer…'
               }
-              className={cn(isInternal && 'bg-amber-50')}
+              sx={isInternal ? { '& .MuiInputBase-root': { bgcolor: '#fffbeb' } } : undefined}
             />
             <div className="flex flex-wrap items-center gap-3">
               {internalAllowed && (
@@ -543,17 +550,19 @@ const ConversationCard = ({
               {!isInternal && (
                 <label className="flex items-center gap-2 text-sm">
                   <span className="text-muted-foreground">Channel</span>
-                  <Select
+                  <TextField
+                    select
+                    size="small"
                     value={channel}
                     onChange={(e) =>
                       setChannel(e.target.value as SupportMessageChannel)
                     }
-                    className="h-9 w-auto"
+                    sx={{ width: 160 }}
                   >
-                    <option value="in_app">In-app reply</option>
-                    <option value="email">Send as email</option>
-                    <option value="call">Log a call</option>
-                  </Select>
+                    <MenuItem value="in_app">In-app reply</MenuItem>
+                    <MenuItem value="email">Send as email</MenuItem>
+                    <MenuItem value="call">Log a call</MenuItem>
+                  </TextField>
                 </label>
               )}
               <Button
@@ -580,7 +589,7 @@ const ConversationCard = ({
                         : 'Send reply'}
               </Button>
             </div>
-            {error && <p className="text-sm text-destructive">{error}</p>}
+            {error && <Alert severity="error">{error}</Alert>}
           </div>
         ) : (
           <p className="border-t border-border pt-4 text-sm text-muted-foreground">

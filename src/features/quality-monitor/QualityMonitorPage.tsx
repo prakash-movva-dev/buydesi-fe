@@ -12,12 +12,11 @@ import Typography from '@mui/material/Typography';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
-import { Label } from '@/components/ui/Label';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
+import TextField from '@mui/material/TextField';
 import { Scrollbar } from '@/components/scrollbar';
 import { TableHeadCustom, TableNoData } from '@/components/table';
-import { Textarea } from '@/components/ui/Textarea';
 import { useCreateTicket } from '@/features/support/api';
 import type { Review } from '@/features/reviews/types';
 import { useReviewsList } from '@/features/reviews/api';
@@ -261,24 +260,24 @@ const CreateTicketDialog = ({ review, onClose }: CreateTicketDialogProps) => {
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="qm-subject">Subject</Label>
-            <Textarea
-              id="qm-subject"
-              value={subject}
-              onChange={(e) => setSubject(e.target.value)}
-              rows={1}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="qm-description">Description</Label>
-            <Textarea
-              id="qm-description"
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={5}
-            />
-          </div>
+          <TextField
+            fullWidth
+            label="Subject"
+            multiline
+            minRows={1}
+            value={subject}
+            onChange={(e) => setSubject(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+          />
+          <TextField
+            fullWidth
+            label="Description"
+            multiline
+            minRows={5}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+          />
           <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
             <Badge variant="muted">category: product_quality</Badge>
             {review.raterName && (

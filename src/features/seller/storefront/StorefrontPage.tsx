@@ -2,6 +2,8 @@ import { useEffect, useState, type ChangeEvent } from 'react';
 import { BadgeCheck, FileUp, Plus, Trash2 } from 'lucide-react';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import Alert from '@mui/material/Alert';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
@@ -11,11 +13,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { Textarea } from '@/components/ui/Textarea';
 import {
   useSellerMe,
   useStorefrontAssetUploadUrl,
@@ -156,26 +155,25 @@ export const SellerStorefrontPage = () => {
           <CardTitle>Basics</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="sf-name">Farm / business name *</Label>
-            <Input
-              id="sf-name"
-              value={farmName}
-              onChange={(e) => setFarmName(e.target.value)}
-              maxLength={200}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="sf-desc">Description</Label>
-            <Textarea
-              id="sf-desc"
-              rows={4}
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              maxLength={5000}
-              placeholder="Tell buyers what makes your farm special — practices, location, history."
-            />
-          </div>
+          <TextField
+            fullWidth
+            label="Farm / business name *"
+            value={farmName}
+            onChange={(e) => setFarmName(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            inputProps={{ maxLength: 200 }}
+          />
+          <TextField
+            fullWidth
+            multiline
+            minRows={4}
+            label="Description"
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Tell buyers what makes your farm special — practices, location, history."
+            InputLabelProps={{ shrink: true }}
+            inputProps={{ maxLength: 5000 }}
+          />
         </CardContent>
       </Card>
 
@@ -231,7 +229,8 @@ export const SellerStorefrontPage = () => {
             )}
           </div>
           <div className="flex gap-2">
-            <Input
+            <TextField
+              fullWidth
               value={practiceDraft}
               onChange={(e) => setPracticeDraft(e.target.value)}
               onKeyDown={(e) => {
@@ -241,7 +240,7 @@ export const SellerStorefrontPage = () => {
                 }
               }}
               placeholder="Add a practice and press Enter"
-              maxLength={200}
+              inputProps={{ maxLength: 200 }}
             />
             <Button variant="outline" onClick={addPractice}>
               <Plus className="h-4 w-4" />
@@ -275,7 +274,8 @@ export const SellerStorefrontPage = () => {
             )}
           </div>
           <div className="flex gap-2">
-            <Input
+            <TextField
+              fullWidth
               value={certDraft}
               onChange={(e) => setCertDraft(e.target.value)}
               onKeyDown={(e) => {
@@ -285,7 +285,7 @@ export const SellerStorefrontPage = () => {
                 }
               }}
               placeholder="Add a certification and press Enter"
-              maxLength={200}
+              inputProps={{ maxLength: 200 }}
             />
             <Button variant="outline" onClick={addCertification}>
               <Plus className="h-4 w-4" />
@@ -317,43 +317,38 @@ export const SellerStorefrontPage = () => {
             </Button>
           ) : (
             <div className="space-y-3">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="bk-acc">Account number *</Label>
-                  <Input
-                    id="bk-acc"
-                    value={accountNumber}
-                    onChange={(e) => setAccountNumber(e.target.value)}
-                    pattern="\d{9,18}"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="bk-ifsc">IFSC *</Label>
-                  <Input
-                    id="bk-ifsc"
-                    value={ifsc}
-                    onChange={(e) => setIfsc(e.target.value.toUpperCase())}
-                    pattern="[A-Z]{4}0[A-Z0-9]{6}"
-                    maxLength={11}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="bk-name">Account holder name *</Label>
-                  <Input
-                    id="bk-name"
-                    value={accountHolderName}
-                    onChange={(e) => setAccountHolderName(e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="bk-bank">Bank name *</Label>
-                  <Input
-                    id="bk-bank"
-                    value={bankName}
-                    onChange={(e) => setBankName(e.target.value)}
-                  />
-                </div>
-              </div>
+              <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { sm: 'repeat(2,1fr)' } }}>
+                <TextField
+                  fullWidth
+                  label="Account number *"
+                  value={accountNumber}
+                  onChange={(e) => setAccountNumber(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ pattern: '\\d{9,18}' }}
+                />
+                <TextField
+                  fullWidth
+                  label="IFSC *"
+                  value={ifsc}
+                  onChange={(e) => setIfsc(e.target.value.toUpperCase())}
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ pattern: '[A-Z]{4}0[A-Z0-9]{6}', maxLength: 11 }}
+                />
+                <TextField
+                  fullWidth
+                  label="Account holder name *"
+                  value={accountHolderName}
+                  onChange={(e) => setAccountHolderName(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
+                <TextField
+                  fullWidth
+                  label="Bank name *"
+                  value={bankName}
+                  onChange={(e) => setBankName(e.target.value)}
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Box>
               <Button variant="ghost" size="sm" onClick={() => setShowBank(false)}>
                 Hide
               </Button>
@@ -362,7 +357,7 @@ export const SellerStorefrontPage = () => {
         </CardContent>
       </Card>
 
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <Alert severity="error">{error}</Alert>}
 
       <div className="flex items-center justify-end gap-3">
         {savedAt && (

@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { ShoppingBasket } from 'lucide-react';
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
+import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { ClusterPicker } from '@/components/pickers/ClusterPicker';
 import { Badge } from '@/components/ui/Badge';
@@ -14,10 +17,7 @@ import {
   CardTitle,
 } from '@/components/ui/Card';
 import { Dialog } from '@/components/ui/Dialog';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { formatInr } from '@/lib/format';
 import { ApiError } from '@/types/api';
@@ -46,7 +46,7 @@ export const TradeCataloguePage = () => {
 
       <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="flex-end">
         <div className="w-56">
-          <Label className="mb-1.5 block text-xs">Category</Label>
+          <Box sx={{ mb: 0.75, typography: 'caption', color: 'text.secondary' }}>Category</Box>
           <CategoryPicker
             value={categoryId}
             onChange={setCategoryId}
@@ -54,7 +54,7 @@ export const TradeCataloguePage = () => {
           />
         </div>
         <div className="w-56">
-          <Label className="mb-1.5 block text-xs">Cluster</Label>
+          <Box sx={{ mb: 0.75, typography: 'caption', color: 'text.secondary' }}>Cluster</Box>
           <ClusterPicker
             value={clusterId}
             onChange={setClusterId}
@@ -213,51 +213,50 @@ const PlaceOrderDialog = ({
       }
     >
       <div className="space-y-3">
-        <div className="space-y-1.5">
-          <Label htmlFor="po-units">Units</Label>
-          <Input
-            id="po-units"
-            type="number"
-            min={listing.minOrderUnits}
-            max={listing.maxOrderUnits ?? listing.availableUnits}
-            value={units}
-            onChange={(e) => setUnits(e.target.value)}
-          />
-          <p className="text-xs text-muted-foreground">
-            Min {listing.minOrderUnits}
-            {listing.maxOrderUnits ? ` · Max ${listing.maxOrderUnits}` : ''} · Available{' '}
-            {listing.availableUnits}
-          </p>
-        </div>
+        <TextField
+          fullWidth
+          type="number"
+          label="Units"
+          value={units}
+          onChange={(e) => setUnits(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+          inputProps={{
+            min: listing.minOrderUnits,
+            max: listing.maxOrderUnits ?? listing.availableUnits,
+          }}
+          helperText={`Min ${listing.minOrderUnits}${
+            listing.maxOrderUnits ? ` · Max ${listing.maxOrderUnits}` : ''
+          } · Available ${listing.availableUnits}`}
+        />
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="po-pay">Payment mode</Label>
-            <Select
-              id="po-pay"
-              value={paymentMode}
-              onChange={(e) => setPaymentMode(e.target.value as TradePaymentMode)}
-            >
-              {listing.acceptedPaymentModes.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="po-tx">Transport mode</Label>
-            <Select
-              id="po-tx"
-              value={transportMode}
-              onChange={(e) => setTransportMode(e.target.value as TradeTransportMode)}
-            >
-              {listing.acceptedTransportModes.map((m) => (
-                <option key={m} value={m}>
-                  {m}
-                </option>
-              ))}
-            </Select>
-          </div>
+          <TextField
+            select
+            fullWidth
+            label="Payment mode"
+            value={paymentMode}
+            onChange={(e) => setPaymentMode(e.target.value as TradePaymentMode)}
+            InputLabelProps={{ shrink: true }}
+          >
+            {listing.acceptedPaymentModes.map((m) => (
+              <MenuItem key={m} value={m}>
+                {m}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            fullWidth
+            label="Transport mode"
+            value={transportMode}
+            onChange={(e) => setTransportMode(e.target.value as TradeTransportMode)}
+            InputLabelProps={{ shrink: true }}
+          >
+            {listing.acceptedTransportModes.map((m) => (
+              <MenuItem key={m} value={m}>
+                {m}
+              </MenuItem>
+            ))}
+          </TextField>
         </div>
         <div className="rounded-md border border-border bg-secondary/30 p-3 text-sm">
           <div className="flex justify-between">
@@ -270,7 +269,7 @@ const PlaceOrderDialog = ({
             Commission, platform fee, and delivery charges are computed on confirmation.
           </p>
         </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        {error && <Alert severity="error">{error}</Alert>}
       </div>
     </Dialog>
   );

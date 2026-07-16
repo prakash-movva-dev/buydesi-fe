@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Save } from 'lucide-react';
 import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
+import MenuItem from '@mui/material/MenuItem';
+import Alert from '@mui/material/Alert';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { api } from '@/lib/api';
 import { ApiError, type SafeUser } from '@/types/api';
@@ -81,30 +81,35 @@ export const ProfilePage = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="pf-name">Name</Label>
-            <Input id="pf-name" value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="pf-lang">Preferred language</Label>
-            <Select
-              id="pf-lang"
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-              className="w-56"
-            >
-              {LANG_OPTIONS.map((l) => (
-                <option key={l.value} value={l.value}>
-                  {l.label}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="pf-zone">Zone (optional)</Label>
-            <Input id="pf-zone" value={zone} onChange={(e) => setZone(e.target.value)} />
-          </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
+          <TextField
+            fullWidth
+            label="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+          />
+          <TextField
+            select
+            label="Preferred language"
+            value={language}
+            onChange={(e) => setLanguage(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 224 }}
+          >
+            {LANG_OPTIONS.map((l) => (
+              <MenuItem key={l.value} value={l.value}>
+                {l.label}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            fullWidth
+            label="Zone (optional)"
+            value={zone}
+            onChange={(e) => setZone(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+          />
+          {error && <Alert severity="error">{error}</Alert>}
           <div className="flex items-center gap-3 pt-2">
             <Button onClick={submit} disabled={update.isPending}>
               <Save className="h-4 w-4" />

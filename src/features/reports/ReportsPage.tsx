@@ -1,7 +1,9 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { ArrowUpDown, Calendar, Download, Play } from 'lucide-react';
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { ClusterPicker } from '@/components/pickers/ClusterPicker';
 import { Button } from '@/components/ui/Button';
@@ -14,8 +16,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
 import { Skeleton } from '@/components/ui/Skeleton';
 import Table from '@mui/material/Table';
 import TableRow from '@mui/material/TableRow';
@@ -145,29 +145,25 @@ export const ReportsPage = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={submit} className="flex flex-wrap items-end gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="r-from">From</Label>
-              <Input
-                id="r-from"
-                type="date"
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="r-to">To</Label>
-              <Input
-                id="r-to"
-                type="date"
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-                required
-              />
-            </div>
+            <TextField
+              label="From"
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+              required
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              label="To"
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              required
+              InputLabelProps={{ shrink: true }}
+            />
             {isSuper && (
-              <div className="space-y-1.5">
-                <Label>Cluster (optional)</Label>
+              <Stack spacing={0.5}>
+                <Typography variant="subtitle2">Cluster (optional)</Typography>
                 <div className="w-72">
                   <ClusterPicker
                     value={clusterId || null}
@@ -175,7 +171,7 @@ export const ReportsPage = () => {
                     placeholder="Blank = all clusters"
                   />
                 </div>
-              </div>
+              </Stack>
             )}
             <Button type="submit" disabled={run.isPending}>
               <Play className="h-4 w-4" />
@@ -186,9 +182,9 @@ export const ReportsPage = () => {
               {downloading ? 'Downloading…' : 'Download CSV'}
             </Button>
           </form>
-          {runError && <p className="mt-3 text-sm text-destructive">{runError}</p>}
+          {runError && <Alert severity="error" sx={{ mt: 3 }}>{runError}</Alert>}
           {downloadError && (
-            <p className="mt-3 text-sm text-destructive">{downloadError}</p>
+            <Alert severity="error" sx={{ mt: 3 }}>{downloadError}</Alert>
           )}
         </CardContent>
       </Card>
@@ -327,9 +323,9 @@ export const ReportsPage = () => {
           </CardHeader>
           <CardContent>
             {clusterPerf.isLoading && <Skeleton className="h-40 w-full" />}
-            {clusterPerfError && <p className="text-sm text-destructive">{clusterPerfError}</p>}
+            {clusterPerfError && <Alert severity="error">{clusterPerfError}</Alert>}
             {clusterDownloadError && (
-              <p className="mb-3 text-sm text-destructive">{clusterDownloadError}</p>
+              <Alert severity="error" sx={{ mb: 3 }}>{clusterDownloadError}</Alert>
             )}
             {!clusterPerf.isLoading && !clusterPerfError && (
               <Scrollbar>

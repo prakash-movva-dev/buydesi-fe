@@ -2,8 +2,10 @@ import { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Headset, Plus, ShieldCheck, Trash2 } from 'lucide-react';
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -15,8 +17,7 @@ import {
   CardTitle,
 } from '@/components/ui/Card';
 import { Dialog } from '@/components/ui/Dialog';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
+import { PhoneInput } from '@/components/phone-input';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatCard } from '@/components/ui/StatCard';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
@@ -459,39 +460,54 @@ const AddClusterAdminDialog = ({
         </>
       }
     >
-      <div className="space-y-3">
-        <div className="space-y-1.5">
-          <Label htmlFor="ca-name">Name *</Label>
-          <Input id="ca-name" value={name} onChange={(e) => setName(e.target.value)} />
-        </div>
+      <Stack spacing={2}>
+        <TextField
+          fullWidth
+          label="Name"
+          required
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
         <Box
           sx={{
             display: 'grid',
-            gap: 1.5,
+            gap: 2,
             gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
           }}
         >
-          <div className="space-y-1.5">
-            <Label htmlFor="ca-email">Email</Label>
-            <Input id="ca-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="ca-mobile">Mobile</Label>
-            <Input id="ca-mobile" value={mobile} onChange={(e) => setMobile(e.target.value)} placeholder="+91…" />
-          </div>
+          <TextField
+            fullWidth
+            label="Email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+          />
+          <PhoneInput
+            fullWidth
+            label="Mobile"
+            value={mobile}
+            onChange={setMobile}
+            country="IN"
+          />
         </Box>
-        <div className="space-y-1.5">
-          <Label htmlFor="ca-pass">Temporary password *</Label>
-          <Input id="ca-pass" value={password} onChange={(e) => setPassword(e.target.value)} />
-        </div>
+        <TextField
+          fullWidth
+          label="Temporary password"
+          required
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
         {isCategory && (
-          <div className="space-y-1.5">
-            <Label>Category *</Label>
+          <Stack spacing={1}>
+            <Typography variant="subtitle2">Category *</Typography>
             <CategoryPicker value={categoryId} onChange={setCategoryId} />
-          </div>
+          </Stack>
         )}
-        {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+        {error && <Alert severity="error">{error}</Alert>}
+      </Stack>
     </Dialog>
   );
 };

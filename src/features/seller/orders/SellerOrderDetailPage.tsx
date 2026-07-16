@@ -15,6 +15,8 @@ import TableRow from '@mui/material/TableRow';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import Typography from '@mui/material/Typography';
+import TextField from '@mui/material/TextField';
+import Alert from '@mui/material/Alert';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
@@ -25,12 +27,9 @@ import {
   CardTitle,
 } from '@/components/ui/Card';
 import { Dialog } from '@/components/ui/Dialog';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Scrollbar } from '@/components/scrollbar';
 import { TableHeadCustom, TableNoData } from '@/components/table';
-import { Textarea } from '@/components/ui/Textarea';
 import { useCancelOrder, useOrder } from '@/features/orders/api';
 import { EscrowStatusBadge, OrderStatusBadge, PaymentStatusBadge } from '@/features/orders/status-badge';
 import { useAuth } from '@/lib/auth';
@@ -346,30 +345,33 @@ const DispatchDialog = ({
         </>
       }
     >
-      <div className="space-y-3">
-        <div className="space-y-1.5">
-          <Label htmlFor="dp-shipment">Shipment id (AWB)</Label>
-          <Input
-            id="dp-shipment"
-            value={shipmentId}
-            onChange={(e) => setShipmentId(e.target.value)}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="dp-tracking">Tracking URL</Label>
-          <Input
-            id="dp-tracking"
-            value={trackingUrl}
-            onChange={(e) => setTrackingUrl(e.target.value)}
-            placeholder="https://…"
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="dp-notes">Notes (optional)</Label>
-          <Textarea id="dp-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
-        </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+      <Stack spacing={2}>
+        <TextField
+          fullWidth
+          label="Shipment id (AWB)"
+          value={shipmentId}
+          onChange={(e) => setShipmentId(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
+        <TextField
+          fullWidth
+          label="Tracking URL"
+          value={trackingUrl}
+          onChange={(e) => setTrackingUrl(e.target.value)}
+          placeholder="https://…"
+          InputLabelProps={{ shrink: true }}
+        />
+        <TextField
+          fullWidth
+          multiline
+          minRows={2}
+          label="Notes (optional)"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
+        {error && <Alert severity="error">{error}</Alert>}
+      </Stack>
     </Dialog>
   );
 };
@@ -428,13 +430,19 @@ const CancelDialog = ({
         </>
       }
     >
-      <div className="space-y-2">
-        <Label htmlFor="co-reason">
-          Reason <span className="text-destructive">*</span>
-        </Label>
-        <Textarea id="co-reason" value={reason} onChange={(e) => setReason(e.target.value)} rows={4} />
-        {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+      <Stack spacing={2}>
+        <TextField
+          fullWidth
+          required
+          multiline
+          minRows={4}
+          label="Reason"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
+        {error && <Alert severity="error">{error}</Alert>}
+      </Stack>
     </Dialog>
   );
 };

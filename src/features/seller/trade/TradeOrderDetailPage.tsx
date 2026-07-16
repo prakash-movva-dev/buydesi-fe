@@ -7,8 +7,10 @@ import {
   Truck,
   XCircle,
 } from 'lucide-react';
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -20,10 +22,7 @@ import {
   CardTitle,
 } from '@/components/ui/Card';
 import { Dialog } from '@/components/ui/Dialog';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { Textarea } from '@/components/ui/Textarea';
 import { useAuth } from '@/lib/auth';
 import { formatDateTime, formatInr } from '@/lib/format';
 import { ApiError } from '@/types/api';
@@ -320,19 +319,30 @@ const DispatchDialog = ({
       }
     >
       <div className="space-y-3">
-        <div className="space-y-1.5">
-          <Label htmlFor="tdo-ship">Shipment id</Label>
-          <Input id="tdo-ship" value={shipmentId} onChange={(e) => setShipmentId(e.target.value)} />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="tdo-track">Tracking URL</Label>
-          <Input id="tdo-track" value={trackingUrl} onChange={(e) => setTrackingUrl(e.target.value)} />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="tdo-notes">Notes</Label>
-          <Textarea id="tdo-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
-        </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        <TextField
+          fullWidth
+          label="Shipment id"
+          value={shipmentId}
+          onChange={(e) => setShipmentId(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
+        <TextField
+          fullWidth
+          label="Tracking URL"
+          value={trackingUrl}
+          onChange={(e) => setTrackingUrl(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
+        <TextField
+          fullWidth
+          multiline
+          minRows={2}
+          label="Notes"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
+        {error && <Alert severity="error">{error}</Alert>}
       </div>
     </Dialog>
   );
@@ -392,11 +402,17 @@ const CancelDialog = ({
       }
     >
       <div className="space-y-2">
-        <Label htmlFor="tcx-reason">
-          Reason <span className="text-destructive">*</span>
-        </Label>
-        <Textarea id="tcx-reason" value={reason} onChange={(e) => setReason(e.target.value)} rows={4} />
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        <TextField
+          fullWidth
+          required
+          multiline
+          minRows={4}
+          label="Reason"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
+        {error && <Alert severity="error">{error}</Alert>}
       </div>
     </Dialog>
   );

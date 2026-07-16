@@ -1,6 +1,7 @@
 import { Fragment, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ChevronDown, ChevronUp, Play } from 'lucide-react';
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
@@ -21,10 +22,7 @@ import {
   CardTitle,
 } from '@/components/ui/Card';
 import { Dialog } from '@/components/ui/Dialog';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Scrollbar } from '@/components/scrollbar';
 import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
@@ -369,33 +367,29 @@ const RunBatchDialog = ({ open, onClose }: { open: boolean; onClose: () => void 
         </>
       }
     >
-      <div className="space-y-3">
-        <div className="space-y-1.5">
-          <Label htmlFor="batch-schedule">Schedule</Label>
-          <Select
-            id="batch-schedule"
-            value={schedule}
-            onChange={(e) => setSchedule(e.target.value as 'daily' | 'weekly')}
-          >
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-          </Select>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="batch-asof">As-of (optional)</Label>
-          <Input
-            id="batch-asof"
-            type="datetime-local"
-            value={asOf}
-            onChange={(e) => setAsOf(e.target.value)}
-          />
-          <p className="text-xs text-muted-foreground">
-            Defaults to "now". Setting a past timestamp re-runs that window — useful for catching
-            up after downtime.
-          </p>
-        </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+      <Stack spacing={2}>
+        <TextField
+          select
+          fullWidth
+          label="Schedule"
+          value={schedule}
+          onChange={(e) => setSchedule(e.target.value as 'daily' | 'weekly')}
+          InputLabelProps={{ shrink: true }}
+        >
+          <MenuItem value="daily">Daily</MenuItem>
+          <MenuItem value="weekly">Weekly</MenuItem>
+        </TextField>
+        <TextField
+          fullWidth
+          label="As-of (optional)"
+          type="datetime-local"
+          value={asOf}
+          onChange={(e) => setAsOf(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+          helperText='Defaults to "now". Setting a past timestamp re-runs that window — useful for catching up after downtime.'
+        />
+        {error && <Alert severity="error">{error}</Alert>}
+      </Stack>
     </Dialog>
   );
 };

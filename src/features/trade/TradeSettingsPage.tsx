@@ -8,6 +8,7 @@ import {
   XCircle,
 } from 'lucide-react';
 import Box from '@mui/material/Box';
+import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
 import MenuItem from '@mui/material/MenuItem';
@@ -27,11 +28,9 @@ import {
   CardTitle,
 } from '@/components/ui/Card';
 import { Dialog } from '@/components/ui/Dialog';
-import { Label } from '@/components/ui/Label';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Scrollbar } from '@/components/scrollbar';
 import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
-import { Textarea } from '@/components/ui/Textarea';
 import { useAuth } from '@/lib/auth';
 import { formatDateTime, formatInr } from '@/lib/format';
 import { ApiError, UserRole } from '@/types/api';
@@ -532,13 +531,19 @@ const TradeReviewDialog = ({ open, action, onClose, onSubmit }: TradeReviewDialo
         </>
       }
     >
-      <div className="space-y-2">
-        <Label htmlFor="tr-notes">
-          Notes {action === 'reject' ? <span className="text-destructive">*</span> : '(optional)'}
-        </Label>
-        <Textarea id="tr-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} />
-        {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+      <Stack spacing={2}>
+        <TextField
+          fullWidth
+          label={action === 'reject' ? 'Notes' : 'Notes (optional)'}
+          required={action === 'reject'}
+          multiline
+          minRows={3}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
+        {error && <Alert severity="error">{error}</Alert>}
+      </Stack>
     </Dialog>
   );
 };

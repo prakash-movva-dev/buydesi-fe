@@ -19,12 +19,11 @@ import TextField from '@mui/material/TextField';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
-import { Label } from '@/components/ui/Label';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
+import Alert from '@mui/material/Alert';
 import { Scrollbar } from '@/components/scrollbar';
 import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
-import { Textarea } from '@/components/ui/Textarea';
 import { ScopedAdminBanner } from '@/features/scoped-admin/ScopedAdminBanner';
 import { useAuth } from '@/lib/auth';
 import { formatDateTime } from '@/lib/format';
@@ -380,18 +379,19 @@ const ModerateDialog = ({ open, action, onClose, onSubmit }: ModerateDialogProps
         </>
       }
     >
-      <div className="space-y-2">
-        <Label htmlFor="rv-notes">
-          Notes {action === 'hide' ? <span className="text-destructive">*</span> : '(optional)'}
-        </Label>
-        <Textarea
-          id="rv-notes"
+      <Stack spacing={2}>
+        <TextField
+          fullWidth
+          label={action === 'hide' ? 'Notes' : 'Notes (optional)'}
+          required={action === 'hide'}
+          multiline
+          minRows={3}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          rows={3}
+          InputLabelProps={{ shrink: true }}
         />
-        {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+        {error && <Alert severity="error">{error}</Alert>}
+      </Stack>
     </Dialog>
   );
 };

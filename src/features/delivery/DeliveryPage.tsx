@@ -1,6 +1,10 @@
 import { useState, type FormEvent } from 'react';
 import { ExternalLink, MapPin, PackageSearch, Receipt, Truck, User } from 'lucide-react';
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
@@ -10,10 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { resolveOrderId, useOrder } from '@/features/orders/api';
 import { OrderStatusBadge } from '@/features/orders/status-badge';
@@ -87,11 +88,13 @@ const TrackPanel = () => {
       </CardHeader>
       <CardContent className="space-y-4">
         <form onSubmit={onSubmit} className="flex gap-2">
-          <Input
+          <TextField
+            label="Shipment id / AWB"
             value={shipmentId}
             onChange={(e) => setShipmentId(e.target.value)}
             placeholder="e.g. DHL12345 / AWB number"
-            className="flex-1"
+            InputLabelProps={{ shrink: true }}
+            sx={{ flex: 1 }}
           />
           <Button type="submit" disabled={track.isPending}>
             {track.isPending ? 'Tracking…' : 'Track'}
@@ -99,9 +102,7 @@ const TrackPanel = () => {
         </form>
 
         {track.isPending && <Skeleton className="h-40 w-full" />}
-        {errorMsg && (
-          <p className="text-sm text-destructive">{errorMsg}</p>
-        )}
+        {errorMsg && <Alert severity="error">{errorMsg}</Alert>}
         {result && !track.isPending && (
           <div className="space-y-3">
             <div className="flex items-center gap-2">
@@ -185,68 +186,63 @@ const RatePanel = () => {
       </CardHeader>
       <CardContent>
         <form onSubmit={onSubmit} className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label htmlFor="quote-pickup">Pickup pincode</Label>
-              <Input
-                id="quote-pickup"
-                pattern="\d{6}"
-                maxLength={6}
-                value={pickupPincode}
-                onChange={(e) => setPickup(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="quote-drop">Drop pincode</Label>
-              <Input
-                id="quote-drop"
-                pattern="\d{6}"
-                maxLength={6}
-                value={dropPincode}
-                onChange={(e) => setDrop(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="quote-weight">Weight (g)</Label>
-              <Input
-                id="quote-weight"
-                type="number"
-                min={1}
-                value={weightGrams}
-                onChange={(e) => setWeight(e.target.value)}
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="quote-mode">Payment</Label>
-              <Select
-                id="quote-mode"
-                value={paymentMode}
-                onChange={(e) => setMode(e.target.value as DeliveryPaymentMode)}
-              >
-                <option value="PREPAID">Prepaid</option>
-                <option value="COD">Cash on delivery</option>
-              </Select>
-            </div>
-            <div className="col-span-2 space-y-1.5">
-              <Label htmlFor="quote-value">Declared value (₹)</Label>
-              <Input
-                id="quote-value"
-                type="number"
-                min={0}
-                value={declaredValueInr}
-                onChange={(e) => setValue(e.target.value)}
-              />
-            </div>
-          </div>
+          <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: 'repeat(2, 1fr)' }}>
+            <TextField
+              fullWidth
+              label="Pickup pincode"
+              value={pickupPincode}
+              onChange={(e) => setPickup(e.target.value)}
+              required
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ pattern: '\\d{6}', maxLength: 6 }}
+            />
+            <TextField
+              fullWidth
+              label="Drop pincode"
+              value={dropPincode}
+              onChange={(e) => setDrop(e.target.value)}
+              required
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ pattern: '\\d{6}', maxLength: 6 }}
+            />
+            <TextField
+              fullWidth
+              label="Weight (g)"
+              type="number"
+              value={weightGrams}
+              onChange={(e) => setWeight(e.target.value)}
+              required
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ min: 1 }}
+            />
+            <TextField
+              select
+              fullWidth
+              label="Payment"
+              value={paymentMode}
+              onChange={(e) => setMode(e.target.value as DeliveryPaymentMode)}
+              InputLabelProps={{ shrink: true }}
+            >
+              <MenuItem value="PREPAID">Prepaid</MenuItem>
+              <MenuItem value="COD">Cash on delivery</MenuItem>
+            </TextField>
+            <TextField
+              fullWidth
+              label="Declared value (₹)"
+              type="number"
+              value={declaredValueInr}
+              onChange={(e) => setValue(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              inputProps={{ min: 0 }}
+              sx={{ gridColumn: 'span 2' }}
+            />
+          </Box>
           <Button type="submit" disabled={quote.isPending}>
             {quote.isPending ? 'Quoting…' : 'Get quote'}
           </Button>
         </form>
 
-        {errorMsg && <p className="mt-3 text-sm text-destructive">{errorMsg}</p>}
+        {errorMsg && <Alert severity="error" sx={{ mt: 3 }}>{errorMsg}</Alert>}
 
         {result && (
           <div className="mt-4 rounded-md border border-border bg-secondary/30 p-3">
@@ -325,25 +321,24 @@ const CreateShipmentPanel = () => {
       </CardHeader>
       <CardContent className="space-y-4">
         <form onSubmit={lookup} className="flex flex-wrap items-end gap-3">
-          <div className="flex-1 space-y-1.5 min-w-[260px]">
-            <Label htmlFor="create-order">Order number</Label>
-            <Input
-              id="create-order"
-              value={orderRef}
-              onChange={(e) => {
-                setOrderRef(e.target.value);
-                setResolvedId(null);
-                setLookupError(null);
-              }}
-              placeholder="e.g. BD-MP6NN7XL-00CA7F"
-            />
-          </div>
+          <TextField
+            label="Order number"
+            value={orderRef}
+            onChange={(e) => {
+              setOrderRef(e.target.value);
+              setResolvedId(null);
+              setLookupError(null);
+            }}
+            placeholder="e.g. BD-MP6NN7XL-00CA7F"
+            InputLabelProps={{ shrink: true }}
+            sx={{ flex: 1, minWidth: 260 }}
+          />
           <Button type="submit" variant="outline" disabled={looking || !orderRef.trim()}>
             {looking ? 'Looking up…' : 'Look up order'}
           </Button>
         </form>
 
-        {lookupError && <p className="text-sm text-destructive">{lookupError}</p>}
+        {lookupError && <Alert severity="error">{lookupError}</Alert>}
 
         {resolvedId && order.isLoading && <Skeleton className="h-28 w-full" />}
 
@@ -388,9 +383,9 @@ const CreateShipmentPanel = () => {
         )}
 
         {create.error && (
-          <p className="text-sm text-destructive">
+          <Alert severity="error">
             {create.error instanceof ApiError ? create.error.message : 'Create failed'}
-          </p>
+          </Alert>
         )}
         {create.data && (
           <div className="rounded-md bg-emerald-50 p-3 text-sm text-emerald-900">

@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { Bell, Languages, Search } from 'lucide-react';
 import Box from '@mui/material/Box';
+import InputAdornment from '@mui/material/InputAdornment';
 import Stack from '@mui/material/Stack';
+import TextField from '@mui/material/TextField';
 import { Badge } from '@/components/ui/Badge';
 import {
   Card,
@@ -10,7 +12,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useNotificationTemplates } from './api';
@@ -94,15 +95,19 @@ export const NotificationTemplatesPage = () => {
         />
       </Box>
 
-      <div className="relative w-96 max-w-full">
-        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Search keys, titles or bodies…"
-          className="pl-9"
-        />
-      </div>
+      <TextField
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        placeholder="Search keys, titles or bodies…"
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <Search className="h-4 w-4 text-muted-foreground" />
+            </InputAdornment>
+          ),
+        }}
+        sx={{ width: 384, maxWidth: '100%' }}
+      />
 
       {isLoading && (
         <div className="space-y-2">

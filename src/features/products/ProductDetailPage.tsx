@@ -28,9 +28,9 @@ import {
   CardTitle,
 } from '@/components/ui/Card';
 import { Dialog } from '@/components/ui/Dialog';
-import { Label } from '@/components/ui/Label';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { Textarea } from '@/components/ui/Textarea';
+import Alert from '@mui/material/Alert';
+import TextField from '@mui/material/TextField';
 import { Scrollbar } from '@/components/scrollbar';
 import { TableHeadCustom } from '@/components/table';
 import { useCategoriesList } from '@/features/categories/api';
@@ -648,15 +648,17 @@ const MarkDuplicateDialog = ({
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           The seller will see your note explaining why their listing was rejected.
         </div>
-        <Label htmlFor="dup-notes">Notes (optional)</Label>
-        <Textarea
-          id="dup-notes"
+        <TextField
+          fullWidth
+          label="Notes (optional)"
+          multiline
+          minRows={4}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="Visible to the seller."
-          rows={4}
+          InputLabelProps={{ shrink: true }}
         />
-        {err && <p className="text-sm text-destructive">{err}</p>}
+        {err && <Alert severity="error">{err}</Alert>}
       </div>
     </Dialog>
   );

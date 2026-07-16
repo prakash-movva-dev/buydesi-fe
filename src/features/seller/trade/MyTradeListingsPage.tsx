@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
+import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
@@ -7,15 +8,13 @@ import Table from '@mui/material/Table';
 import TableRow from '@mui/material/TableRow';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
+import TextField from '@mui/material/TextField';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { Textarea } from '@/components/ui/Textarea';
 import { Scrollbar } from '@/components/scrollbar';
 import { TableHeadCustom, TableNoData } from '@/components/table';
 import { formatDate, formatInr } from '@/lib/format';
@@ -187,87 +186,93 @@ const NewListingDialog = ({ open, onClose }: { open: boolean; onClose: () => voi
         </>
       }
     >
-      <div className="space-y-3">
+      <Stack spacing={2}>
         <div className="grid gap-3 sm:grid-cols-2">
+          <TextField
+            fullWidth
+            required
+            label="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+          />
           <div className="space-y-1.5">
-            <Label htmlFor="tl-name">Name *</Label>
-            <Input id="tl-name" value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Category *</Label>
+            <Box sx={{ typography: 'body2', fontWeight: 600 }}>Category *</Box>
             <CategoryPicker value={categoryId} onChange={setCategoryId} />
           </div>
         </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="tl-desc">Description *</Label>
-          <Textarea
-            id="tl-desc"
-            rows={3}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
+        <TextField
+          fullWidth
+          required
+          multiline
+          minRows={3}
+          label="Description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
+        <div className="grid gap-3 sm:grid-cols-3">
+          <TextField
+            fullWidth
+            required
+            label="Unit"
+            value={unit}
+            onChange={(e) => setUnit(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+          />
+          <TextField
+            fullWidth
+            required
+            type="number"
+            label="Weight per unit (g)"
+            value={weightGramsPerUnit}
+            onChange={(e) => setWeight(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            inputProps={{ min: 0 }}
+          />
+          <TextField
+            fullWidth
+            required
+            type="number"
+            label="Unit price (₹)"
+            value={unitPriceInr}
+            onChange={(e) => setPrice(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            inputProps={{ min: 0, step: '0.5' }}
           />
         </div>
         <div className="grid gap-3 sm:grid-cols-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="tl-unit">Unit *</Label>
-            <Input id="tl-unit" value={unit} onChange={(e) => setUnit(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="tl-weight">Weight per unit (g) *</Label>
-            <Input
-              id="tl-weight"
-              type="number"
-              min={0}
-              value={weightGramsPerUnit}
-              onChange={(e) => setWeight(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="tl-price">Unit price (₹) *</Label>
-            <Input
-              id="tl-price"
-              type="number"
-              min={0}
-              step="0.5"
-              value={unitPriceInr}
-              onChange={(e) => setPrice(e.target.value)}
-            />
-          </div>
-        </div>
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="space-y-1.5">
-            <Label htmlFor="tl-total">Total units *</Label>
-            <Input
-              id="tl-total"
-              type="number"
-              min={1}
-              value={totalUnits}
-              onChange={(e) => setTotal(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="tl-min">Min order units</Label>
-            <Input
-              id="tl-min"
-              type="number"
-              min={1}
-              value={minOrderUnits}
-              onChange={(e) => setMinOrder(e.target.value)}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="tl-max">Max order units (optional)</Label>
-            <Input
-              id="tl-max"
-              type="number"
-              min={1}
-              value={maxOrderUnits}
-              onChange={(e) => setMaxOrder(e.target.value)}
-            />
-          </div>
+          <TextField
+            fullWidth
+            required
+            type="number"
+            label="Total units"
+            value={totalUnits}
+            onChange={(e) => setTotal(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            inputProps={{ min: 1 }}
+          />
+          <TextField
+            fullWidth
+            type="number"
+            label="Min order units"
+            value={minOrderUnits}
+            onChange={(e) => setMinOrder(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            inputProps={{ min: 1 }}
+          />
+          <TextField
+            fullWidth
+            type="number"
+            label="Max order units (optional)"
+            value={maxOrderUnits}
+            onChange={(e) => setMaxOrder(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            inputProps={{ min: 1 }}
+          />
         </div>
         <div>
-          <Label>Accepted payments *</Label>
+          <Box sx={{ typography: 'body2', fontWeight: 600 }}>Accepted payments *</Box>
           <div className="mt-1.5 flex flex-wrap gap-2">
             {(['ONLINE', 'CASH'] as const).map((m) => (
               <label
@@ -285,7 +290,9 @@ const NewListingDialog = ({ open, onClose }: { open: boolean; onClose: () => voi
           </div>
         </div>
         <div>
-          <Label>Accepted transport (optional; defaults to your cluster setting)</Label>
+          <Box sx={{ typography: 'body2', fontWeight: 600 }}>
+            Accepted transport (optional; defaults to your cluster setting)
+          </Box>
           <div className="mt-1.5 flex flex-wrap gap-2">
             {(['DELHIVERY', 'LOCAL'] as const).map((m) => (
               <label
@@ -302,8 +309,8 @@ const NewListingDialog = ({ open, onClose }: { open: boolean; onClose: () => voi
             ))}
           </div>
         </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+        {error && <Alert severity="error">{error}</Alert>}
+      </Stack>
     </Dialog>
   );
 };

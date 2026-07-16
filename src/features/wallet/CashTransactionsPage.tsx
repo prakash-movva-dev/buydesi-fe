@@ -13,12 +13,11 @@ import TextField from '@mui/material/TextField';
 import IconButton from '@mui/material/IconButton';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
-import { Label } from '@/components/ui/Label';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
+import Alert from '@mui/material/Alert';
 import { Scrollbar } from '@/components/scrollbar';
 import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
-import { Textarea } from '@/components/ui/Textarea';
 import { formatDate, formatInr } from '@/lib/format';
 import { ApiError } from '@/types/api';
 import { useApproveCash, useCashList, useRejectCash } from './api';
@@ -307,13 +306,19 @@ const CashReviewDialog = ({ open, action, onClose, onSubmit }: ReviewDialogProps
         </>
       }
     >
-      <div className="space-y-2">
-        <Label htmlFor="cash-notes">
-          Notes {action === 'reject' ? <span className="text-destructive">*</span> : '(optional)'}
-        </Label>
-        <Textarea id="cash-notes" value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} />
-        {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+      <Stack spacing={2}>
+        <TextField
+          fullWidth
+          label={action === 'reject' ? 'Notes' : 'Notes (optional)'}
+          required={action === 'reject'}
+          multiline
+          minRows={4}
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
+        {error && <Alert severity="error">{error}</Alert>}
+      </Stack>
     </Dialog>
   );
 };

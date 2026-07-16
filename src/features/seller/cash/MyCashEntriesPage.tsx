@@ -10,16 +10,13 @@ import TableRow from '@mui/material/TableRow';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TextField from '@mui/material/TextField';
+import Alert from '@mui/material/Alert';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Scrollbar } from '@/components/scrollbar';
 import { TableHeadCustom, TableNoData } from '@/components/table';
-import { Textarea } from '@/components/ui/Textarea';
 import { CashStatusBadge } from '@/features/wallet/status-badge';
 import { formatDate, formatInr } from '@/lib/format';
 import { ApiError } from '@/types/api';
@@ -232,51 +229,48 @@ const NewCashEntryDialog = ({ open, onClose }: { open: boolean; onClose: () => v
         </>
       }
     >
-      <div className="space-y-3">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <Label htmlFor="ce-type">Type</Label>
-            <Select
-              id="ce-type"
-              value={type}
-              onChange={(e) => setType(e.target.value as CashEntryType)}
-            >
-              <option value="cash_received">Cash received</option>
-              <option value="cash_paid">Cash paid</option>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="ce-amount">Amount (₹)</Label>
-            <Input
-              id="ce-amount"
-              type="number"
-              min={1}
-              step="0.01"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-            />
-          </div>
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="ce-reason">Reason / description *</Label>
-          <Textarea
-            id="ce-reason"
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            rows={3}
+      <Stack spacing={2}>
+        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { sm: 'repeat(2,1fr)' } }}>
+          <TextField
+            select
+            fullWidth
+            label="Type"
+            value={type}
+            onChange={(e) => setType(e.target.value as CashEntryType)}
+            InputLabelProps={{ shrink: true }}
+          >
+            <MenuItem value="cash_received">Cash received</MenuItem>
+            <MenuItem value="cash_paid">Cash paid</MenuItem>
+          </TextField>
+          <TextField
+            fullWidth
+            type="number"
+            label="Amount (₹)"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            inputProps={{ min: 1, step: '0.01' }}
           />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="ce-trade">Linked trade order id (optional)</Label>
-          <Input
-            id="ce-trade"
-            value={tradeOrderId}
-            onChange={(e) => setTradeOrderId(e.target.value)}
-            placeholder="If this settles a specific trade order"
-          />
-        </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
-      </div>
+        </Box>
+        <TextField
+          fullWidth
+          multiline
+          minRows={3}
+          label="Reason / description *"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
+        <TextField
+          fullWidth
+          label="Linked trade order id (optional)"
+          value={tradeOrderId}
+          onChange={(e) => setTradeOrderId(e.target.value)}
+          placeholder="If this settles a specific trade order"
+          InputLabelProps={{ shrink: true }}
+        />
+        {error && <Alert severity="error">{error}</Alert>}
+      </Stack>
     </Dialog>
   );
 };

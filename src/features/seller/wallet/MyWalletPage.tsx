@@ -10,16 +10,14 @@ import TableRow from '@mui/material/TableRow';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import TextField from '@mui/material/TextField';
+import Alert from '@mui/material/Alert';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatCard } from '@/components/ui/StatCard';
 import { Scrollbar } from '@/components/scrollbar';
 import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
-import { Textarea } from '@/components/ui/Textarea';
 import { TxSourceBadge, TxStatusBadge, TxTypeBadge } from '@/features/wallet/status-badge';
 import { formatDate, formatInr } from '@/lib/format';
 import { ApiError } from '@/types/api';
@@ -313,28 +311,26 @@ const WithdrawDialog = ({
       }
     >
       <div className="space-y-3">
-        <div className="space-y-1.5">
-          <Label htmlFor="wd-amount">Amount (₹) *</Label>
-          <Input
-            id="wd-amount"
-            type="number"
-            min={1}
-            max={maxAmount}
-            step="1"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
-        </div>
-        <div className="space-y-1.5">
-          <Label htmlFor="wd-notes">Notes (optional)</Label>
-          <Textarea
-            id="wd-notes"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            rows={2}
-          />
-        </div>
-        {error && <p className="text-sm text-destructive">{error}</p>}
+        <TextField
+          fullWidth
+          required
+          type="number"
+          label="Amount (₹)"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+          inputProps={{ min: 1, max: maxAmount, step: '1' }}
+        />
+        <TextField
+          fullWidth
+          multiline
+          minRows={2}
+          label="Notes (optional)"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          InputLabelProps={{ shrink: true }}
+        />
+        {error && <Alert severity="error">{error}</Alert>}
       </div>
     </Dialog>
   );
