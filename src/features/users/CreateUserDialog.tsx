@@ -46,7 +46,21 @@ const ADMIN_ROLES_FOR_SUPER: ReadonlyArray<UserRole> = [
   UserRole.BUYER,
 ];
 
+// A Regional Admin runs their whole region: appoint Cluster / Category / Support
+// admins (to clusters in their region) plus sellers/promoters/buyers.
+const ROLES_FOR_REGIONAL_ADMIN: ReadonlyArray<UserRole> = [
+  UserRole.CLUSTER_ADMIN,
+  UserRole.CATEGORY_ADMIN,
+  UserRole.SUPPORT_ADMIN,
+  UserRole.SELLER,
+  UserRole.PROMOTER,
+  UserRole.BUYER,
+];
+
+// A Cluster Admin appoints Category / Support admins for their cluster.
 const ROLES_FOR_CLUSTER_ADMIN: ReadonlyArray<UserRole> = [
+  UserRole.CATEGORY_ADMIN,
+  UserRole.SUPPORT_ADMIN,
   UserRole.SELLER,
   UserRole.PROMOTER,
   UserRole.BUYER,
@@ -57,7 +71,11 @@ export const CreateUserDialog = ({ open, onClose }: Props) => {
   const isSuperTier =
     user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.SUB_SUPER_ADMIN;
 
-  const allowedRoles = isSuperTier ? ADMIN_ROLES_FOR_SUPER : ROLES_FOR_CLUSTER_ADMIN;
+  const allowedRoles = isSuperTier
+    ? ADMIN_ROLES_FOR_SUPER
+    : user?.role === UserRole.REGIONAL_ADMIN
+      ? ROLES_FOR_REGIONAL_ADMIN
+      : ROLES_FOR_CLUSTER_ADMIN;
   const roleChoices = ROLE_OPTIONS.filter((r) => allowedRoles.includes(r.value));
 
   const create = useAdminCreateUser();
@@ -265,12 +283,21 @@ export const CreateUserDialog = ({ open, onClose }: Props) => {
               <ClusterPicker
                 value={clusterId}
                 onChange={setClusterId}
-                disabled={!isSuperTier}
-                placeholder="Pick a cluster…"
+                disabled={user?.role === UserRole.CLUSTER_ADMIN}
+                placeholder={
+                  user?.role === UserRole.REGIONAL_ADMIN
+                    ? 'Pick a cluster in your region…'
+                    : 'Pick a cluster…'
+                }
               />
-              {!isSuperTier && (
+              {user?.role === UserRole.CLUSTER_ADMIN && (
                 <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                   Pinned to your own cluster.
+                </Typography>
+              )}
+              {user?.role === UserRole.REGIONAL_ADMIN && (
+                <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                  Must be a cluster within your region.
                 </Typography>
               )}
               <FieldError show={showErrors} message={clusterError} />

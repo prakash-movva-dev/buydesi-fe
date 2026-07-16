@@ -48,6 +48,7 @@ export interface NavSection {
 const ALL_ADMINS = [
   UserRole.SUPER_ADMIN,
   UserRole.SUB_SUPER_ADMIN,
+  UserRole.REGIONAL_ADMIN,
   UserRole.CLUSTER_ADMIN,
   UserRole.CATEGORY_ADMIN,
   UserRole.SUPPORT_ADMIN,
@@ -62,6 +63,7 @@ const OPS_ADMINS = [
 const SUPPORT_TIER = [
   UserRole.SUPER_ADMIN,
   UserRole.SUB_SUPER_ADMIN,
+  UserRole.REGIONAL_ADMIN,
   UserRole.CLUSTER_ADMIN,
   UserRole.SUPPORT_ADMIN,
 ] as const;
