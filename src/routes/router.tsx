@@ -76,10 +76,10 @@ const CATALOG_ADMIN_ROLES = [
   UserRole.CATEGORY_ADMIN,
 ] as const;
 
+// Taxonomy management is platform-only — Category Admins don't edit categories.
 const CATEGORY_MGMT_ROLES = [
   UserRole.SUPER_ADMIN,
   UserRole.SUB_SUPER_ADMIN,
-  UserRole.CATEGORY_ADMIN,
 ] as const;
 
 const SUPPORT_ROLES = [
@@ -89,10 +89,30 @@ const SUPPORT_ROLES = [
   UserRole.SUPPORT_ADMIN,
 ] as const;
 
+// Orders + support tickets: cluster/support/regional oversight PLUS the Category
+// Admin (scoped server-side to their category's products in their cluster).
+const ORDERS_SUPPORT_ROLES = [
+  UserRole.SUPER_ADMIN,
+  UserRole.SUB_SUPER_ADMIN,
+  UserRole.REGIONAL_ADMIN,
+  UserRole.CLUSTER_ADMIN,
+  UserRole.SUPPORT_ADMIN,
+  UserRole.CATEGORY_ADMIN,
+] as const;
+
 const OPS_ADMIN_ROLES = [
   UserRole.SUPER_ADMIN,
   UserRole.SUB_SUPER_ADMIN,
   UserRole.CLUSTER_ADMIN,
+] as const;
+
+// User management excludes the Category Admin (they manage no users).
+const USER_MGMT_ROLES = [
+  UserRole.SUPER_ADMIN,
+  UserRole.SUB_SUPER_ADMIN,
+  UserRole.REGIONAL_ADMIN,
+  UserRole.CLUSTER_ADMIN,
+  UserRole.SUPPORT_ADMIN,
 ] as const;
 
 const SUPER_TIER = [UserRole.SUPER_ADMIN, UserRole.SUB_SUPER_ADMIN] as const;
@@ -138,7 +158,6 @@ const router = createBrowserRouter([
               { path: '/admin/products', element: <ProductsListPage /> },
               { path: '/admin/products/:id', element: <ProductDetailPage /> },
               { path: '/admin/stock-monitor', element: <StockMonitorPage /> },
-              { path: '/admin/commission', element: <CommissionPage /> },
             ],
           },
           {
@@ -146,12 +165,17 @@ const router = createBrowserRouter([
             children: [{ path: '/admin/categories', element: <CategoriesPage /> }],
           },
           {
-            element: <ProtectedRoute roles={SUPPORT_ROLES} />,
+            element: <ProtectedRoute roles={ORDERS_SUPPORT_ROLES} />,
             children: [
               { path: '/admin/orders', element: <OrdersListPage /> },
               { path: '/admin/orders/:id', element: <OrderDetailPage /> },
               { path: '/admin/support', element: <TicketsListPage /> },
               { path: '/admin/support/:id', element: <TicketDetailPage /> },
+            ],
+          },
+          {
+            element: <ProtectedRoute roles={SUPPORT_ROLES} />,
+            children: [
               { path: '/admin/quality-monitor', element: <QualityMonitorPage /> },
               { path: '/admin/delivery', element: <DeliveryPage /> },
             ],
@@ -159,6 +183,7 @@ const router = createBrowserRouter([
           {
             element: <ProtectedRoute roles={OPS_ADMIN_ROLES} />,
             children: [
+              { path: '/admin/commission', element: <CommissionPage /> },
               { path: '/admin/wallet', element: <WalletPage /> },
               { path: '/admin/cash-transactions', element: <CashTransactionsPage /> },
               { path: '/admin/payouts', element: <PayoutsPage /> },
@@ -183,11 +208,12 @@ const router = createBrowserRouter([
             children: [{ path: '/admin/verified-badge', element: <VerifiedBadgePage /> }],
           },
           {
+            element: <ProtectedRoute roles={USER_MGMT_ROLES} />,
+            children: [{ path: '/admin/users', element: <UsersPage /> }],
+          },
+          {
             element: <ProtectedRoute roles={ALL_ADMINS} />,
-            children: [
-              { path: '/admin/users', element: <UsersPage /> },
-              { path: '/admin/reviews', element: <ReviewsPage /> },
-            ],
+            children: [{ path: '/admin/reviews', element: <ReviewsPage /> }],
           },
           {
             element: <ProtectedRoute roles={SUPER_TIER} />,

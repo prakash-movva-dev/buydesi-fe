@@ -45,15 +45,6 @@ export interface NavSection {
   items: NavItem[];
 }
 
-const ALL_ADMINS = [
-  UserRole.SUPER_ADMIN,
-  UserRole.SUB_SUPER_ADMIN,
-  UserRole.REGIONAL_ADMIN,
-  UserRole.CLUSTER_ADMIN,
-  UserRole.CATEGORY_ADMIN,
-  UserRole.SUPPORT_ADMIN,
-] as const;
-
 const OPS_ADMINS = [
   UserRole.SUPER_ADMIN,
   UserRole.SUB_SUPER_ADMIN,
@@ -66,13 +57,6 @@ const SUPPORT_TIER = [
   UserRole.REGIONAL_ADMIN,
   UserRole.CLUSTER_ADMIN,
   UserRole.SUPPORT_ADMIN,
-] as const;
-
-const CATALOG_ADMINS = [
-  UserRole.SUPER_ADMIN,
-  UserRole.SUB_SUPER_ADMIN,
-  UserRole.CLUSTER_ADMIN,
-  UserRole.CATEGORY_ADMIN,
 ] as const;
 
 // Regional Admin = supply/ops oversight across a region (multiple clusters).
@@ -254,19 +238,23 @@ export const navSections: NavSection[] = [
         label: 'Categories',
         path: '/admin/categories',
         icon: FolderTree,
-        roles: [UserRole.SUPER_ADMIN, UserRole.SUB_SUPER_ADMIN, UserRole.CATEGORY_ADMIN],
+        // Taxonomy management is a platform concern — a Category Admin only
+        // reviews products/orders/support within their own category+cluster.
+        roles: [UserRole.SUPER_ADMIN, UserRole.SUB_SUPER_ADMIN],
       },
       {
         label: 'Orders',
         path: '/admin/orders',
         icon: ClipboardList,
-        roles: SUPPLY_OPS_WITH_SUPPORT,
+        // Category Admin: orders for their category's products in their cluster.
+        roles: [...SUPPLY_OPS_WITH_SUPPORT, UserRole.CATEGORY_ADMIN],
       },
       {
         label: 'Support tickets',
         path: '/admin/support',
         icon: Headset,
-        roles: SUPPORT_TIER,
+        // Category Admin: tickets for their category's products in their cluster.
+        roles: [...SUPPORT_TIER, UserRole.CATEGORY_ADMIN],
       },
       {
         label: 'Quality Monitor',
@@ -312,7 +300,7 @@ export const navSections: NavSection[] = [
         roles: OPS_ADMINS,
       },
       { label: 'Payouts', path: '/admin/payouts', icon: CreditCard, roles: OPS_ADMINS },
-      { label: 'Commission', path: '/admin/commission', icon: Receipt, roles: CATALOG_ADMINS },
+      { label: 'Commission', path: '/admin/commission', icon: Receipt, roles: OPS_ADMINS },
     ],
   },
   {
@@ -371,7 +359,14 @@ export const navSections: NavSection[] = [
         label: 'Users',
         path: '/admin/users',
         icon: Users,
-        roles: ALL_ADMINS,
+        // Category Admin manages no users — they only review catalogue/orders/support.
+        roles: [
+          UserRole.SUPER_ADMIN,
+          UserRole.SUB_SUPER_ADMIN,
+          UserRole.REGIONAL_ADMIN,
+          UserRole.CLUSTER_ADMIN,
+          UserRole.SUPPORT_ADMIN,
+        ],
       },
     ],
   },
