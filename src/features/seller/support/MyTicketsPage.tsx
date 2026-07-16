@@ -2,8 +2,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Plus } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
-import { Badge } from '@/components/ui/Badge';
+import Table from '@mui/material/Table';
+import MenuItem from '@mui/material/MenuItem';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TextField from '@mui/material/TextField';
+import Box from '@mui/material/Box';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
@@ -11,15 +18,9 @@ import { Label } from '@/components/ui/Label';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
 import { Textarea } from '@/components/ui/Textarea';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData } from '@/components/table';
 import { useTicketsList, ticketKeys } from '@/features/support/api';
 import {
   TicketCategoryBadge,
@@ -74,6 +75,16 @@ export const MyTicketsPage = () => {
 
   const [open, setOpen] = useState(false);
 
+  const items = data?.items ?? [];
+
+  const head = [
+    { id: 'ticket', label: 'Ticket' },
+    { id: 'status', label: 'Status' },
+    { id: 'category', label: 'Category' },
+    { id: 'order', label: 'Order' },
+    { id: 'raised', label: 'Raised' },
+  ];
+
   return (
     <Stack spacing={3}>
       <PageHeader
@@ -87,64 +98,77 @@ export const MyTicketsPage = () => {
         }
       />
 
-      <Select
-        value={status}
-        onChange={(e) => setParam({ status: e.target.value })}
-        className="w-48"
-      >
-        {STATUS_OPTIONS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </Select>
-
-      {isLoading && <Skeleton className="h-40 w-full" />}
-
-      {!isLoading && (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Ticket</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Order</TableHead>
-              <TableHead>Raised</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {(data?.items ?? []).map((t) => (
-              <TableRow
-                key={t.id}
-                className="cursor-pointer"
-                onClick={() => navigate(`/seller/support/${t.id}`)}
-              >
-                <TableCell className="font-medium">
-                  {t.ticketNumber}
-                  <div className="text-xs text-muted-foreground line-clamp-1">{t.subject}</div>
-                </TableCell>
-                <TableCell>
-                  <TicketStatusBadge status={t.status} />
-                </TableCell>
-                <TableCell>
-                  <TicketCategoryBadge category={t.category} />
-                </TableCell>
-                <TableCell className="font-mono text-xs">
-                  {t.orderId ? t.orderId.slice(-8) : '—'}
-                </TableCell>
-                <TableCell className="text-xs">{formatDate(t.createdAt)}</TableCell>
-              </TableRow>
+      <Card>
+        <Stack
+          direction="row"
+          spacing={2}
+          flexWrap="wrap"
+          alignItems="center"
+          sx={{ p: 2.5 }}
+        >
+          <TextField
+            select
+            label="Status"
+            value={status}
+            onChange={(e) => setParam({ status: e.target.value })}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 200 }}
+          >
+            {STATUS_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
             ))}
-            {(data?.items.length ?? 0) === 0 && (
-              <TableRow>
-                <TableCell colSpan={5} className="py-12 text-center text-sm text-muted-foreground">
-                  No tickets yet.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      )}
+          </TextField>
+        </Stack>
+
+        {isLoading && <Skeleton className="mx-4 mb-4 h-40" />}
+
+        {!isLoading && (
+          <Scrollbar>
+            <Table sx={{ minWidth: 800 }}>
+              <TableHeadCustom headLabel={head} />
+              <TableBody>
+                {items.map((t) => (
+                  <TableRow
+                    key={t.id}
+                    hover
+                    sx={{ cursor: 'pointer' }}
+                    onClick={() => navigate(`/seller/support/${t.id}`)}
+                  >
+                    <TableCell sx={{ fontWeight: 600 }}>
+                      {t.ticketNumber}
+                      <Box
+                        sx={{
+                          color: 'text.secondary',
+                          typography: 'caption',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 1,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {t.subject}
+                      </Box>
+                    </TableCell>
+                    <TableCell>
+                      <TicketStatusBadge status={t.status} />
+                    </TableCell>
+                    <TableCell>
+                      <TicketCategoryBadge category={t.category} />
+                    </TableCell>
+                    <TableCell sx={{ fontFamily: 'monospace', typography: 'caption' }}>
+                      {t.orderId ? t.orderId.slice(-8) : '—'}
+                    </TableCell>
+                    <TableCell sx={{ typography: 'caption' }}>{formatDate(t.createdAt)}</TableCell>
+                  </TableRow>
+                ))}
+                <TableNoData notFound={!isLoading && items.length === 0} />
+              </TableBody>
+            </Table>
+          </Scrollbar>
+        )}
+      </Card>
 
       <NewTicketDialog open={open} onClose={() => setOpen(false)} />
     </Stack>
@@ -262,6 +286,3 @@ const NewTicketDialog = ({ open, onClose }: { open: boolean; onClose: () => void
     </Dialog>
   );
 };
-
-// Inline use to silence unused-import in some builds
-void Badge;

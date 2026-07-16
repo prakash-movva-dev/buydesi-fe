@@ -2,6 +2,13 @@ import { useMemo, useState } from 'react';
 import { Pencil, Plus, ReceiptText, Wand2 } from 'lucide-react';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import MenuItem from '@mui/material/MenuItem';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TextField from '@mui/material/TextField';
+import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { ProductPicker } from '@/components/pickers/ProductPicker';
@@ -17,16 +24,9 @@ import {
 } from '@/components/ui/Card';
 import { Label } from '@/components/ui/Label';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom } from '@/components/table';
 import { ScopedAdminBanner } from '@/features/scoped-admin/ScopedAdminBanner';
 import { useAuth } from '@/lib/auth';
 import { formatDate } from '@/lib/format';
@@ -54,6 +54,17 @@ const SOURCE_LABEL: Record<ResolvedSource, string> = {
   category: 'Category rule',
   category_default: 'Category default',
 };
+
+const RULE_HEAD = [
+  { id: 'appliesTo', label: 'Applies to' },
+  { id: 'rate', label: 'Rate', align: 'right' as const },
+  { id: 'active', label: 'Active' },
+  { id: 'from', label: 'From' },
+  { id: 'to', label: 'To' },
+  { id: 'notes', label: 'Notes' },
+];
+
+const RULE_HEAD_SUPER = [...RULE_HEAD, { id: 'edit', label: '' }];
 
 export const CommissionPage = () => {
   const { user } = useAuth();
@@ -106,18 +117,21 @@ export const CommissionPage = () => {
 
       <ResolveTool />
 
-      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
-        <Select
+      <Stack direction="row" spacing={2} flexWrap="wrap" alignItems="center">
+        <TextField
+          select
+          label="Scope"
           value={scope}
           onChange={(e) => setScope(e.target.value as '' | CommissionScope)}
-          className="w-44"
+          InputLabelProps={{ shrink: true }}
+          sx={{ width: 200 }}
         >
           {SCOPE_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
+            <MenuItem key={opt.value} value={opt.value}>
               {opt.label}
-            </option>
+            </MenuItem>
           ))}
-        </Select>
+        </TextField>
         <label className="flex items-center gap-2 text-sm">
           <input
             type="checkbox"
@@ -155,64 +169,74 @@ export const CommissionPage = () => {
               </CardHeader>
               <CardContent className="p-0">
                 {grouped[s].length === 0 ? (
-                  <p className="px-6 pb-4 text-sm text-muted-foreground">
+                  <Typography
+                    variant="body2"
+                    sx={{ px: 3, pb: 2, color: 'text.secondary' }}
+                  >
                     No {s} rules{activeOnly ? ' active' : ''}.
-                  </p>
+                  </Typography>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Applies to</TableHead>
-                        <TableHead className="text-right">Rate</TableHead>
-                        <TableHead>Active</TableHead>
-                        <TableHead>From</TableHead>
-                        <TableHead>To</TableHead>
-                        <TableHead>Notes</TableHead>
-                        {isSuper && <TableHead className="w-px" />}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {grouped[s].map((r) => (
-                        <TableRow key={r.id}>
-                          <TableCell>
-                            <span className="font-medium">{r.targetName}</span>
-                            <span className="ml-2 text-xs text-muted-foreground">
-                              {r.targetType}
-                            </span>
-                          </TableCell>
-                          <TableCell className="text-right font-medium">
-                            {r.ratePercent}%
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={r.active ? 'success' : 'muted'}>
-                              {r.active ? 'Active' : 'Inactive'}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-xs">{formatDate(r.effectiveFrom)}</TableCell>
-                          <TableCell className="text-xs">
-                            {r.effectiveTo ? formatDate(r.effectiveTo) : 'open-ended'}
-                          </TableCell>
-                          <TableCell className="max-w-xs truncate text-xs text-muted-foreground">
-                            {r.notes ?? '—'}
-                          </TableCell>
-                          {isSuper && (
+                  <Scrollbar>
+                    <Table sx={{ minWidth: 800 }}>
+                      <TableHeadCustom headLabel={isSuper ? RULE_HEAD_SUPER : RULE_HEAD} />
+                      <TableBody>
+                        {grouped[s].map((r) => (
+                          <TableRow key={r.id} hover>
                             <TableCell>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => {
-                                  setEditing(r);
-                                  setDialogOpen(true);
-                                }}
+                              <Box component="span" sx={{ fontWeight: 600 }}>
+                                {r.targetName}
+                              </Box>
+                              <Box
+                                component="span"
+                                sx={{ ml: 1, color: 'text.secondary', typography: 'caption' }}
                               >
-                                <Pencil className="h-3.5 w-3.5" />
-                              </Button>
+                                {r.targetType}
+                              </Box>
                             </TableCell>
-                          )}
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                            <TableCell align="right" sx={{ fontWeight: 600 }}>
+                              {r.ratePercent}%
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={r.active ? 'success' : 'muted'}>
+                                {r.active ? 'Active' : 'Inactive'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell sx={{ typography: 'caption' }}>
+                              {formatDate(r.effectiveFrom)}
+                            </TableCell>
+                            <TableCell sx={{ typography: 'caption' }}>
+                              {r.effectiveTo ? formatDate(r.effectiveTo) : 'open-ended'}
+                            </TableCell>
+                            <TableCell
+                              sx={{
+                                maxWidth: 320,
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                color: 'text.secondary',
+                                typography: 'caption',
+                              }}
+                            >
+                              {r.notes ?? '—'}
+                            </TableCell>
+                            {isSuper && (
+                              <TableCell>
+                                <IconButton
+                                  size="small"
+                                  onClick={() => {
+                                    setEditing(r);
+                                    setDialogOpen(true);
+                                  }}
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </IconButton>
+                              </TableCell>
+                            )}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </Scrollbar>
                 )}
               </CardContent>
             </Card>

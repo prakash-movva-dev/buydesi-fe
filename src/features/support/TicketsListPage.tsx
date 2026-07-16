@@ -1,26 +1,27 @@
 import { useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { AlertCircle, ChevronLeft, ChevronRight, Clock, UserX } from 'lucide-react';
+import { AlertCircle, Clock, UserX } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import MenuItem from '@mui/material/MenuItem';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
 import {
   readNumber,
   useExposedSettingMap,
 } from '@/features/platform-settings/exposed';
 import { ScopedAdminBanner } from '@/features/scoped-admin/ScopedAdminBanner';
 import { useAuth } from '@/lib/auth';
-import { cn } from '@/lib/cn';
 import { formatDate } from '@/lib/format';
 import { useTicketsList } from './api';
 import {
@@ -62,6 +63,16 @@ const LEVEL_OPTIONS: Array<{ value: '' | SupportEscalationLevel; label: string }
 ];
 
 const PAGE_SIZE = 20;
+
+const HEAD = [
+  { id: 'ticket', label: 'Ticket' },
+  { id: 'status', label: 'Status' },
+  { id: 'tier', label: 'Tier' },
+  { id: 'category', label: 'Category' },
+  { id: 'assigned', label: 'Assigned' },
+  { id: 'sla', label: 'SLA' },
+  { id: 'created', label: 'Created' },
+];
 
 type SlaState = 'ok' | 'warning' | 'breached';
 
@@ -118,7 +129,26 @@ export const TicketsListPage = () => {
 
   const { data, isLoading, isError, error } = useTicketsList(query);
   const total = data?.meta.total ?? 0;
-  const pageCount = total > 0 ? Math.ceil(total / PAGE_SIZE) : 1;
+
+  const rows = useMemo(() => {
+    return (data?.items ?? [])
+      .map((t) => {
+        const warningMs = slaWarningHours * 60 * 60 * 1000;
+        const respState = slaState(
+          t.sla.responseDueAt,
+          t.sla.firstResponseAt,
+          warningMs,
+        );
+        const resoState = slaState(
+          t.sla.resolutionDueAt,
+          t.sla.resolvedAt,
+          warningMs,
+        );
+        const worst = worstSla(respState, resoState);
+        return { t, respState, resoState, worst };
+      })
+      .filter(({ worst }) => !slaRiskOnly || worst !== 'ok');
+  }, [data, slaWarningHours, slaRiskOnly]);
 
   const setParam = (next: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams);
@@ -139,118 +169,109 @@ export const TicketsListPage = () => {
 
       <ScopedAdminBanner />
 
-      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
-        <Select
-          value={status}
-          onChange={(e) => setParam({ status: e.target.value })}
-          className="w-44"
+      <Card>
+        <Stack
+          direction="row"
+          spacing={2}
+          flexWrap="wrap"
+          alignItems="center"
+          sx={{ p: 2.5 }}
         >
-          {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-        <Select
-          value={category}
-          onChange={(e) => setParam({ category: e.target.value })}
-          className="w-44"
-        >
-          {CATEGORY_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-        <Select
-          value={escalationLevel}
-          onChange={(e) => setParam({ escalationLevel: e.target.value })}
-          className="w-36"
-        >
-          {LEVEL_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-        <Button
-          variant={mineOnly ? 'primary' : 'outline'}
-          size="sm"
-          onClick={() =>
-            setParam({ assignedTo: mineOnly ? null : user?.id ?? 'me' })
-          }
-        >
-          {mineOnly ? 'Showing mine' : 'Show only mine'}
-        </Button>
-        <Button
-          variant={unassignedOnly ? 'primary' : 'outline'}
-          size="sm"
-          onClick={() => setParam({ assignedTo: unassignedOnly ? null : 'none' })}
-        >
-          {unassignedOnly ? 'Showing unassigned' : 'Unassigned only'}
-        </Button>
-        <Button
-          variant={slaRiskOnly ? 'primary' : 'outline'}
-          size="sm"
-          onClick={() => setParam({ slaRisk: slaRiskOnly ? null : '1' })}
-        >
-          {slaRiskOnly ? 'SLA risk (page)' : 'SLA risk only'}
-        </Button>
-      </Stack>
+          <TextField
+            select
+            label="Status"
+            value={status}
+            onChange={(e) => setParam({ status: e.target.value })}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 180 }}
+          >
+            {STATUS_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            label="Category"
+            value={category}
+            onChange={(e) => setParam({ category: e.target.value })}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 180 }}
+          >
+            {CATEGORY_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            label="Tier"
+            value={escalationLevel}
+            onChange={(e) => setParam({ escalationLevel: e.target.value })}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 150 }}
+          >
+            {LEVEL_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </TextField>
+          <Button
+            variant={mineOnly ? 'primary' : 'outline'}
+            size="sm"
+            onClick={() =>
+              setParam({ assignedTo: mineOnly ? null : user?.id ?? 'me' })
+            }
+          >
+            {mineOnly ? 'Showing mine' : 'Show only mine'}
+          </Button>
+          <Button
+            variant={unassignedOnly ? 'primary' : 'outline'}
+            size="sm"
+            onClick={() => setParam({ assignedTo: unassignedOnly ? null : 'none' })}
+          >
+            {unassignedOnly ? 'Showing unassigned' : 'Unassigned only'}
+          </Button>
+          <Button
+            variant={slaRiskOnly ? 'primary' : 'outline'}
+            size="sm"
+            onClick={() => setParam({ slaRisk: slaRiskOnly ? null : '1' })}
+          >
+            {slaRiskOnly ? 'SLA risk (page)' : 'SLA risk only'}
+          </Button>
+        </Stack>
 
-      {isLoading && (
-        <div className="space-y-2">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-12 w-full" />
-          ))}
-        </div>
-      )}
+        {isError && (
+          <Box sx={{ px: 2.5, pb: 2, color: 'error.main', typography: 'body2' }}>
+            {error instanceof Error ? error.message : 'Failed to load tickets'}
+          </Box>
+        )}
 
-      {isError && (
-        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
-          {error instanceof Error ? error.message : 'Failed to load tickets'}
-        </div>
-      )}
+        {isLoading && (
+          <Box sx={{ px: 2.5, pb: 2.5 }}>
+            <Stack spacing={1}>
+              {Array.from({ length: 6 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
+              ))}
+            </Stack>
+          </Box>
+        )}
 
-      {!isLoading && !isError && (
-        <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Ticket</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Tier</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Assigned</TableHead>
-                <TableHead>SLA</TableHead>
-                <TableHead>Created</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(data?.items ?? [])
-                .map((t) => {
-                  const warningMs = slaWarningHours * 60 * 60 * 1000;
-                  const respState = slaState(
-                    t.sla.responseDueAt,
-                    t.sla.firstResponseAt,
-                    warningMs,
-                  );
-                  const resoState = slaState(
-                    t.sla.resolutionDueAt,
-                    t.sla.resolvedAt,
-                    warningMs,
-                  );
-                  const worst = worstSla(respState, resoState);
-                  return { t, respState, resoState, worst };
-                })
-                .filter(({ worst }) => !slaRiskOnly || worst !== 'ok')
-                .map(({ t, respState, resoState, worst }) => {
+        {!isLoading && !isError && (
+          <Scrollbar>
+            <Table sx={{ minWidth: 800 }}>
+              <TableHeadCustom headLabel={HEAD} />
+              <TableBody>
+                {rows.map(({ t, respState, resoState, worst }) => {
                   const rowTone =
                     worst === 'breached'
-                      ? 'bg-destructive/5 hover:bg-destructive/10'
+                      ? 'error.lighter'
                       : worst === 'warning'
-                        ? 'bg-amber-50 hover:bg-amber-100'
-                        : '';
+                        ? 'warning.lighter'
+                        : undefined;
                   const slaLabel = (() => {
                     if (resoState === 'breached') return 'resolution breach';
                     if (respState === 'breached') return 'response breach';
@@ -261,12 +282,24 @@ export const TicketsListPage = () => {
                   return (
                     <TableRow
                       key={t.id}
-                      className={cn('cursor-pointer', rowTone)}
+                      hover
+                      sx={{ cursor: 'pointer', bgcolor: rowTone }}
                       onClick={() => navigate(`/admin/support/${t.id}`)}
                     >
-                      <TableCell className="font-medium">
-                        <div>{t.ticketNumber}</div>
-                        <div className="text-xs text-muted-foreground line-clamp-1">{t.subject}</div>
+                      <TableCell sx={{ fontWeight: 500 }}>
+                        <Box>{t.ticketNumber}</Box>
+                        <Box
+                          sx={{
+                            color: 'text.secondary',
+                            typography: 'caption',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 1,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                          }}
+                        >
+                          {t.subject}
+                        </Box>
                       </TableCell>
                       <TableCell>
                         <TicketStatusBadge status={t.status} />
@@ -279,74 +312,84 @@ export const TicketsListPage = () => {
                       </TableCell>
                       <TableCell>
                         {t.assignedTo ? (
-                          <span className="text-xs font-mono">{t.assignedTo.slice(-6)}</span>
+                          <Box sx={{ typography: 'caption', fontFamily: 'monospace' }}>
+                            {t.assignedTo.slice(-6)}
+                          </Box>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                          <Box
+                            sx={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 0.5,
+                              typography: 'caption',
+                              color: 'text.secondary',
+                            }}
+                          >
                             <UserX className="h-3 w-3" />
                             unclaimed
-                          </span>
+                          </Box>
                         )}
                       </TableCell>
                       <TableCell>
                         {worst === 'breached' && (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-destructive">
+                          <Box
+                            sx={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 0.5,
+                              typography: 'caption',
+                              fontWeight: 500,
+                              color: 'error.main',
+                            }}
+                          >
                             <AlertCircle className="h-3 w-3" />
                             {slaLabel}
-                          </span>
+                          </Box>
                         )}
                         {worst === 'warning' && (
-                          <span className="inline-flex items-center gap-1 text-xs font-medium text-amber-700">
+                          <Box
+                            sx={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: 0.5,
+                              typography: 'caption',
+                              fontWeight: 500,
+                              color: 'warning.dark',
+                            }}
+                          >
                             <Clock className="h-3 w-3" />
                             {slaLabel}
-                          </span>
+                          </Box>
                         )}
                       </TableCell>
                       <TableCell>{formatDate(t.createdAt)}</TableCell>
                     </TableRow>
                   );
                 })}
-              {(data?.items.length ?? 0) === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
-                    No tickets match the current filter.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                <TableNoData notFound={!isLoading && (data?.items.length ?? 0) === 0} />
+              </TableBody>
+            </Table>
+          </Scrollbar>
+        )}
 
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>
-              {data?.items.length ?? 0} of {total} · page {page} / {pageCount}
-              {slaRiskOnly && (
-                <span className="ml-2 text-xs">
-                  (SLA-risk filter is page-local — total above includes all tickets.)
-                </span>
-              )}
-            </span>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.max(1, page - 1)) })}
-                disabled={page <= 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Prev
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.min(pageCount, page + 1)) })}
-                disabled={page >= pageCount}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </>
-      )}
+        {slaRiskOnly && (
+          <Typography
+            variant="caption"
+            sx={{ display: 'block', px: 2.5, pt: 1, color: 'text.secondary' }}
+          >
+            SLA-risk filter is page-local — total below includes all tickets.
+          </Typography>
+        )}
+
+        <TablePaginationCustom
+          count={total}
+          page={page - 1}
+          rowsPerPage={PAGE_SIZE}
+          rowsPerPageOptions={[PAGE_SIZE]}
+          onPageChange={(_e, newPage) => setParam({ page: String(newPage + 1) })}
+          onRowsPerPageChange={() => {}}
+        />
+      </Card>
     </Stack>
   );
 };

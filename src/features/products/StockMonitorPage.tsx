@@ -1,26 +1,24 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
-  AlertTriangle,
   Bell,
-  ChevronLeft,
-  ChevronRight,
   Image as ImageIcon,
 } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import MenuItem from '@mui/material/MenuItem';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TextField from '@mui/material/TextField';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { ClusterPicker } from '@/components/pickers/ClusterPicker';
 import { useCategoriesList } from '@/features/categories/api';
@@ -105,7 +103,6 @@ export const StockMonitorPage = () => {
   const { data, isLoading, isError, error } = useProductsList(query);
   const { data: categories } = useCategoriesList();
   const total = data?.meta.total ?? 0;
-  const pageCount = total > 0 ? Math.ceil(total / PAGE_SIZE) : 1;
 
   const categoryName = useMemo(() => {
     const map = new Map<string, string>();
@@ -162,6 +159,16 @@ export const StockMonitorPage = () => {
     }
   };
 
+  const head = [
+    { id: 'thumb', label: '' },
+    { id: 'product', label: 'Product' },
+    { id: 'seller', label: 'Seller' },
+    { id: 'category', label: 'Category' },
+    { id: 'stock', label: 'Stock / threshold', align: 'right' as const },
+    { id: 'status', label: 'Status' },
+    { id: 'actions', label: '' },
+  ];
+
   return (
     <Stack spacing={3}>
       <PageHeader
@@ -190,37 +197,6 @@ export const StockMonitorPage = () => {
         </div>
       )}
 
-      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
-        <Select
-          value={stockState}
-          onChange={(e) => setParam({ stockState: e.target.value })}
-          className="w-48"
-        >
-          {STOCK_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-        <div className="w-72">
-          <CategoryPicker
-            value={category || null}
-            onChange={(id) => setParam({ category: id })}
-            placeholder="All categories"
-            activeOnly={false}
-          />
-        </div>
-        {canScopeCluster && (
-          <div className="w-72">
-            <ClusterPicker
-              value={cluster || null}
-              onChange={(id) => setParam({ cluster: id })}
-              placeholder="All clusters"
-            />
-          </div>
-        )}
-      </Stack>
-
       {isLoading && (
         <div className="space-y-2">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -236,128 +212,130 @@ export const StockMonitorPage = () => {
       )}
 
       {!isLoading && !isError && (
-        <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-px" />
-                <TableHead>Product</TableHead>
-                <TableHead>Seller</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead className="text-right">Stock / threshold</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-px" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(data?.items ?? []).map((product) => {
-                const isOut = product.stock.quantity <= 0;
-                const isLow = !isOut && product.stock.quantity <= product.stock.threshold;
-                const price = lowestPrice(product);
-                return (
-                  <TableRow
-                    key={product.id}
-                    className={cn(
-                      isOut && 'bg-destructive/5 hover:bg-destructive/10',
-                      isLow && 'bg-amber-50 hover:bg-amber-100/70',
-                    )}
-                  >
-                    <TableCell>
-                      <ProductThumb src={product.images[0]} alt={product.name} />
-                    </TableCell>
-                    <TableCell
-                      className="cursor-pointer font-medium"
-                      onClick={() => navigate(`/admin/products/${product.id}`)}
-                    >
-                      <div>{product.name}</div>
-                      {price !== null && (
-                        <div className="text-xs text-muted-foreground">
-                          {formatInr(price)} / {product.unit}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {product.sellerId.slice(-6)}
-                      </span>
-                    </TableCell>
-                    <TableCell>{categoryName(product.categoryId)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <span className="font-medium tabular-nums">
-                          {product.stock.quantity}
-                        </span>
-                        <span className="text-xs text-muted-foreground tabular-nums">
-                          / {product.stock.threshold}
-                        </span>
-                        {isOut ? (
-                          <Badge variant="destructive">Out</Badge>
-                        ) : isLow ? (
-                          <Badge variant="warning">Low</Badge>
-                        ) : null}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <ProductStatusBadge status={product.status} />
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => sendAlert(product)}
-                        disabled={sendAlertMut.isPending || alerted.has(product.id)}
-                      >
-                        <Bell className="h-3.5 w-3.5" />
-                        {alerted.has(product.id) ? 'Alert sent' : 'Send restock alert'}
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-              {(data?.items.length ?? 0) === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
-                    <div className="flex flex-col items-center gap-2">
-                      <AlertTriangle className="h-5 w-5 text-muted-foreground" />
-                      No products match the current filters.
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-
+        <Card>
           <Stack
             direction="row"
+            spacing={2}
+            flexWrap="wrap"
             alignItems="center"
-            justifyContent="space-between"
-            sx={{ fontSize: 14, color: 'text.secondary' }}
+            sx={{ p: 2.5 }}
           >
-            <span>
-              {data?.items.length ?? 0} of {total} · page {page} / {pageCount}
-            </span>
-            <Stack direction="row" spacing={1}>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.max(1, page - 1)) })}
-                disabled={page <= 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Prev
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.min(pageCount, page + 1)) })}
-                disabled={page >= pageCount}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </Stack>
+            <TextField
+              select
+              label="Stock level"
+              value={stockState}
+              onChange={(e) => setParam({ stockState: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: 200 }}
+            >
+              {STOCK_OPTIONS.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </TextField>
+            <Box sx={{ width: 288 }}>
+              <CategoryPicker
+                value={category || null}
+                onChange={(id) => setParam({ category: id })}
+                placeholder="All categories"
+                activeOnly={false}
+              />
+            </Box>
+            {canScopeCluster && (
+              <Box sx={{ width: 288 }}>
+                <ClusterPicker
+                  value={cluster || null}
+                  onChange={(id) => setParam({ cluster: id })}
+                  placeholder="All clusters"
+                />
+              </Box>
+            )}
           </Stack>
-        </>
+
+          <Scrollbar>
+            <Table sx={{ minWidth: 800 }}>
+              <TableHeadCustom headLabel={head} />
+              <TableBody>
+                {(data?.items ?? []).map((product) => {
+                  const isOut = product.stock.quantity <= 0;
+                  const isLow = !isOut && product.stock.quantity <= product.stock.threshold;
+                  const price = lowestPrice(product);
+                  return (
+                    <TableRow
+                      key={product.id}
+                      hover
+                      className={cn(
+                        isOut && 'bg-destructive/5 hover:bg-destructive/10',
+                        isLow && 'bg-amber-50 hover:bg-amber-100/70',
+                      )}
+                    >
+                      <TableCell>
+                        <ProductThumb src={product.images[0]} alt={product.name} />
+                      </TableCell>
+                      <TableCell
+                        className="cursor-pointer font-medium"
+                        onClick={() => navigate(`/admin/products/${product.id}`)}
+                      >
+                        <div>{product.name}</div>
+                        {price !== null && (
+                          <div className="text-xs text-muted-foreground">
+                            {formatInr(price)} / {product.unit}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-mono text-xs text-muted-foreground">
+                          {product.sellerId.slice(-6)}
+                        </span>
+                      </TableCell>
+                      <TableCell>{categoryName(product.categoryId)}</TableCell>
+                      <TableCell align="right">
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="font-medium tabular-nums">
+                            {product.stock.quantity}
+                          </span>
+                          <span className="text-xs text-muted-foreground tabular-nums">
+                            / {product.stock.threshold}
+                          </span>
+                          {isOut ? (
+                            <Badge variant="destructive">Out</Badge>
+                          ) : isLow ? (
+                            <Badge variant="warning">Low</Badge>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <ProductStatusBadge status={product.status} />
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => sendAlert(product)}
+                          disabled={sendAlertMut.isPending || alerted.has(product.id)}
+                        >
+                          <Bell className="h-3.5 w-3.5" />
+                          {alerted.has(product.id) ? 'Alert sent' : 'Send restock alert'}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                <TableNoData notFound={!isLoading && (data?.items.length ?? 0) === 0} />
+              </TableBody>
+            </Table>
+          </Scrollbar>
+
+          <TablePaginationCustom
+            count={total}
+            page={page - 1}
+            rowsPerPage={PAGE_SIZE}
+            rowsPerPageOptions={[10, 25, 50]}
+            onPageChange={(_e, newPage) => setParam({ page: String(newPage + 1) })}
+            onRowsPerPageChange={(e) => setParam({ limit: e.target.value, page: '1' })}
+          />
+        </Card>
       )}
     </Stack>
   );

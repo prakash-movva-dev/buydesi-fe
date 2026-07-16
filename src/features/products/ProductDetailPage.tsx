@@ -13,6 +13,10 @@ import {
 } from 'lucide-react';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
 import Typography from '@mui/material/Typography';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -27,14 +31,8 @@ import { Dialog } from '@/components/ui/Dialog';
 import { Label } from '@/components/ui/Label';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Textarea } from '@/components/ui/Textarea';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom } from '@/components/table';
 import { useCategoriesList } from '@/features/categories/api';
 import { formatDate, formatDateTime, formatInr } from '@/lib/format';
 import { ApiError } from '@/types/api';
@@ -504,6 +502,15 @@ const DuplicateCheck = ({
 }) => {
   const { data, isLoading, isError, error } = useProductDuplicates(productId);
 
+  const dupHead = [
+    { id: 'thumb', label: '' },
+    { id: 'name', label: 'Name' },
+    { id: 'seller', label: 'Seller' },
+    { id: 'status', label: 'Status' },
+    { id: 'submitted', label: 'Submitted' },
+    { id: 'actions', label: '' },
+  ];
+
   return (
     <Card>
       <CardHeader>
@@ -527,62 +534,55 @@ const DuplicateCheck = ({
           </div>
         )}
         {!isLoading && !isError && (data?.length ?? 0) > 0 && (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-px" />
-                <TableHead>Name</TableHead>
-                <TableHead>Seller</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Submitted</TableHead>
-                <TableHead className="w-px" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(data ?? []).map((c) => (
-                <TableRow key={c.id}>
-                  <TableCell>
-                    {c.image ? (
-                      <img
-                        src={c.image}
-                        alt={c.name}
-                        className="h-10 w-10 rounded-md border border-border object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-10 w-10 items-center justify-center rounded-md border border-border bg-secondary text-muted-foreground">
-                        <ImageIcon className="h-4 w-4" />
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Link
-                      to={`/admin/products/${c.id}`}
-                      className="font-medium text-primary underline-offset-2 hover:underline"
-                    >
-                      {c.name}
-                    </Link>
-                  </TableCell>
-                  <TableCell>
-                    <span className="font-mono text-xs text-muted-foreground">
-                      {c.sellerId.slice(-6)}
-                    </span>
-                  </TableCell>
-                  <TableCell>
-                    <ProductStatusBadge status={c.status} />
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {formatDate(c.createdAt)}
-                  </TableCell>
-                  <TableCell>
-                    <Button size="sm" variant="outline" onClick={() => onMarkDuplicate(c)}>
-                      <Copy className="h-3.5 w-3.5" />
-                      Mark as duplicate
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <Scrollbar>
+            <Table sx={{ minWidth: 800 }}>
+              <TableHeadCustom headLabel={dupHead} />
+              <TableBody>
+                {(data ?? []).map((c) => (
+                  <TableRow key={c.id} hover>
+                    <TableCell>
+                      {c.image ? (
+                        <img
+                          src={c.image}
+                          alt={c.name}
+                          className="h-10 w-10 rounded-md border border-border object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-md border border-border bg-secondary text-muted-foreground">
+                          <ImageIcon className="h-4 w-4" />
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Link
+                        to={`/admin/products/${c.id}`}
+                        className="font-medium text-primary underline-offset-2 hover:underline"
+                      >
+                        {c.name}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {c.sellerId.slice(-6)}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <ProductStatusBadge status={c.status} />
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {formatDate(c.createdAt)}
+                    </TableCell>
+                    <TableCell>
+                      <Button size="sm" variant="outline" onClick={() => onMarkDuplicate(c)}>
+                        <Copy className="h-3.5 w-3.5" />
+                        Mark as duplicate
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Scrollbar>
         )}
       </CardContent>
     </Card>

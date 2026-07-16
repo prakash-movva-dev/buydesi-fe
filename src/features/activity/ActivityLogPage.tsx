@@ -1,25 +1,35 @@
 import { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import { Download } from 'lucide-react';
 import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import MenuItem from '@mui/material/MenuItem';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+import { useSearchParams } from 'react-router-dom';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
 import { formatDateTime } from '@/lib/format';
 import { downloadActivityCsv, useActivityList } from './api';
 import type { ActivityListQuery } from './types';
+
+const HEAD = [
+  { id: 'when', label: 'When' },
+  { id: 'actor', label: 'Actor' },
+  { id: 'action', label: 'Action' },
+  { id: 'entity', label: 'Entity' },
+  { id: 'meta', label: 'Path / metadata' },
+  { id: 'status', label: 'Status' },
+  { id: 'ip', label: 'IP' },
+];
 
 const ROLE_OPTIONS = [
   { value: '', label: 'Any actor role' },
@@ -69,7 +79,6 @@ export const ActivityLogPage = () => {
 
   const { data, isLoading, isError, error } = useActivityList(query);
   const total = data?.meta.total ?? 0;
-  const pageCount = total > 0 ? Math.ceil(total / PAGE_SIZE) : 1;
 
   const [downloading, setDownloading] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
@@ -114,44 +123,56 @@ export const ActivityLogPage = () => {
           gridTemplateColumns: { xs: '1fr', sm: 'repeat(2,1fr)', lg: 'repeat(4,1fr)' },
         }}
       >
-        <Input
+        <TextField
           value={actorId}
           onChange={(e) => setParam({ actorId: e.target.value })}
-          placeholder="Actor id"
+          label="Actor id"
+          InputLabelProps={{ shrink: true }}
         />
-        <Select value={actorRole} onChange={(e) => setParam({ actorRole: e.target.value })}>
+        <TextField
+          select
+          label="Actor role"
+          value={actorRole}
+          onChange={(e) => setParam({ actorRole: e.target.value })}
+          InputLabelProps={{ shrink: true }}
+        >
           {ROLE_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
+            <MenuItem key={opt.value} value={opt.value}>
               {opt.label}
-            </option>
+            </MenuItem>
           ))}
-        </Select>
-        <Input
+        </TextField>
+        <TextField
           value={action}
           onChange={(e) => setParam({ action: e.target.value })}
-          placeholder="Action (e.g. http.PUT)"
+          label="Action (e.g. http.PUT)"
+          InputLabelProps={{ shrink: true }}
         />
-        <Input
+        <TextField
           value={entityType}
           onChange={(e) => setParam({ entityType: e.target.value })}
-          placeholder="Entity type"
+          label="Entity type"
+          InputLabelProps={{ shrink: true }}
         />
-        <Input
+        <TextField
           value={entityId}
           onChange={(e) => setParam({ entityId: e.target.value })}
-          placeholder="Entity id"
+          label="Entity id"
+          InputLabelProps={{ shrink: true }}
         />
-        <Input
+        <TextField
           type="date"
           value={from}
           onChange={(e) => setParam({ from: e.target.value })}
-          aria-label="From date"
+          label="From date"
+          InputLabelProps={{ shrink: true }}
         />
-        <Input
+        <TextField
           type="date"
           value={to}
           onChange={(e) => setParam({ to: e.target.value })}
-          aria-label="To date"
+          label="To date"
+          InputLabelProps={{ shrink: true }}
         />
         <Button variant="outline" onClick={() => setSearchParams(new URLSearchParams())}>
           Clear filters
@@ -181,102 +202,91 @@ export const ActivityLogPage = () => {
 
       {!isLoading && !isError && (
         <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>When</TableHead>
-                <TableHead>Actor</TableHead>
-                <TableHead>Action</TableHead>
-                <TableHead>Entity</TableHead>
-                <TableHead>Path / metadata</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>IP</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(data?.items ?? []).map((e) => {
-                const path =
-                  typeof e.metadata?.path === 'string' ? (e.metadata.path as string) : null;
-                return (
-                  <TableRow key={e.id ?? e._id}>
-                    <TableCell className="whitespace-nowrap text-xs">
-                      {formatDateTime(e.at)}
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      {e.actorRole && <Badge variant="muted">{e.actorRole}</Badge>}
-                      {e.actorId && (
-                        <div className="mt-0.5 font-mono">{e.actorId.slice(-10)}</div>
-                      )}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">{e.action}</TableCell>
-                    <TableCell className="text-xs">
-                      {e.entityType ? (
-                        <>
-                          <Badge variant="info">{e.entityType}</Badge>
-                          {e.entityId && (
-                            <div className="mt-0.5 font-mono">{e.entityId.slice(-10)}</div>
+          <Card>
+            <Scrollbar>
+              <Table sx={{ minWidth: 800 }}>
+                <TableHeadCustom headLabel={HEAD} />
+                <TableBody>
+                  {(data?.items ?? []).map((e) => {
+                    const path =
+                      typeof e.metadata?.path === 'string' ? (e.metadata.path as string) : null;
+                    return (
+                      <TableRow key={e.id ?? e._id} hover>
+                        <TableCell sx={{ whiteSpace: 'nowrap', typography: 'caption' }}>
+                          {formatDateTime(e.at)}
+                        </TableCell>
+                        <TableCell sx={{ typography: 'caption' }}>
+                          {e.actorRole && <Badge variant="muted">{e.actorRole}</Badge>}
+                          {e.actorId && (
+                            <Box sx={{ mt: 0.25, fontFamily: 'monospace' }}>
+                              {e.actorId.slice(-10)}
+                            </Box>
                           )}
-                        </>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="max-w-md truncate font-mono text-xs" title={path ?? ''}>
-                      {path ?? (Object.keys(e.metadata).length ? JSON.stringify(e.metadata) : '—')}
-                    </TableCell>
-                    <TableCell>
-                      {e.status !== null ? (
-                        <Badge variant={statusVariant(e.status)}>{e.status}</Badge>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {e.ip ?? '—'}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-              {(data?.items.length ?? 0) === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
-                    No matching activity.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                        </TableCell>
+                        <TableCell sx={{ fontFamily: 'monospace', typography: 'caption' }}>
+                          {e.action}
+                        </TableCell>
+                        <TableCell sx={{ typography: 'caption' }}>
+                          {e.entityType ? (
+                            <>
+                              <Badge variant="info">{e.entityType}</Badge>
+                              {e.entityId && (
+                                <Box sx={{ mt: 0.25, fontFamily: 'monospace' }}>
+                                  {e.entityId.slice(-10)}
+                                </Box>
+                              )}
+                            </>
+                          ) : (
+                            <Box component="span" sx={{ color: 'text.secondary' }}>—</Box>
+                          )}
+                        </TableCell>
+                        <TableCell
+                          title={path ?? ''}
+                          sx={{
+                            maxWidth: 360,
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            fontFamily: 'monospace',
+                            typography: 'caption',
+                          }}
+                        >
+                          {path ?? (Object.keys(e.metadata).length ? JSON.stringify(e.metadata) : '—')}
+                        </TableCell>
+                        <TableCell>
+                          {e.status !== null ? (
+                            <Badge variant={statusVariant(e.status)}>{e.status}</Badge>
+                          ) : (
+                            <Box component="span" sx={{ color: 'text.secondary', typography: 'caption' }}>
+                              —
+                            </Box>
+                          )}
+                        </TableCell>
+                        <TableCell sx={{ color: 'text.secondary', typography: 'caption' }}>
+                          {e.ip ?? '—'}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  <TableNoData notFound={!isLoading && (data?.items.length ?? 0) === 0} />
+                </TableBody>
+              </Table>
+            </Scrollbar>
 
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>
-              {data?.items.length ?? 0} of {total} · page {page} / {pageCount}
-            </span>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.max(1, page - 1)) })}
-                disabled={page <= 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Prev
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.min(pageCount, page + 1)) })}
-                disabled={page >= pageCount}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+            <TablePaginationCustom
+              count={total}
+              page={page - 1}
+              rowsPerPage={PAGE_SIZE}
+              rowsPerPageOptions={[10, 25, 50]}
+              onPageChange={(_e, newPage) => setParam({ page: String(newPage + 1) })}
+              onRowsPerPageChange={() => {}}
+            />
+          </Card>
 
-          <p className="text-xs text-muted-foreground">
+          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
             Entries auto-expire after 180 days via Mongo TTL — snapshot to cold storage if you
             need longer retention.
-          </p>
+          </Typography>
         </>
       )}
     </Stack>

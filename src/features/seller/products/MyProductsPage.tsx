@@ -1,21 +1,23 @@
 import { useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Pencil, Plus, Search, Trash2, Upload } from 'lucide-react';
+import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom';
+import { Pencil, Plus, Trash2, Upload } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
+import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import MenuItem from '@mui/material/MenuItem';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TextField from '@mui/material/TextField';
+import IconButton from '@mui/material/IconButton';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
 import { ProductStatusBadge } from '@/features/products/status-badge';
 import { BulkUploadDialog } from '@/features/products/BulkUploadDialog';
 import { formatDate, formatInr } from '@/lib/format';
@@ -31,6 +33,15 @@ const STATUS_OPTIONS: Array<{ value: '' | ProductStatus; label: string }> = [
 ];
 
 const PAGE_SIZE = 20;
+
+const HEAD = [
+  { id: 'product', label: 'Product' },
+  { id: 'status', label: 'Status' },
+  { id: 'stock', label: 'Stock', align: 'right' as const },
+  { id: 'price', label: 'Price', align: 'right' as const },
+  { id: 'updated', label: 'Last updated' },
+  { id: 'actions', label: '' },
+];
 
 const lowestPrice = (p: { pricing: { standard?: number; organic?: number; premium?: number } }) =>
   Math.min(
@@ -62,7 +73,6 @@ export const MyProductsPage = () => {
   const { data, isLoading } = useMyProducts(query);
   const remove = useDeleteProduct();
   const total = data?.meta.total ?? 0;
-  const pageCount = total > 0 ? Math.ceil(total / PAGE_SIZE) : 1;
 
   const setParam = (next: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams);
@@ -100,152 +110,121 @@ export const MyProductsPage = () => {
         }
       />
 
-      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
-        <Select
-          value={status}
-          onChange={(e) => setParam({ status: e.target.value })}
-          className="w-48"
+      <Card>
+        <Stack
+          direction="row"
+          spacing={2}
+          flexWrap="wrap"
+          alignItems="center"
+          sx={{ p: 2.5 }}
         >
-          {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-        <div className="w-56">
-          <CategoryPicker
-            value={category || null}
-            onChange={(id) => setParam({ category: id ?? '' })}
-            placeholder="All my categories"
-          />
-        </div>
-        <div className="relative w-80">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
+          <TextField
+            select
+            label="Status"
+            value={status}
+            onChange={(e) => setParam({ status: e.target.value })}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 192 }}
+          >
+            {STATUS_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </TextField>
+          <Box sx={{ width: 224 }}>
+            <CategoryPicker
+              value={category || null}
+              onChange={(id) => setParam({ category: id ?? '' })}
+              placeholder="All my categories"
+            />
+          </Box>
+          <TextField
+            label="Search"
             value={q}
             onChange={(e) => setParam({ q: e.target.value })}
             placeholder="Search by name…"
-            className="pl-9"
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 320 }}
           />
-        </div>
-      </Stack>
+        </Stack>
 
-      {isLoading && (
-        <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-12 w-full" />
-          ))}
-        </div>
-      )}
-
-      {!isLoading && (
-        <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Product</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Stock</TableHead>
-                <TableHead className="text-right">Price</TableHead>
-                <TableHead>Last updated</TableHead>
-                <TableHead className="w-px" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(data?.items ?? []).map((p) => (
-                <TableRow key={p.id} className="cursor-pointer">
-                  <TableCell
-                    className="font-medium"
-                    onClick={() => navigate(`/seller/products/${p.id}`)}
-                  >
-                    {p.name}
-                    <div className="text-xs text-muted-foreground">{p.unit}</div>
-                  </TableCell>
-                  <TableCell onClick={() => navigate(`/seller/products/${p.id}`)}>
-                    <ProductStatusBadge status={p.status} />
-                  </TableCell>
-                  <TableCell
-                    className="text-right"
-                    onClick={() => navigate(`/seller/products/${p.id}`)}
-                  >
-                    {p.stock.quantity}
-                    {p.stock.quantity <= p.stock.threshold && (
-                      <span className="ml-1 text-xs text-amber-700">low</span>
-                    )}
-                  </TableCell>
-                  <TableCell
-                    className="text-right"
-                    onClick={() => navigate(`/seller/products/${p.id}`)}
-                  >
-                    {formatInr(lowestPrice(p))}
-                  </TableCell>
-                  <TableCell onClick={() => navigate(`/seller/products/${p.id}`)}>
-                    {formatDate(p.updatedAt)}
-                  </TableCell>
-                  <TableCell className="space-x-1 whitespace-nowrap">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigate(`/seller/products/${p.id}/edit`);
-                      }}
-                      title="Edit"
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete(p.id);
-                      }}
-                      disabled={remove.isPending}
-                      title="Delete"
-                    >
-                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
+        {isLoading && (
+          <Box sx={{ p: 2.5 }}>
+            <Stack spacing={1}>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <Skeleton key={i} className="h-12 w-full" />
               ))}
-              {(data?.items.length ?? 0) === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="py-12 text-center text-sm text-muted-foreground">
-                    No products yet. Create your first to start selling.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+            </Stack>
+          </Box>
+        )}
 
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>
-              {data?.items.length ?? 0} of {total} · page {page} / {pageCount}
-            </span>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.max(1, page - 1)) })}
-                disabled={page <= 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Prev
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.min(pageCount, page + 1)) })}
-                disabled={page >= pageCount}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </>
-      )}
+        {!isLoading && (
+          <>
+            <Scrollbar>
+              <Table sx={{ minWidth: 800 }}>
+                <TableHeadCustom headLabel={HEAD} />
+                <TableBody>
+                  {(data?.items ?? []).map((p) => (
+                    <TableRow key={p.id} hover>
+                      <TableCell sx={{ fontWeight: 600 }}>
+                        <Link
+                          component={RouterLink}
+                          to={`/seller/products/${p.id}`}
+                          color="inherit"
+                        >
+                          {p.name}
+                        </Link>
+                        <Box sx={{ color: 'text.secondary', typography: 'caption' }}>{p.unit}</Box>
+                      </TableCell>
+                      <TableCell>
+                        <ProductStatusBadge status={p.status} />
+                      </TableCell>
+                      <TableCell align="right">
+                        {p.stock.quantity}
+                        {p.stock.quantity <= p.stock.threshold && (
+                          <Box component="span" sx={{ ml: 0.5, typography: 'caption', color: 'warning.dark' }}>
+                            low
+                          </Box>
+                        )}
+                      </TableCell>
+                      <TableCell align="right">{formatInr(lowestPrice(p))}</TableCell>
+                      <TableCell>{formatDate(p.updatedAt)}</TableCell>
+                      <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                        <IconButton
+                          size="small"
+                          onClick={() => navigate(`/seller/products/${p.id}/edit`)}
+                          title="Edit"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => onDelete(p.id)}
+                          disabled={remove.isPending}
+                          title="Delete"
+                        >
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </IconButton>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  <TableNoData notFound={!isLoading && (data?.items.length ?? 0) === 0} />
+                </TableBody>
+              </Table>
+            </Scrollbar>
+
+            <TablePaginationCustom
+              count={total}
+              page={page - 1}
+              rowsPerPage={PAGE_SIZE}
+              rowsPerPageOptions={[10, 25, 50]}
+              onPageChange={(_e, newPage) => setParam({ page: String(newPage + 1) })}
+              onRowsPerPageChange={() => {}}
+            />
+          </>
+        )}
+      </Card>
 
       <BulkUploadDialog open={bulkOpen} onClose={() => setBulkOpen(false)} forSelf />
     </Stack>

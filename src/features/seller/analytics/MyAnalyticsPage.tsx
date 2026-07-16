@@ -2,8 +2,13 @@ import { useMemo, useState } from 'react';
 import { BarChart3, Box as BoxIcon, RefreshCw, ShoppingBag, Star, Users, Wallet } from 'lucide-react';
 import MuiBox from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import MenuItem from '@mui/material/MenuItem';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
   Card,
@@ -12,19 +17,10 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData } from '@/components/table';
 import { formatDate, formatInr } from '@/lib/format';
 import { useSellerAnalytics, type Granularity } from '@/features/seller/profile/api';
 
@@ -69,33 +65,35 @@ export const MyAnalyticsPage = () => {
           <CardTitle className="text-base">Date range</CardTitle>
         </CardHeader>
         <CardContent>
-          <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="flex-end">
-            <div className="space-y-1.5">
-              <Label htmlFor="an-from">From</Label>
-              <Input
-                id="an-from"
-                type="date"
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="an-to">To</Label>
-              <Input id="an-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="an-gran">Granularity</Label>
-              <Select
-                id="an-gran"
-                value={granularity}
-                onChange={(e) => setGranularity(e.target.value as Granularity)}
-                className="w-40"
-              >
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly">Monthly</option>
-              </Select>
-            </div>
+          <Stack direction="row" spacing={2} flexWrap="wrap" alignItems="center">
+            <TextField
+              label="From"
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: 180 }}
+            />
+            <TextField
+              label="To"
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: 180 }}
+            />
+            <TextField
+              select
+              label="Granularity"
+              value={granularity}
+              onChange={(e) => setGranularity(e.target.value as Granularity)}
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: 160 }}
+            >
+              <MenuItem value="daily">Daily</MenuItem>
+              <MenuItem value="weekly">Weekly</MenuItem>
+              <MenuItem value="monthly">Monthly</MenuItem>
+            </TextField>
           </Stack>
         </CardContent>
       </Card>
@@ -137,33 +135,29 @@ export const MyAnalyticsPage = () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Bucket</TableHead>
-                    <TableHead className="text-right">Orders</TableHead>
-                    <TableHead className="text-right">Revenue</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.sales.timeseries.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={3} className="py-6 text-center text-sm text-muted-foreground">
-                        No data in this range.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {data.sales.timeseries.map((b) => (
-                    <TableRow key={b.bucket}>
-                      <TableCell>{b.bucket}</TableCell>
-                      <TableCell className="text-right">{b.orders}</TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatInr(b.revenueInr)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <Scrollbar>
+                <Table sx={{ minWidth: 800 }}>
+                  <TableHeadCustom
+                    headLabel={[
+                      { id: 'bucket', label: 'Bucket' },
+                      { id: 'orders', label: 'Orders', align: 'right' as const },
+                      { id: 'revenue', label: 'Revenue', align: 'right' as const },
+                    ]}
+                  />
+                  <TableBody>
+                    {data.sales.timeseries.map((b) => (
+                      <TableRow key={b.bucket} hover>
+                        <TableCell>{b.bucket}</TableCell>
+                        <TableCell align="right">{b.orders}</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 600 }}>
+                          {formatInr(b.revenueInr)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableNoData notFound={data.sales.timeseries.length === 0} />
+                  </TableBody>
+                </Table>
+              </Scrollbar>
             </CardContent>
           </Card>
 
@@ -221,33 +215,29 @@ export const MyAnalyticsPage = () => {
           <SectionTitle icon={Star} title="Top products" />
           <Card>
             <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Product</TableHead>
-                    <TableHead className="text-right">Units sold</TableHead>
-                    <TableHead className="text-right">Revenue</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.productPerformance.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={3} className="py-6 text-center text-sm text-muted-foreground">
-                        No sales in this range.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                  {data.productPerformance.map((r) => (
-                    <TableRow key={r.productId}>
-                      <TableCell className="font-medium">{r.name}</TableCell>
-                      <TableCell className="text-right">{r.unitsSold}</TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatInr(r.revenueInr)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+              <Scrollbar>
+                <Table sx={{ minWidth: 800 }}>
+                  <TableHeadCustom
+                    headLabel={[
+                      { id: 'product', label: 'Product' },
+                      { id: 'units', label: 'Units sold', align: 'right' as const },
+                      { id: 'revenue', label: 'Revenue', align: 'right' as const },
+                    ]}
+                  />
+                  <TableBody>
+                    {data.productPerformance.map((r) => (
+                      <TableRow key={r.productId} hover>
+                        <TableCell sx={{ fontWeight: 600 }}>{r.name}</TableCell>
+                        <TableCell align="right">{r.unitsSold}</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 600 }}>
+                          {formatInr(r.revenueInr)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableNoData notFound={data.productPerformance.length === 0} />
+                  </TableBody>
+                </Table>
+              </Scrollbar>
             </CardContent>
           </Card>
 
@@ -318,6 +308,3 @@ const Metric = ({
     </CardHeader>
   </Card>
 );
-
-// Inline Badge to satisfy the unused-import lint while still being available for future use.
-void Badge;

@@ -1,20 +1,21 @@
 import { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Plus, ToggleRight } from 'lucide-react';
+import { Plus, ToggleRight } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import MenuItem from '@mui/material/MenuItem';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TextField from '@mui/material/TextField';
+import { useSearchParams } from 'react-router-dom';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
 import { formatDate } from '@/lib/format';
 import { usePromotionsList, useUpdatePromotion } from './api';
 import { PromotionFormDialog } from './PromotionFormDialog';
@@ -24,6 +25,16 @@ import type {
   PromotionType,
   PromotionsListQuery,
 } from './types';
+
+const HEAD = [
+  { id: 'name', label: 'Name' },
+  { id: 'type', label: 'Type' },
+  { id: 'scope', label: 'Scope' },
+  { id: 'summary', label: 'Summary' },
+  { id: 'window', label: 'Window' },
+  { id: 'active', label: 'Active' },
+  { id: 'actions', label: '' },
+];
 
 const TYPE_OPTIONS: Array<{ value: '' | PromotionType; label: string }> = [
   { value: '', label: 'All types' },
@@ -90,7 +101,6 @@ export const PromotionsPage = () => {
   const { data, isLoading, isError, error } = usePromotionsList(query);
   const updateMut = useUpdatePromotion();
   const total = data?.meta.total ?? 0;
-  const pageCount = total > 0 ? Math.ceil(total / PAGE_SIZE) : 1;
 
   const setParam = (next: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams);
@@ -117,40 +127,6 @@ export const PromotionsPage = () => {
         }
       />
 
-      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
-        <Select
-          value={type}
-          onChange={(e) => setParam({ type: e.target.value })}
-          className="w-48"
-        >
-          {TYPE_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-        <Select
-          value={scope}
-          onChange={(e) => setParam({ scope: e.target.value })}
-          className="w-40"
-        >
-          {SCOPE_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-        <Select
-          value={active}
-          onChange={(e) => setParam({ active: e.target.value })}
-          className="w-40"
-        >
-          <option value="">Any status</option>
-          <option value="true">Active</option>
-          <option value="false">Inactive</option>
-        </Select>
-      </Stack>
-
       {isLoading && <Skeleton className="h-40 w-full" />}
       {isError && (
         <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
@@ -159,112 +135,143 @@ export const PromotionsPage = () => {
       )}
 
       {!isLoading && !isError && (
-        <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Scope</TableHead>
-                <TableHead>Summary</TableHead>
-                <TableHead>Window</TableHead>
-                <TableHead>Active</TableHead>
-                <TableHead className="w-px" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(data?.items ?? []).map((p) => {
-                const id = p.id ?? p._id;
-                const now = Date.now();
-                const live =
-                  p.active &&
-                  new Date(p.startsAt).getTime() <= now &&
-                  new Date(p.endsAt).getTime() > now;
-                return (
-                  <TableRow key={id}>
-                    <TableCell className="font-medium">
-                      {p.name}
-                      {p.isOverride && (
-                        <Badge variant="info" className="ml-2">
-                          override
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={typeVariant[p.type]}>{p.type}</Badge>
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      <Badge variant="muted">{p.scope}</Badge>
-                      {p.scope === 'cluster' && p.clusterId && (
-                        <div className="mt-0.5 font-mono">{p.clusterId.slice(-8)}</div>
-                      )}
-                      {p.scope === 'category' && p.categoryId && (
-                        <div className="mt-0.5 font-mono">{p.categoryId.slice(-8)}</div>
-                      )}
-                    </TableCell>
-                    <TableCell className="max-w-md truncate text-xs" title={promotionSummary(p)}>
-                      {promotionSummary(p)}
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      {formatDate(p.startsAt)} → {formatDate(p.endsAt)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={live ? 'success' : p.active ? 'warning' : 'muted'}>
-                        {live ? 'Live now' : p.active ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() =>
-                          updateMut.mutate({ id, patch: { active: !p.active } })
-                        }
-                        disabled={updateMut.isPending}
-                        title={p.active ? 'Deactivate' : 'Activate'}
-                      >
-                        <ToggleRight className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-              {(data?.items.length ?? 0) === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
-                    No promotions match the current filter.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+        <Card>
+          <Stack
+            direction="row"
+            spacing={2}
+            flexWrap="wrap"
+            alignItems="center"
+            sx={{ p: 2.5 }}
+          >
+            <TextField
+              select
+              label="Type"
+              value={type}
+              onChange={(e) => setParam({ type: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: 200 }}
+            >
+              {TYPE_OPTIONS.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label="Scope"
+              value={scope}
+              onChange={(e) => setParam({ scope: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: 180 }}
+            >
+              {SCOPE_OPTIONS.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label="Status"
+              value={active}
+              onChange={(e) => setParam({ active: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: 180 }}
+            >
+              <MenuItem value="">Any status</MenuItem>
+              <MenuItem value="true">Active</MenuItem>
+              <MenuItem value="false">Inactive</MenuItem>
+            </TextField>
+          </Stack>
 
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>
-              {data?.items.length ?? 0} of {total} · page {page} / {pageCount}
-            </span>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.max(1, page - 1)) })}
-                disabled={page <= 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Prev
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.min(pageCount, page + 1)) })}
-                disabled={page >= pageCount}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </>
+          <Scrollbar>
+            <Table sx={{ minWidth: 800 }}>
+              <TableHeadCustom headLabel={HEAD} />
+              <TableBody>
+                {(data?.items ?? []).map((p) => {
+                  const id = p.id ?? p._id;
+                  const now = Date.now();
+                  const live =
+                    p.active &&
+                    new Date(p.startsAt).getTime() <= now &&
+                    new Date(p.endsAt).getTime() > now;
+                  return (
+                    <TableRow key={id} hover>
+                      <TableCell sx={{ fontWeight: 500 }}>
+                        {p.name}
+                        {p.isOverride && (
+                          <Badge variant="info" className="ml-2">
+                            override
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={typeVariant[p.type]}>{p.type}</Badge>
+                      </TableCell>
+                      <TableCell sx={{ typography: 'caption' }}>
+                        <Badge variant="muted">{p.scope}</Badge>
+                        {p.scope === 'cluster' && p.clusterId && (
+                          <Box sx={{ mt: 0.25, fontFamily: 'monospace' }}>
+                            {p.clusterId.slice(-8)}
+                          </Box>
+                        )}
+                        {p.scope === 'category' && p.categoryId && (
+                          <Box sx={{ mt: 0.25, fontFamily: 'monospace' }}>
+                            {p.categoryId.slice(-8)}
+                          </Box>
+                        )}
+                      </TableCell>
+                      <TableCell
+                        title={promotionSummary(p)}
+                        sx={{
+                          maxWidth: 360,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          typography: 'caption',
+                        }}
+                      >
+                        {promotionSummary(p)}
+                      </TableCell>
+                      <TableCell sx={{ typography: 'caption' }}>
+                        {formatDate(p.startsAt)} → {formatDate(p.endsAt)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={live ? 'success' : p.active ? 'warning' : 'muted'}>
+                          {live ? 'Live now' : p.active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell align="right">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() =>
+                            updateMut.mutate({ id, patch: { active: !p.active } })
+                          }
+                          disabled={updateMut.isPending}
+                          title={p.active ? 'Deactivate' : 'Activate'}
+                        >
+                          <ToggleRight className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                <TableNoData notFound={!isLoading && (data?.items.length ?? 0) === 0} />
+              </TableBody>
+            </Table>
+          </Scrollbar>
+
+          <TablePaginationCustom
+            count={total}
+            page={page - 1}
+            rowsPerPage={PAGE_SIZE}
+            rowsPerPageOptions={[10, 25, 50]}
+            onPageChange={(_e, newPage) => setParam({ page: String(newPage + 1) })}
+            onRowsPerPageChange={() => {}}
+          />
+        </Card>
       )}
 
       <PromotionFormDialog

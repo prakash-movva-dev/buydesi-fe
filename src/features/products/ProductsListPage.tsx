@@ -1,22 +1,21 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle2, ChevronLeft, ChevronRight, Search, Upload, XCircle } from 'lucide-react';
+import { CheckCircle2, Upload, XCircle } from 'lucide-react';
 import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import MenuItem from '@mui/material/MenuItem';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TextField from '@mui/material/TextField';
 import { BulkUploadDialog } from './BulkUploadDialog';
 import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
 import { useCategoriesList } from '@/features/categories/api';
 import { ScopedAdminBanner } from '@/features/scoped-admin/ScopedAdminBanner';
 import { formatDate, formatInr } from '@/lib/format';
@@ -65,7 +64,6 @@ export const ProductsListPage = () => {
   const { data, isLoading, isError, error } = useProductsList(query);
   const { data: categories } = useCategoriesList();
   const total = data?.meta.total ?? 0;
-  const pageCount = total > 0 ? Math.ceil(total / PAGE_SIZE) : 1;
 
   const categoryName = useMemo(() => {
     const map = new Map<string, string>();
@@ -132,6 +130,27 @@ export const ProductsListPage = () => {
 
   const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
 
+  const head = [
+    {
+      id: 'select',
+      label: (
+        <input
+          type="checkbox"
+          checked={Boolean(allOnPageSelected)}
+          onChange={toggleAll}
+          aria-label="Select all rows"
+        />
+      ),
+    },
+    { id: 'product', label: 'Product' },
+    { id: 'category', label: 'Category' },
+    { id: 'status', label: 'Status' },
+    { id: 'from', label: 'From' },
+    { id: 'stock', label: 'Stock' },
+    { id: 'submitted', label: 'Submitted' },
+    { id: 'actions', label: '' },
+  ];
+
   return (
     <Stack spacing={3}>
       <PageHeader
@@ -148,41 +167,6 @@ export const ProductsListPage = () => {
       <BulkUploadDialog open={bulkUploadOpen} onClose={() => setBulkUploadOpen(false)} />
 
       <ScopedAdminBanner />
-
-      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
-        <Select
-          value={status}
-          onChange={(e) => setParam({ status: e.target.value })}
-          className="w-48"
-        >
-          {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-        <Select
-          value={category}
-          onChange={(e) => setParam({ category: e.target.value })}
-          className="w-56"
-        >
-          <option value="">All categories</option>
-          {(categories ?? []).map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
-            </option>
-          ))}
-        </Select>
-        <div className="relative w-80">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={q}
-            onChange={(e) => setParam({ q: e.target.value })}
-            placeholder="Search by name / description"
-            className="pl-9"
-          />
-        </div>
-      </Stack>
 
       {selected.size > 0 && (
         <Box
@@ -223,138 +207,140 @@ export const ProductsListPage = () => {
       )}
 
       {!isLoading && !isError && (
-        <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-px">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(allOnPageSelected)}
-                    onChange={toggleAll}
-                    aria-label="Select all rows"
-                  />
-                </TableHead>
-                <TableHead>Product</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>From</TableHead>
-                <TableHead>Stock</TableHead>
-                <TableHead>Submitted</TableHead>
-                <TableHead className="w-px" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(data?.items ?? []).map((product) => (
-                <TableRow key={product.id}>
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
-                      checked={selected.has(product.id)}
-                      onChange={() => toggle(product.id)}
-                      aria-label={`Select ${product.name}`}
-                    />
-                  </TableCell>
-                  <TableCell
-                    className="cursor-pointer font-medium"
-                    onClick={() => navigate(`/admin/products/${product.id}`)}
-                  >
-                    <div>{product.name}</div>
-                    <div className="text-xs text-muted-foreground">{formatInr(lowestPrice(product))} / {product.unit}</div>
-                  </TableCell>
-                  <TableCell onClick={() => navigate(`/admin/products/${product.id}`)} className="cursor-pointer">
-                    {categoryName(product.categoryId)}
-                  </TableCell>
-                  <TableCell onClick={() => navigate(`/admin/products/${product.id}`)} className="cursor-pointer">
-                    <ProductStatusBadge status={product.status} />
-                  </TableCell>
-                  <TableCell onClick={() => navigate(`/admin/products/${product.id}`)} className="cursor-pointer">
-                    <span className="text-xs text-muted-foreground">{product.sellerId.slice(-6)}</span>
-                  </TableCell>
-                  <TableCell onClick={() => navigate(`/admin/products/${product.id}`)} className="cursor-pointer">
-                    {product.stock.quantity}
-                    {product.stock.quantity <= product.stock.threshold && (
-                      <span className="ml-1 text-xs text-amber-700">low</span>
-                    )}
-                  </TableCell>
-                  <TableCell onClick={() => navigate(`/admin/products/${product.id}`)} className="cursor-pointer">
-                    {formatDate(product.createdAt)}
-                  </TableCell>
-                  <TableCell>
-                    {product.status === 'PENDING' ? (
-                      <div className="flex gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setSingleAction({ id: product.id, action: 'approve' })}
-                          aria-label="Quick approve"
-                          title="Approve"
-                        >
-                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setSingleAction({ id: product.id, action: 'reject' })}
-                          aria-label="Quick reject"
-                          title="Reject"
-                        >
-                          <XCircle className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate(`/admin/products/${product.id}`)}
-                      >
-                        Open
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {(data?.items.length ?? 0) === 0 && (
-                <TableRow>
-                  <TableCell colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
-                    No products match the current filters.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-
+        <Card>
           <Stack
             direction="row"
+            spacing={2}
+            flexWrap="wrap"
             alignItems="center"
-            justifyContent="space-between"
-            sx={{ fontSize: 14, color: 'text.secondary' }}
+            sx={{ p: 2.5 }}
           >
-            <span>
-              {data?.items.length ?? 0} of {total} · page {page} / {pageCount}
-            </span>
-            <Stack direction="row" spacing={1}>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.max(1, page - 1)) })}
-                disabled={page <= 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Prev
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.min(pageCount, page + 1)) })}
-                disabled={page >= pageCount}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </Stack>
+            <TextField
+              select
+              label="Status"
+              value={status}
+              onChange={(e) => setParam({ status: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: 200 }}
+            >
+              {STATUS_OPTIONS.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label="Category"
+              value={category}
+              onChange={(e) => setParam({ category: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: 240 }}
+            >
+              <MenuItem value="">All categories</MenuItem>
+              {(categories ?? []).map((c) => (
+                <MenuItem key={c.id} value={c.id}>
+                  {c.name}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              label="Search"
+              value={q}
+              onChange={(e) => setParam({ q: e.target.value })}
+              placeholder="Search by name / description"
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: 320 }}
+            />
           </Stack>
-        </>
+
+          <Scrollbar>
+            <Table sx={{ minWidth: 800 }}>
+              <TableHeadCustom headLabel={head} />
+              <TableBody>
+                {(data?.items ?? []).map((product) => (
+                  <TableRow key={product.id} hover>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
+                      <input
+                        type="checkbox"
+                        checked={selected.has(product.id)}
+                        onChange={() => toggle(product.id)}
+                        aria-label={`Select ${product.name}`}
+                      />
+                    </TableCell>
+                    <TableCell
+                      className="cursor-pointer font-medium"
+                      onClick={() => navigate(`/admin/products/${product.id}`)}
+                    >
+                      <div>{product.name}</div>
+                      <div className="text-xs text-muted-foreground">{formatInr(lowestPrice(product))} / {product.unit}</div>
+                    </TableCell>
+                    <TableCell onClick={() => navigate(`/admin/products/${product.id}`)} className="cursor-pointer">
+                      {categoryName(product.categoryId)}
+                    </TableCell>
+                    <TableCell onClick={() => navigate(`/admin/products/${product.id}`)} className="cursor-pointer">
+                      <ProductStatusBadge status={product.status} />
+                    </TableCell>
+                    <TableCell onClick={() => navigate(`/admin/products/${product.id}`)} className="cursor-pointer">
+                      <span className="text-xs text-muted-foreground">{product.sellerId.slice(-6)}</span>
+                    </TableCell>
+                    <TableCell onClick={() => navigate(`/admin/products/${product.id}`)} className="cursor-pointer">
+                      {product.stock.quantity}
+                      {product.stock.quantity <= product.stock.threshold && (
+                        <span className="ml-1 text-xs text-amber-700">low</span>
+                      )}
+                    </TableCell>
+                    <TableCell onClick={() => navigate(`/admin/products/${product.id}`)} className="cursor-pointer">
+                      {formatDate(product.createdAt)}
+                    </TableCell>
+                    <TableCell>
+                      {product.status === 'PENDING' ? (
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setSingleAction({ id: product.id, action: 'approve' })}
+                            aria-label="Quick approve"
+                            title="Approve"
+                          >
+                            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setSingleAction({ id: product.id, action: 'reject' })}
+                            aria-label="Quick reject"
+                            title="Reject"
+                          >
+                            <XCircle className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/admin/products/${product.id}`)}
+                        >
+                          Open
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                <TableNoData notFound={!isLoading && (data?.items.length ?? 0) === 0} />
+              </TableBody>
+            </Table>
+          </Scrollbar>
+
+          <TablePaginationCustom
+            count={total}
+            page={page - 1}
+            rowsPerPage={PAGE_SIZE}
+            rowsPerPageOptions={[10, 25, 50]}
+            onPageChange={(_e, newPage) => setParam({ page: String(newPage + 1) })}
+            onRowsPerPageChange={(e) => setParam({ limit: e.target.value, page: '1' })}
+          />
+        </Card>
       )}
 
       <StatusReviewDialog

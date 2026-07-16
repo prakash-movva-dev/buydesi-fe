@@ -12,7 +12,13 @@ import {
   TrendingUp,
   Users,
 } from 'lucide-react';
+import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import Typography from '@mui/material/Typography';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -24,14 +30,8 @@ import {
   CardTitle,
 } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData } from '@/components/table';
 import { useAuth } from '@/lib/auth';
 import { formatDate, formatDateTime, formatInr } from '@/lib/format';
 import { useMyPromoterDashboard, useMyPromoterUsage } from '../api';
@@ -86,6 +86,7 @@ export const PromoterDashboard = () => {
   }
 
   const shareLink = buildShareLink(d.couponCode);
+  const usageItems = usage.data?.items ?? [];
 
   // Derived metrics
   const avgDiscountPerOrder =
@@ -211,46 +212,50 @@ export const PromoterDashboard = () => {
             </div>
           )}
           {usage.isError && (
-            <p className="p-4 text-sm text-destructive">
+            <Typography variant="body2" sx={{ p: 2, color: 'error.main' }}>
               Couldn't load usage feed.
-            </p>
+            </Typography>
           )}
           {!usage.isLoading && !usage.isError && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>When</TableHead>
-                  <TableHead>Buyer</TableHead>
-                  <TableHead>Order</TableHead>
-                  <TableHead className="text-right">Order total</TableHead>
-                  <TableHead className="text-right">Discount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(usage.data?.items ?? []).map((u) => (
-                  <TableRow key={u.id}>
-                    <TableCell className="text-xs">{formatDateTime(u.usedAt)}</TableCell>
-                    <TableCell className="font-mono text-xs">{u.buyerId.slice(-8)}</TableCell>
-                    <TableCell className="text-xs">
-                      {u.orderNumber ?? <span className="text-muted-foreground">validate-only</span>}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {u.orderTotalInr !== null ? formatInr(u.orderTotalInr) : '—'}
-                    </TableCell>
-                    <TableCell className="text-right text-muted-foreground">
-                      {u.discountInr !== null ? formatInr(u.discountInr) : '—'}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {(usage.data?.items.length ?? 0) === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="py-12 text-center text-sm text-muted-foreground">
-                      No uses yet — share your code to get started.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+            <Scrollbar>
+              <Table sx={{ minWidth: 800 }}>
+                <TableHeadCustom
+                  headLabel={[
+                    { id: 'when', label: 'When' },
+                    { id: 'buyer', label: 'Buyer' },
+                    { id: 'order', label: 'Order' },
+                    { id: 'total', label: 'Order total', align: 'right' as const },
+                    { id: 'discount', label: 'Discount', align: 'right' as const },
+                  ]}
+                />
+                <TableBody>
+                  {usageItems.map((u) => (
+                    <TableRow key={u.id} hover>
+                      <TableCell sx={{ typography: 'caption' }}>{formatDateTime(u.usedAt)}</TableCell>
+                      <TableCell sx={{ fontFamily: 'monospace', typography: 'caption' }}>
+                        {u.buyerId.slice(-8)}
+                      </TableCell>
+                      <TableCell sx={{ typography: 'caption' }}>
+                        {u.orderNumber ?? (
+                          <Box component="span" sx={{ color: 'text.secondary' }}>
+                            validate-only
+                          </Box>
+                        )}
+                      </TableCell>
+                      <TableCell align="right">
+                        {u.orderTotalInr !== null ? formatInr(u.orderTotalInr) : '—'}
+                      </TableCell>
+                      <TableCell align="right" sx={{ color: 'text.secondary' }}>
+                        {u.discountInr !== null ? formatInr(u.discountInr) : '—'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  <TableNoData
+                    notFound={!usage.isLoading && !usage.isError && usageItems.length === 0}
+                  />
+                </TableBody>
+              </Table>
+            </Scrollbar>
           )}
         </CardContent>
       </Card>

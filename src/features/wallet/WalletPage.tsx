@@ -1,8 +1,15 @@
 import { useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, RefreshCw, Wallet as WalletIcon } from 'lucide-react';
+import { RefreshCw, Wallet as WalletIcon } from 'lucide-react';
 import Box from '@mui/material/Box';
+import MuiCard from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import MenuItem from '@mui/material/MenuItem';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { UserPicker } from '@/components/pickers/UserPicker';
 import { Badge } from '@/components/ui/Badge';
@@ -15,18 +22,11 @@ import {
   CardTitle,
 } from '@/components/ui/Card';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatCard } from '@/components/ui/StatCard';
 import { UserRole } from '@/types/api';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
 import { formatDate, formatDateTime, formatInr } from '@/lib/format';
 import {
   useCancelWithdrawal,
@@ -67,6 +67,18 @@ const TX_SOURCE_OPTIONS: Array<{ value: '' | WalletTxSource; label: string }> = 
 
 const PAGE_SIZE = 25;
 
+const HEAD = [
+  { id: 'type', label: 'Type' },
+  { id: 'source', label: 'Source' },
+  { id: 'status', label: 'Status' },
+  { id: 'amount', label: 'Amount', align: 'right' as const },
+  { id: 'seller', label: 'Seller' },
+  { id: 'reference', label: 'Reference' },
+  { id: 'notes', label: 'Notes' },
+  { id: 'created', label: 'Created' },
+  { id: 'actions', label: '' },
+];
+
 export const WalletPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const sellerIdFilter = searchParams.get('sellerId') ?? '';
@@ -94,7 +106,6 @@ export const WalletPage = () => {
   const [adjustOpen, setAdjustOpen] = useState(false);
 
   const total = data?.meta.total ?? 0;
-  const pageCount = total > 0 ? Math.ceil(total / PAGE_SIZE) : 1;
 
   const setParam = (next: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams);
@@ -169,42 +180,6 @@ export const WalletPage = () => {
         </CardContent>
       </Card>
 
-      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
-        <Select
-          value={type}
-          onChange={(e) => setParam({ type: e.target.value })}
-          className="w-36"
-        >
-          {TX_TYPE_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-        <Select
-          value={status}
-          onChange={(e) => setParam({ status: e.target.value })}
-          className="w-40"
-        >
-          {TX_STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-        <Select
-          value={source}
-          onChange={(e) => setParam({ source: e.target.value })}
-          className="w-48"
-        >
-          {TX_SOURCE_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-      </Stack>
-
       {isLoading && (
         <div className="space-y-2">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -219,126 +194,157 @@ export const WalletPage = () => {
       )}
 
       {!isLoading && !isError && (
-        <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Type</TableHead>
-                <TableHead>Source</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead>Seller</TableHead>
-                <TableHead>Reference</TableHead>
-                <TableHead>Notes</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="w-px" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(data?.items ?? []).map((tx) => (
-                <TableRow key={tx.id}>
-                  <TableCell>
-                    <TxTypeBadge type={tx.type} />
-                  </TableCell>
-                  <TableCell>
-                    <TxSourceBadge source={tx.source} />
-                  </TableCell>
-                  <TableCell>
-                    <TxStatusBadge status={tx.status} />
-                  </TableCell>
-                  <TableCell className="text-right font-medium">
-                    {tx.type === 'DEBIT' ? '−' : '+'}
-                    {formatInr(tx.amountInr)}
-                  </TableCell>
-                  <TableCell className="font-mono text-xs">{tx.userId.slice(-8)}</TableCell>
-                  <TableCell className="text-xs">
-                    {tx.referenceType ? (
-                      <>
-                        <Badge variant="muted">{tx.referenceType}</Badge>
-                        {tx.referenceId && (
-                          <div className="mt-0.5 font-mono text-xs text-muted-foreground">
-                            {tx.referenceId.slice(-8)}
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="max-w-xs truncate text-xs text-muted-foreground" title={tx.notes ?? ''}>
-                    {tx.notes ?? '—'}
-                  </TableCell>
-                  <TableCell className="text-xs">{formatDate(tx.createdAt)}</TableCell>
-                  <TableCell className="space-x-1 whitespace-nowrap">
-                    {tx.source === 'withdrawal' && tx.status === 'PENDING' && (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => completeMut.mutate({ id: tx.id })}
-                          disabled={completeMut.isPending}
-                          title="Mark withdrawal completed"
-                        >
-                          Complete
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => cancelMut.mutate({ id: tx.id })}
-                          disabled={cancelMut.isPending}
-                          title="Cancel withdrawal"
-                        >
-                          Cancel
-                        </Button>
-                      </>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {(data?.items.length ?? 0) === 0 && (
-                <TableRow>
-                  <TableCell colSpan={9} className="py-12 text-center text-sm text-muted-foreground">
-                    No transactions match the current filter.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              fontSize: 14,
-              color: 'text.secondary',
-            }}
+        <MuiCard>
+          <Stack
+            direction="row"
+            spacing={2}
+            flexWrap="wrap"
+            alignItems="center"
+            sx={{ p: 2.5 }}
           >
-            <span>
-              {data?.items.length ?? 0} of {total} · page {page} / {pageCount}
-            </span>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.max(1, page - 1)) })}
-                disabled={page <= 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Prev
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.min(pageCount, page + 1)) })}
-                disabled={page >= pageCount}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </Box>
-        </>
+            <TextField
+              select
+              label="Type"
+              value={type}
+              onChange={(e) => setParam({ type: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: 160 }}
+            >
+              {TX_TYPE_OPTIONS.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label="Status"
+              value={status}
+              onChange={(e) => setParam({ status: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: 180 }}
+            >
+              {TX_STATUS_OPTIONS.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label="Source"
+              value={source}
+              onChange={(e) => setParam({ source: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: 220 }}
+            >
+              {TX_SOURCE_OPTIONS.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Stack>
+
+          <Scrollbar>
+            <Table sx={{ minWidth: 960 }}>
+              <TableHeadCustom headLabel={HEAD} />
+              <TableBody>
+                {(data?.items ?? []).map((tx) => (
+                  <TableRow key={tx.id} hover>
+                    <TableCell>
+                      <TxTypeBadge type={tx.type} />
+                    </TableCell>
+                    <TableCell>
+                      <TxSourceBadge source={tx.source} />
+                    </TableCell>
+                    <TableCell>
+                      <TxStatusBadge status={tx.status} />
+                    </TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600 }}>
+                      {tx.type === 'DEBIT' ? '−' : '+'}
+                      {formatInr(tx.amountInr)}
+                    </TableCell>
+                    <TableCell sx={{ fontFamily: 'monospace', typography: 'caption' }}>
+                      {tx.userId.slice(-8)}
+                    </TableCell>
+                    <TableCell sx={{ typography: 'caption' }}>
+                      {tx.referenceType ? (
+                        <>
+                          <Badge variant="muted">{tx.referenceType}</Badge>
+                          {tx.referenceId && (
+                            <Box
+                              sx={{
+                                mt: 0.25,
+                                fontFamily: 'monospace',
+                                typography: 'caption',
+                                color: 'text.secondary',
+                              }}
+                            >
+                              {tx.referenceId.slice(-8)}
+                            </Box>
+                          )}
+                        </>
+                      ) : (
+                        <Box component="span" sx={{ color: 'text.secondary' }}>
+                          —
+                        </Box>
+                      )}
+                    </TableCell>
+                    <TableCell
+                      title={tx.notes ?? ''}
+                      sx={{
+                        maxWidth: 320,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        color: 'text.secondary',
+                        typography: 'caption',
+                      }}
+                    >
+                      {tx.notes ?? '—'}
+                    </TableCell>
+                    <TableCell sx={{ typography: 'caption' }}>{formatDate(tx.createdAt)}</TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                      {tx.source === 'withdrawal' && tx.status === 'PENDING' && (
+                        <>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => completeMut.mutate({ id: tx.id })}
+                            disabled={completeMut.isPending}
+                            title="Mark withdrawal completed"
+                          >
+                            Complete
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => cancelMut.mutate({ id: tx.id })}
+                            disabled={cancelMut.isPending}
+                            title="Cancel withdrawal"
+                          >
+                            Cancel
+                          </Button>
+                        </>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                <TableNoData notFound={!isLoading && (data?.items.length ?? 0) === 0} />
+              </TableBody>
+            </Table>
+          </Scrollbar>
+
+          <TablePaginationCustom
+            count={total}
+            page={page - 1}
+            rowsPerPage={PAGE_SIZE}
+            rowsPerPageOptions={[10, 25, 50]}
+            onPageChange={(_e, newPage) => setParam({ page: String(newPage + 1) })}
+            onRowsPerPageChange={(e) => setParam({ limit: e.target.value, page: '1' })}
+          />
+        </MuiCard>
       )}
 
       <WalletAdjustDialog

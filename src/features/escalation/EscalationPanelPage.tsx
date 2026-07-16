@@ -1,23 +1,40 @@
-import { Link } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 import { AlertTriangle, ChevronRight, PackageSearch } from 'lucide-react';
+import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
 import { Badge } from '@/components/ui/Badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData } from '@/components/table';
 import { useTicketsList } from '@/features/support/api';
 import { useTradeListings } from '@/features/trade/api';
 import { formatDateTime, formatInr } from '@/lib/format';
 
 const PAGE_SIZE = 50;
+
+const TICKETS_HEAD = [
+  { id: 'ticket', label: 'Ticket' },
+  { id: 'subject', label: 'Subject' },
+  { id: 'category', label: 'Category' },
+  { id: 'status', label: 'Status' },
+  { id: 'raised', label: 'Raised' },
+  { id: 'open', label: '' },
+];
+
+const LISTINGS_HEAD = [
+  { id: 'listing', label: 'Listing' },
+  { id: 'price', label: 'Unit price' },
+  { id: 'available', label: 'Available' },
+  { id: 'status', label: 'Status' },
+  { id: 'submitted', label: 'Submitted' },
+  { id: 'review', label: '' },
+];
 
 /**
  * SA-7 Escalation Panel (story 1.16). A read-only, unified queue for the
@@ -67,52 +84,42 @@ export const EscalationPanelPage = () => {
             </div>
           )}
           {!tickets.isLoading && !tickets.isError && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Ticket</TableHead>
-                  <TableHead>Subject</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Raised</TableHead>
-                  <TableHead className="w-px" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {ticketItems.map((t) => (
-                  <TableRow key={t.id}>
-                    <TableCell className="font-mono text-xs">{t.ticketNumber}</TableCell>
-                    <TableCell className="font-medium">{t.subject}</TableCell>
-                    <TableCell className="text-xs capitalize">
-                      {t.category.replace('_', ' ')}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="warning">{t.status}</Badge>
-                    </TableCell>
-                    <TableCell className="text-xs">{formatDateTime(t.createdAt)}</TableCell>
-                    <TableCell>
-                      <Link
-                        to={`/admin/support/${t.id}`}
-                        className="inline-flex items-center text-sm font-medium text-primary hover:underline"
-                      >
-                        Open
-                        <ChevronRight className="h-4 w-4" />
-                      </Link>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {ticketItems.length === 0 && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={6}
-                      className="py-10 text-center text-sm text-muted-foreground"
-                    >
-                      No escalated support tickets.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+            <Scrollbar>
+              <Table sx={{ minWidth: 800 }}>
+                <TableHeadCustom headLabel={TICKETS_HEAD} />
+                <TableBody>
+                  {ticketItems.map((t) => (
+                    <TableRow key={t.id} hover>
+                      <TableCell sx={{ fontFamily: 'monospace', typography: 'caption' }}>
+                        {t.ticketNumber}
+                      </TableCell>
+                      <TableCell sx={{ fontWeight: 500 }}>{t.subject}</TableCell>
+                      <TableCell sx={{ typography: 'caption', textTransform: 'capitalize' }}>
+                        {t.category.replace('_', ' ')}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="warning">{t.status}</Badge>
+                      </TableCell>
+                      <TableCell sx={{ typography: 'caption' }}>
+                        {formatDateTime(t.createdAt)}
+                      </TableCell>
+                      <TableCell>
+                        <Link
+                          component={RouterLink}
+                          to={`/admin/support/${t.id}`}
+                          variant="subtitle2"
+                          sx={{ display: 'inline-flex', alignItems: 'center' }}
+                        >
+                          Open
+                          <ChevronRight className="h-4 w-4" />
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  <TableNoData notFound={ticketItems.length === 0} />
+                </TableBody>
+              </Table>
+            </Scrollbar>
           )}
         </CardContent>
       </Card>
@@ -140,55 +147,43 @@ export const EscalationPanelPage = () => {
             </div>
           )}
           {!listings.isLoading && !listings.isError && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Listing</TableHead>
-                  <TableHead>Unit price</TableHead>
-                  <TableHead>Available</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Submitted</TableHead>
-                  <TableHead className="w-px" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {listingItems.map((l) => {
-                  const id = l.id ?? l._id;
-                  return (
-                    <TableRow key={id}>
-                      <TableCell className="font-medium">{l.name}</TableCell>
-                      <TableCell>{formatInr(l.unitPriceInr)}</TableCell>
-                      <TableCell className="text-xs">
-                        {l.availableUnits} / {l.totalUnits} {l.unit}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="info">{l.status}</Badge>
-                      </TableCell>
-                      <TableCell className="text-xs">{formatDateTime(l.createdAt)}</TableCell>
-                      <TableCell>
-                        <Link
-                          to="/admin/trade"
-                          className="inline-flex items-center text-sm font-medium text-primary hover:underline"
-                        >
-                          Review
-                          <ChevronRight className="h-4 w-4" />
-                        </Link>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-                {listingItems.length === 0 && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={6}
-                      className="py-10 text-center text-sm text-muted-foreground"
-                    >
-                      No pending trade listings.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+            <Scrollbar>
+              <Table sx={{ minWidth: 800 }}>
+                <TableHeadCustom headLabel={LISTINGS_HEAD} />
+                <TableBody>
+                  {listingItems.map((l) => {
+                    const id = l.id ?? l._id;
+                    return (
+                      <TableRow key={id} hover>
+                        <TableCell sx={{ fontWeight: 500 }}>{l.name}</TableCell>
+                        <TableCell>{formatInr(l.unitPriceInr)}</TableCell>
+                        <TableCell sx={{ typography: 'caption' }}>
+                          {l.availableUnits} / {l.totalUnits} {l.unit}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="info">{l.status}</Badge>
+                        </TableCell>
+                        <TableCell sx={{ typography: 'caption' }}>
+                          {formatDateTime(l.createdAt)}
+                        </TableCell>
+                        <TableCell>
+                          <Link
+                            component={RouterLink}
+                            to="/admin/trade"
+                            variant="subtitle2"
+                            sx={{ display: 'inline-flex', alignItems: 'center' }}
+                          >
+                            Review
+                            <ChevronRight className="h-4 w-4" />
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  <TableNoData notFound={listingItems.length === 0} />
+                </TableBody>
+              </Table>
+            </Scrollbar>
           )}
         </CardContent>
       </Card>

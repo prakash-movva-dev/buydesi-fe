@@ -10,6 +10,10 @@ import {
 } from 'lucide-react';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
 import Typography from '@mui/material/Typography';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -24,14 +28,8 @@ import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData } from '@/components/table';
 import { Textarea } from '@/components/ui/Textarea';
 import { useCancelOrder, useOrder } from '@/features/orders/api';
 import { EscrowStatusBadge, OrderStatusBadge, PaymentStatusBadge } from '@/features/orders/status-badge';
@@ -39,6 +37,14 @@ import { useAuth } from '@/lib/auth';
 import { formatDateTime, formatInr } from '@/lib/format';
 import { ApiError } from '@/types/api';
 import { useTransitionOrderStatus } from './api';
+
+const ITEMS_HEAD = [
+  { id: 'product', label: 'Product' },
+  { id: 'tier', label: 'Tier' },
+  { id: 'qty', label: 'Qty', align: 'right' as const },
+  { id: 'unit', label: 'Unit ₹', align: 'right' as const },
+  { id: 'subtotal', label: 'Subtotal', align: 'right' as const },
+];
 
 export const SellerOrderDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -143,35 +149,30 @@ export const SellerOrderDetailPage = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Product</TableHead>
-                  <TableHead>Tier</TableHead>
-                  <TableHead className="text-right">Qty</TableHead>
-                  <TableHead className="text-right">Unit ₹</TableHead>
-                  <TableHead className="text-right">Subtotal</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {myItems.map((it, idx) => (
-                  <TableRow key={it.id ?? `${it.productId}-${idx}`}>
-                    <TableCell className="font-medium">
-                      {it.name}
-                      <div className="text-xs text-muted-foreground">{it.unit}</div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="muted">{it.tier}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">{it.quantity}</TableCell>
-                    <TableCell className="text-right">{formatInr(it.unitPriceInr)}</TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatInr(it.subtotalInr)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <Scrollbar>
+              <Table sx={{ minWidth: 800 }}>
+                <TableHeadCustom headLabel={ITEMS_HEAD} />
+                <TableBody>
+                  {myItems.map((it, idx) => (
+                    <TableRow key={it.id ?? `${it.productId}-${idx}`} hover>
+                      <TableCell sx={{ fontWeight: 600 }}>
+                        {it.name}
+                        <Box sx={{ color: 'text.secondary', typography: 'caption' }}>{it.unit}</Box>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="muted">{it.tier}</Badge>
+                      </TableCell>
+                      <TableCell align="right">{it.quantity}</TableCell>
+                      <TableCell align="right">{formatInr(it.unitPriceInr)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600 }}>
+                        {formatInr(it.subtotalInr)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  <TableNoData notFound={myItems.length === 0} />
+                </TableBody>
+              </Table>
+            </Scrollbar>
           </CardContent>
         </Card>
         </Box>
@@ -189,9 +190,9 @@ export const SellerOrderDetailPage = () => {
               <span className="text-muted-foreground">Items subtotal</span>
               <span className="font-medium">{formatInr(myTotal)}</span>
             </div>
-            <p className="text-xs text-muted-foreground">
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
               Commission is deducted at payout time based on the resolved rate per item.
-            </p>
+            </Typography>
           </CardContent>
         </Card>
       </Box>
@@ -217,9 +218,9 @@ export const SellerOrderDetailPage = () => {
             {order.shippingAddress.pincode}
           </p>
           {order.delhiveryShipmentId && (
-            <p className="text-xs text-muted-foreground">
+            <Typography variant="caption" component="p" sx={{ color: 'text.secondary' }}>
               Shipment {order.delhiveryShipmentId} · {order.deliveryProvider}
-            </p>
+            </Typography>
           )}
           {order.trackingUrl && (
             <a

@@ -1,7 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Plus } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import MenuItem from '@mui/material/MenuItem';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TextField from '@mui/material/TextField';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
@@ -9,14 +17,8 @@ import { Label } from '@/components/ui/Label';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData } from '@/components/table';
 import { Textarea } from '@/components/ui/Textarea';
 import { CashStatusBadge } from '@/features/wallet/status-badge';
 import { formatDate, formatInr } from '@/lib/format';
@@ -35,6 +37,15 @@ const TYPE_OPTIONS: Array<{ value: '' | CashEntryType; label: string }> = [
   { value: '', label: 'Any type' },
   { value: 'cash_received', label: 'Cash received (got money)' },
   { value: 'cash_paid', label: 'Cash paid (spent money)' },
+];
+
+const HEAD = [
+  { id: 'type', label: 'Type' },
+  { id: 'status', label: 'Status' },
+  { id: 'amount', label: 'Amount', align: 'right' as const },
+  { id: 'reason', label: 'Reason' },
+  { id: 'trade', label: 'Trade order' },
+  { id: 'created', label: 'Created' },
 ];
 
 export const MyCashEntriesPage = () => {
@@ -73,72 +84,89 @@ export const MyCashEntriesPage = () => {
         }
       />
 
-      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
-        <Select
-          value={status}
-          onChange={(e) => setParam({ status: e.target.value })}
-          className="w-48"
+      <Card>
+        <Stack
+          direction="row"
+          spacing={2}
+          flexWrap="wrap"
+          alignItems="center"
+          sx={{ p: 2.5 }}
         >
-          {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-        <Select
-          value={type}
-          onChange={(e) => setParam({ type: e.target.value })}
-          className="w-64"
-        >
-          {TYPE_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-      </Stack>
-
-      {isLoading && <Skeleton className="h-40 w-full" />}
-
-      {!isLoading && (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Type</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
-              <TableHead>Reason</TableHead>
-              <TableHead>Trade order</TableHead>
-              <TableHead>Created</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {visible.map((c) => (
-              <TableRow key={c.id}>
-                <TableCell className="capitalize">{c.type.replace('_', ' ')}</TableCell>
-                <TableCell>
-                  <CashStatusBadge status={c.status} />
-                </TableCell>
-                <TableCell className="text-right font-medium">{formatInr(c.amountInr)}</TableCell>
-                <TableCell className="max-w-md truncate text-xs" title={c.reason}>
-                  {c.reason}
-                </TableCell>
-                <TableCell className="font-mono text-xs">
-                  {c.tradeOrderId ? c.tradeOrderId.slice(-8) : '—'}
-                </TableCell>
-                <TableCell className="text-xs">{formatDate(c.createdAt)}</TableCell>
-              </TableRow>
+          <TextField
+            select
+            label="Status"
+            value={status}
+            onChange={(e) => setParam({ status: e.target.value })}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 192 }}
+          >
+            {STATUS_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
             ))}
-            {visible.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={6} className="py-12 text-center text-sm text-muted-foreground">
-                  No cash entries yet.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      )}
+          </TextField>
+          <TextField
+            select
+            label="Type"
+            value={type}
+            onChange={(e) => setParam({ type: e.target.value })}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 256 }}
+          >
+            {TYPE_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Stack>
+
+        {isLoading && (
+          <Box sx={{ p: 2.5 }}>
+            <Skeleton className="h-40 w-full" />
+          </Box>
+        )}
+
+        {!isLoading && (
+          <Scrollbar>
+            <Table sx={{ minWidth: 800 }}>
+              <TableHeadCustom headLabel={HEAD} />
+              <TableBody>
+                {visible.map((c) => (
+                  <TableRow key={c.id} hover>
+                    <TableCell sx={{ textTransform: 'capitalize' }}>
+                      {c.type.replace('_', ' ')}
+                    </TableCell>
+                    <TableCell>
+                      <CashStatusBadge status={c.status} />
+                    </TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600 }}>
+                      {formatInr(c.amountInr)}
+                    </TableCell>
+                    <TableCell sx={{ maxWidth: 360, typography: 'caption' }} title={c.reason}>
+                      <Box
+                        sx={{
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {c.reason}
+                      </Box>
+                    </TableCell>
+                    <TableCell sx={{ fontFamily: 'monospace', typography: 'caption' }}>
+                      {c.tradeOrderId ? c.tradeOrderId.slice(-8) : '—'}
+                    </TableCell>
+                    <TableCell sx={{ typography: 'caption' }}>{formatDate(c.createdAt)}</TableCell>
+                  </TableRow>
+                ))}
+                <TableNoData notFound={!isLoading && visible.length === 0} />
+              </TableBody>
+            </Table>
+          </Scrollbar>
+        )}
+      </Card>
 
       <NewCashEntryDialog open={open} onClose={() => setOpen(false)} />
     </Stack>

@@ -1,19 +1,19 @@
 import { useState } from 'react';
 import { Pencil, Plus, ShoppingCart } from 'lucide-react';
+import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import IconButton from '@mui/material/IconButton';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import { CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData } from '@/components/table';
 import { formatInr } from '@/lib/format';
 import { useCartLimitsList } from './api';
 import { CartLimitFormDialog } from './CartLimitFormDialog';
@@ -26,10 +26,25 @@ const scopeVariant: Record<CartLimitScope, 'muted' | 'info' | 'warning' | 'succe
   cluster_category: 'success',
 };
 
+const HEAD = [
+  { id: 'scope', label: 'Scope' },
+  { id: 'kind', label: 'Kind' },
+  { id: 'cluster', label: 'Cluster' },
+  { id: 'category', label: 'Category' },
+  { id: 'maxQty', label: 'Max qty / product', align: 'right' as const },
+  { id: 'maxDistinct', label: 'Max distinct items', align: 'right' as const },
+  { id: 'maxValue', label: 'Max cart value', align: 'right' as const },
+  { id: 'maxWeight', label: 'Max weight (g)', align: 'right' as const },
+  { id: 'maxCod', label: 'Max COD', align: 'right' as const },
+  { id: 'edit', label: '' },
+];
+
 export const CartLimitsPage = () => {
   const { data, isLoading, isError, error } = useCartLimitsList();
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<CartLimit | null>(null);
+
+  const items = data ?? [];
 
   return (
     <Stack spacing={3}>
@@ -70,64 +85,48 @@ export const CartLimitsPage = () => {
       )}
 
       {!isLoading && !isError && (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Scope</TableHead>
-              <TableHead>Kind</TableHead>
-              <TableHead>Cluster</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead className="text-right">Max qty / product</TableHead>
-              <TableHead className="text-right">Max distinct items</TableHead>
-              <TableHead className="text-right">Max cart value</TableHead>
-              <TableHead className="text-right">Max weight (g)</TableHead>
-              <TableHead className="text-right">Max COD</TableHead>
-              <TableHead className="w-px" />
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {(data ?? []).map((row) => (
-              <TableRow key={row.id ?? row._id}>
-                <TableCell>
-                  <Badge variant={scopeVariant[row.scope]}>{row.scope}</Badge>
-                </TableCell>
-                <TableCell className="capitalize">{row.kind}</TableCell>
-                <TableCell className="font-mono text-xs">
-                  {row.clusterId ? row.clusterId.slice(-10) : '—'}
-                </TableCell>
-                <TableCell className="font-mono text-xs">
-                  {row.categoryId ? row.categoryId.slice(-10) : '—'}
-                </TableCell>
-                <TableCell className="text-right">{row.maxQtyPerProduct}</TableCell>
-                <TableCell className="text-right">{row.maxDistinctItems}</TableCell>
-                <TableCell className="text-right">{formatInr(row.maxCartValueInr)}</TableCell>
-                <TableCell className="text-right">{row.maxTotalWeightGrams}</TableCell>
-                <TableCell className="text-right">
-                  {row.kind === 'bulk' ? '—' : formatInr(row.maxCodValueInr)}
-                </TableCell>
-                <TableCell>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      setEditing(row);
-                      setOpen(true);
-                    }}
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-            {(data?.length ?? 0) === 0 && (
-              <TableRow>
-                <TableCell colSpan={10} className="py-12 text-center text-sm text-muted-foreground">
-                  No cart limits configured. Create a "default" rule first.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+        <Card>
+          <Scrollbar>
+            <Table sx={{ minWidth: 800 }}>
+              <TableHeadCustom headLabel={HEAD} />
+              <TableBody>
+                {items.map((row) => (
+                  <TableRow key={row.id ?? row._id} hover>
+                    <TableCell>
+                      <Badge variant={scopeVariant[row.scope]}>{row.scope}</Badge>
+                    </TableCell>
+                    <TableCell sx={{ textTransform: 'capitalize' }}>{row.kind}</TableCell>
+                    <TableCell sx={{ fontFamily: 'monospace', typography: 'caption' }}>
+                      {row.clusterId ? row.clusterId.slice(-10) : '—'}
+                    </TableCell>
+                    <TableCell sx={{ fontFamily: 'monospace', typography: 'caption' }}>
+                      {row.categoryId ? row.categoryId.slice(-10) : '—'}
+                    </TableCell>
+                    <TableCell align="right">{row.maxQtyPerProduct}</TableCell>
+                    <TableCell align="right">{row.maxDistinctItems}</TableCell>
+                    <TableCell align="right">{formatInr(row.maxCartValueInr)}</TableCell>
+                    <TableCell align="right">{row.maxTotalWeightGrams}</TableCell>
+                    <TableCell align="right">
+                      {row.kind === 'bulk' ? '—' : formatInr(row.maxCodValueInr)}
+                    </TableCell>
+                    <TableCell>
+                      <IconButton
+                        size="small"
+                        onClick={() => {
+                          setEditing(row);
+                          setOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+                <TableNoData notFound={!isLoading && items.length === 0} />
+              </TableBody>
+            </Table>
+          </Scrollbar>
+        </Card>
       )}
 
       <CartLimitFormDialog open={open} editing={editing} onClose={() => setOpen(false)} />

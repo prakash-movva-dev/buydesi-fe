@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -9,15 +15,9 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
 import { Textarea } from '@/components/ui/Textarea';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData } from '@/components/table';
 import { formatDate, formatInr } from '@/lib/format';
 import { ApiError } from '@/types/api';
 import { useCreateListing, useMyTradeListings } from './api';
@@ -35,6 +35,17 @@ export const MyTradeListingsPage = () => {
   const { data, isLoading } = useMyTradeListings({ page: 1, limit: 50 });
   const [createOpen, setCreateOpen] = useState(false);
 
+  const items = data?.items ?? [];
+
+  const head = [
+    { id: 'listing', label: 'Listing' },
+    { id: 'status', label: 'Status' },
+    { id: 'price', label: 'Price / unit', align: 'right' as const },
+    { id: 'available', label: 'Available / Total', align: 'right' as const },
+    { id: 'payments', label: 'Payments' },
+    { id: 'created', label: 'Created' },
+  ];
+
   return (
     <Stack spacing={3}>
       <PageHeader
@@ -48,50 +59,39 @@ export const MyTradeListingsPage = () => {
         }
       />
 
-      {isLoading && <Skeleton className="h-40 w-full" />}
+      <Card>
+        {isLoading && <Skeleton className="m-4 h-40" />}
 
-      {!isLoading && (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Listing</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Price / unit</TableHead>
-              <TableHead className="text-right">Available / Total</TableHead>
-              <TableHead>Payments</TableHead>
-              <TableHead>Created</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {(data?.items ?? []).map((l) => (
-              <TableRow key={l.id ?? l._id}>
-                <TableCell className="font-medium">
-                  {l.name}
-                  <div className="text-xs text-muted-foreground">{l.unit}</div>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={statusVariant[l.status] ?? 'muted'}>{l.status}</Badge>
-                </TableCell>
-                <TableCell className="text-right">{formatInr(l.unitPriceInr)}</TableCell>
-                <TableCell className="text-right">
-                  {l.availableUnits} / {l.totalUnits}
-                </TableCell>
-                <TableCell className="text-xs">
-                  {l.acceptedPaymentModes.join(' · ')}
-                </TableCell>
-                <TableCell className="text-xs">{formatDate(l.createdAt)}</TableCell>
-              </TableRow>
-            ))}
-            {(data?.items.length ?? 0) === 0 && (
-              <TableRow>
-                <TableCell colSpan={6} className="py-12 text-center text-sm text-muted-foreground">
-                  No listings yet. Create one to start selling to other clusters.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      )}
+        {!isLoading && (
+          <Scrollbar>
+            <Table sx={{ minWidth: 800 }}>
+              <TableHeadCustom headLabel={head} />
+              <TableBody>
+                {items.map((l) => (
+                  <TableRow key={l.id ?? l._id} hover>
+                    <TableCell sx={{ fontWeight: 600 }}>
+                      {l.name}
+                      <Box sx={{ color: 'text.secondary', typography: 'caption' }}>{l.unit}</Box>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={statusVariant[l.status] ?? 'muted'}>{l.status}</Badge>
+                    </TableCell>
+                    <TableCell align="right">{formatInr(l.unitPriceInr)}</TableCell>
+                    <TableCell align="right">
+                      {l.availableUnits} / {l.totalUnits}
+                    </TableCell>
+                    <TableCell sx={{ typography: 'caption' }}>
+                      {l.acceptedPaymentModes.join(' · ')}
+                    </TableCell>
+                    <TableCell sx={{ typography: 'caption' }}>{formatDate(l.createdAt)}</TableCell>
+                  </TableRow>
+                ))}
+                <TableNoData notFound={!isLoading && items.length === 0} />
+              </TableBody>
+            </Table>
+          </Scrollbar>
+        )}
+      </Card>
 
       <NewListingDialog open={createOpen} onClose={() => setCreateOpen(false)} />
     </Stack>

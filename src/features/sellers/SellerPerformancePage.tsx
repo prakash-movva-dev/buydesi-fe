@@ -1,28 +1,21 @@
 import { useState } from 'react';
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import MenuItem from '@mui/material/MenuItem';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
 import { Calendar, Download } from 'lucide-react';
 import { ClusterPicker } from '@/components/pickers/ClusterPicker';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData } from '@/components/table';
 import { useAuth } from '@/lib/auth';
 import { formatInr } from '@/lib/format';
 import { ApiError, UserRole } from '@/types/api';
@@ -42,6 +35,16 @@ const sortOptions: { value: SellerPerformanceSort; label: string }[] = [
   { value: 'revenue', label: 'Revenue' },
   { value: 'orders', label: 'Orders' },
   { value: 'rating', label: 'Avg rating' },
+];
+
+const HEAD = [
+  { id: 'farm', label: 'Farm name' },
+  { id: 'orders', label: 'Orders', align: 'right' as const },
+  { id: 'fulfilled', label: 'Fulfilled', align: 'right' as const },
+  { id: 'returned', label: 'Returned', align: 'right' as const },
+  { id: 'rating', label: 'Avg rating', align: 'right' as const },
+  { id: 'complaints', label: 'Complaints', align: 'right' as const },
+  { id: 'revenue', label: 'Revenue', align: 'right' as const },
 ];
 
 export const SellerPerformancePage = () => {
@@ -96,107 +99,116 @@ export const SellerPerformancePage = () => {
         description="Per-seller orders, fulfilment, returns, ratings, complaints and revenue for a chosen date range. Cluster admins are auto-scoped to their cluster; super admin can pin to a specific cluster or leave blank for platform-wide."
       />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Calendar className="h-4 w-4" />
-            Filters
-          </CardTitle>
-          <CardDescription>Defaults to the last 30 days.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="flex-end">
-            <div className="space-y-1.5">
-              <Label htmlFor="sp-from">From</Label>
-              <Input
-                id="sp-from"
-                type="date"
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="sp-to">To</Label>
-              <Input id="sp-to" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="sp-sort">Sort by</Label>
-              <Select
-                id="sp-sort"
-                className="w-40"
-                value={sort}
-                onChange={(e) => setSort(e.target.value as SellerPerformanceSort)}
+      <Card sx={{ p: 2.5 }}>
+        <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
+          <Calendar className="h-4 w-4" />
+          <Typography variant="subtitle1">Filters</Typography>
+        </Stack>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Defaults to the last 30 days.
+        </Typography>
+        <Stack direction="row" spacing={2} flexWrap="wrap" alignItems="flex-end">
+          <TextField
+            id="sp-from"
+            label="From"
+            type="date"
+            value={from}
+            onChange={(e) => setFrom(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 180 }}
+          />
+          <TextField
+            id="sp-to"
+            label="To"
+            type="date"
+            value={to}
+            onChange={(e) => setTo(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 180 }}
+          />
+          <TextField
+            select
+            id="sp-sort"
+            label="Sort by"
+            value={sort}
+            onChange={(e) => setSort(e.target.value as SellerPerformanceSort)}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 180 }}
+          >
+            {sortOptions.map((o) => (
+              <MenuItem key={o.value} value={o.value}>
+                {o.label}
+              </MenuItem>
+            ))}
+          </TextField>
+          {isSuper && (
+            <Box sx={{ width: 288 }}>
+              <Typography
+                variant="caption"
+                sx={{ display: 'block', mb: 0.5, color: 'text.secondary' }}
               >
-                {sortOptions.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            {isSuper && (
-              <div className="space-y-1.5">
-                <Label>Cluster (optional)</Label>
-                <div className="w-72">
-                  <ClusterPicker
-                    value={clusterId || null}
-                    onChange={(id) => setClusterId(id ?? '')}
-                    placeholder="Blank = all clusters"
-                  />
-                </div>
-              </div>
-            )}
-            <Button type="button" variant="outline" onClick={onDownload} disabled={downloading}>
-              <Download className="h-4 w-4" />
-              {downloading ? 'Downloading…' : 'Download CSV'}
-            </Button>
-          </Stack>
-          {runError && <p className="mt-3 text-sm text-destructive">{runError}</p>}
-          {downloadError && <p className="mt-3 text-sm text-destructive">{downloadError}</p>}
-        </CardContent>
+                Cluster (optional)
+              </Typography>
+              <ClusterPicker
+                value={clusterId || null}
+                onChange={(id) => setClusterId(id ?? '')}
+                placeholder="Blank = all clusters"
+              />
+            </Box>
+          )}
+          <Button type="button" variant="outline" onClick={onDownload} disabled={downloading}>
+            <Download className="h-4 w-4" />
+            {downloading ? 'Downloading…' : 'Download CSV'}
+          </Button>
+        </Stack>
+        {runError && (
+          <Typography variant="body2" sx={{ mt: 1.5, color: 'error.main' }}>
+            {runError}
+          </Typography>
+        )}
+        {downloadError && (
+          <Typography variant="body2" sx={{ mt: 1.5, color: 'error.main' }}>
+            {downloadError}
+          </Typography>
+        )}
       </Card>
 
       {isLoading ? (
         <Skeleton className="h-64 w-full" />
       ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Farm name</TableHead>
-              <TableHead className="text-right">Orders</TableHead>
-              <TableHead className="text-right">Fulfilled</TableHead>
-              <TableHead className="text-right">Returned</TableHead>
-              <TableHead className="text-right">Avg rating</TableHead>
-              <TableHead className="text-right">Complaints</TableHead>
-              <TableHead className="text-right">Revenue</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={7} className="py-12 text-center text-muted-foreground">
-                  No seller activity in this range.
-                </TableCell>
-              </TableRow>
-            ) : (
-              rows.map((row) => (
-                <TableRow key={row.sellerId}>
-                  <TableCell className="font-medium">{row.farmName}</TableCell>
-                  <TableCell className="text-right tabular-nums">{row.orders}</TableCell>
-                  <TableCell className="text-right tabular-nums">{row.fulfilled}</TableCell>
-                  <TableCell className="text-right tabular-nums">{row.returned}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {row.avgRating != null ? row.avgRating.toFixed(2) : '—'}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{row.complaints}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {formatInr(row.revenueInr)}
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+        <Card>
+          <Scrollbar>
+            <Table sx={{ minWidth: 800 }}>
+              <TableHeadCustom headLabel={HEAD} />
+              <TableBody>
+                {rows.map((row) => (
+                  <TableRow key={row.sellerId} hover>
+                    <TableCell sx={{ fontWeight: 500 }}>{row.farmName}</TableCell>
+                    <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                      {row.orders}
+                    </TableCell>
+                    <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                      {row.fulfilled}
+                    </TableCell>
+                    <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                      {row.returned}
+                    </TableCell>
+                    <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                      {row.avgRating != null ? row.avgRating.toFixed(2) : '—'}
+                    </TableCell>
+                    <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                      {row.complaints}
+                    </TableCell>
+                    <TableCell align="right" sx={{ fontVariantNumeric: 'tabular-nums' }}>
+                      {formatInr(row.revenueInr)}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                <TableNoData notFound={!isLoading && rows.length === 0} />
+              </TableBody>
+            </Table>
+          </Scrollbar>
+        </Card>
       )}
     </Stack>
   );

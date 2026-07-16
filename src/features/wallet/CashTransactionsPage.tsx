@@ -1,22 +1,23 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { CheckCircle2, ChevronLeft, ChevronRight, XCircle } from 'lucide-react';
+import { CheckCircle2, XCircle } from 'lucide-react';
 import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import MenuItem from '@mui/material/MenuItem';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TextField from '@mui/material/TextField';
+import IconButton from '@mui/material/IconButton';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
 import { Label } from '@/components/ui/Label';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
 import { Textarea } from '@/components/ui/Textarea';
 import { formatDate, formatInr } from '@/lib/format';
 import { ApiError } from '@/types/api';
@@ -43,6 +44,18 @@ const TYPE_OPTIONS: Array<{ value: '' | CashEntryType; label: string }> = [
 
 const PAGE_SIZE = 25;
 
+const HEAD = [
+  { id: 'type', label: 'Type' },
+  { id: 'status', label: 'Status' },
+  { id: 'amount', label: 'Amount', align: 'right' as const },
+  { id: 'reason', label: 'Reason' },
+  { id: 'seller', label: 'Seller' },
+  { id: 'cluster', label: 'Cluster' },
+  { id: 'tradeOrder', label: 'Trade order' },
+  { id: 'submitted', label: 'Submitted' },
+  { id: 'actions', label: '' },
+];
+
 export const CashTransactionsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const status = (searchParams.get('status') as CashEntryStatus | null) ?? '';
@@ -63,7 +76,6 @@ export const CashTransactionsPage = () => {
   const approveMut = useApproveCash();
   const rejectMut = useRejectCash();
   const total = data?.meta.total ?? 0;
-  const pageCount = total > 0 ? Math.ceil(total / PAGE_SIZE) : 1;
 
   const setParam = (next: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams);
@@ -86,31 +98,6 @@ export const CashTransactionsPage = () => {
         description="Offline trade settlements logged by sellers. Approving posts the wallet entry; rejecting cancels it."
       />
 
-      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
-        <Select
-          value={status}
-          onChange={(e) => setParam({ status: e.target.value })}
-          className="w-48"
-        >
-          {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-        <Select
-          value={type}
-          onChange={(e) => setParam({ type: e.target.value })}
-          className="w-72"
-        >
-          {TYPE_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-      </Stack>
-
       {isLoading && (
         <div className="space-y-2">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -125,113 +112,120 @@ export const CashTransactionsPage = () => {
       )}
 
       {!isLoading && !isError && (
-        <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Type</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead>Reason</TableHead>
-                <TableHead>Seller</TableHead>
-                <TableHead>Cluster</TableHead>
-                <TableHead>Trade order</TableHead>
-                <TableHead>Submitted</TableHead>
-                <TableHead className="w-px" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(data?.items ?? []).map((c) => (
-                <TableRow key={c.id}>
-                  <TableCell className="capitalize">{c.type.replace('_', ' ')}</TableCell>
-                  <TableCell>
-                    <CashStatusBadge status={c.status} />
-                  </TableCell>
-                  <TableCell className="text-right font-medium">{formatInr(c.amountInr)}</TableCell>
-                  <TableCell className="max-w-xs truncate text-xs" title={c.reason}>
-                    {c.reason}
-                  </TableCell>
-                  <TableCell>
-                    <div className="font-medium">{c.sellerName ?? '—'}</div>
-                    {(c.sellerMobile || c.sellerEmail) && (
-                      <div className="text-xs text-muted-foreground">
-                        {c.sellerMobile ?? c.sellerEmail}
-                      </div>
-                    )}
-                  </TableCell>
-                  <TableCell className="text-xs">{c.clusterName ?? '—'}</TableCell>
-                  <TableCell className="text-xs">{c.tradeOrderLabel ?? '—'}</TableCell>
-                  <TableCell className="text-xs">{formatDate(c.createdAt)}</TableCell>
-                  <TableCell className="space-x-1 whitespace-nowrap">
-                    {c.status === 'PENDING' && (
-                      <>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setReviewing({ id: c.id, action: 'approve' })}
-                          aria-label="Approve cash entry"
-                          title="Approve"
-                        >
-                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setReviewing({ id: c.id, action: 'reject' })}
-                          aria-label="Reject cash entry"
-                          title="Reject"
-                        >
-                          <XCircle className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {(data?.items.length ?? 0) === 0 && (
-                <TableRow>
-                  <TableCell colSpan={9} className="py-12 text-center text-sm text-muted-foreground">
-                    No cash entries match the current filter.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              fontSize: 14,
-              color: 'text.secondary',
-            }}
+        <Card>
+          <Stack
+            direction="row"
+            spacing={2}
+            flexWrap="wrap"
+            alignItems="center"
+            sx={{ p: 2.5 }}
           >
-            <span>
-              {data?.items.length ?? 0} of {total} · page {page} / {pageCount}
-            </span>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.max(1, page - 1)) })}
-                disabled={page <= 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Prev
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.min(pageCount, page + 1)) })}
-                disabled={page >= pageCount}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </Box>
-        </>
+            <TextField
+              select
+              label="Status"
+              value={status}
+              onChange={(e) => setParam({ status: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: 220 }}
+            >
+              {STATUS_OPTIONS.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label="Type"
+              value={type}
+              onChange={(e) => setParam({ type: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: 320 }}
+            >
+              {TYPE_OPTIONS.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Stack>
+
+          <Scrollbar>
+            <Table sx={{ minWidth: 800 }}>
+              <TableHeadCustom headLabel={HEAD} />
+              <TableBody>
+                {(data?.items ?? []).map((c) => (
+                  <TableRow key={c.id} hover>
+                    <TableCell sx={{ textTransform: 'capitalize' }}>
+                      {c.type.replace('_', ' ')}
+                    </TableCell>
+                    <TableCell>
+                      <CashStatusBadge status={c.status} />
+                    </TableCell>
+                    <TableCell align="right" sx={{ fontWeight: 600 }}>
+                      {formatInr(c.amountInr)}
+                    </TableCell>
+                    <TableCell
+                      title={c.reason}
+                      sx={{
+                        maxWidth: 320,
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        typography: 'caption',
+                      }}
+                    >
+                      {c.reason}
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ fontWeight: 600 }}>{c.sellerName ?? '—'}</Box>
+                      {(c.sellerMobile || c.sellerEmail) && (
+                        <Box sx={{ color: 'text.secondary', typography: 'caption' }}>
+                          {c.sellerMobile ?? c.sellerEmail}
+                        </Box>
+                      )}
+                    </TableCell>
+                    <TableCell sx={{ typography: 'caption' }}>{c.clusterName ?? '—'}</TableCell>
+                    <TableCell sx={{ typography: 'caption' }}>{c.tradeOrderLabel ?? '—'}</TableCell>
+                    <TableCell sx={{ typography: 'caption' }}>{formatDate(c.createdAt)}</TableCell>
+                    <TableCell sx={{ whiteSpace: 'nowrap' }}>
+                      {c.status === 'PENDING' && (
+                        <>
+                          <IconButton
+                            size="small"
+                            onClick={() => setReviewing({ id: c.id, action: 'approve' })}
+                            aria-label="Approve cash entry"
+                            title="Approve"
+                          >
+                            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            onClick={() => setReviewing({ id: c.id, action: 'reject' })}
+                            aria-label="Reject cash entry"
+                            title="Reject"
+                          >
+                            <XCircle className="h-4 w-4 text-destructive" />
+                          </IconButton>
+                        </>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                <TableNoData notFound={!isLoading && (data?.items.length ?? 0) === 0} />
+              </TableBody>
+            </Table>
+          </Scrollbar>
+
+          <TablePaginationCustom
+            count={total}
+            page={page - 1}
+            rowsPerPage={PAGE_SIZE}
+            rowsPerPageOptions={[10, 25, 50]}
+            onPageChange={(_e, newPage) => setParam({ page: String(newPage + 1) })}
+            onRowsPerPageChange={(e) => setParam({ limit: e.target.value, page: '1' })}
+          />
+        </Card>
       )}
 
       <CashReviewDialog

@@ -1,13 +1,20 @@
 import { Fragment, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Play } from 'lucide-react';
+import { ChevronDown, ChevronUp, Play } from 'lucide-react';
 import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import MenuItem from '@mui/material/MenuItem';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TextField from '@mui/material/TextField';
 import { UserPicker } from '@/components/pickers/UserPicker';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
-  Card,
+  Card as UiCard,
   CardContent,
   CardDescription,
   CardHeader,
@@ -19,14 +26,8 @@ import { Label } from '@/components/ui/Label';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
 import { ScopedAdminBanner } from '@/features/scoped-admin/ScopedAdminBanner';
 import { useAuth } from '@/lib/auth';
 import { formatDateTime, formatInr } from '@/lib/format';
@@ -64,6 +65,29 @@ const statusVariant: Record<PayoutStatus, 'warning' | 'info' | 'success' | 'dest
 
 const PAGE_SIZE = 25;
 
+const HEAD = [
+  { id: 'expand', label: '' },
+  { id: 'seller', label: 'Seller' },
+  { id: 'schedule', label: 'Schedule' },
+  { id: 'status', label: 'Status' },
+  { id: 'gross', label: 'Gross', align: 'right' as const },
+  { id: 'commission', label: 'Commission', align: 'right' as const },
+  { id: 'net', label: 'Net', align: 'right' as const },
+  { id: 'orders', label: 'Orders', align: 'right' as const },
+  { id: 'created', label: 'Created' },
+  { id: 'paid', label: 'Paid' },
+];
+
+const LINE_ITEM_HEAD = [
+  { id: 'product', label: 'Product' },
+  { id: 'order', label: 'Order' },
+  { id: 'gross', label: 'Gross', align: 'right' as const },
+  { id: 'rate', label: 'Rate %', align: 'right' as const },
+  { id: 'source', label: 'Source' },
+  { id: 'commission', label: 'Commission', align: 'right' as const },
+  { id: 'net', label: 'Net', align: 'right' as const },
+];
+
 export const PayoutsPage = () => {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -85,7 +109,6 @@ export const PayoutsPage = () => {
 
   const { data, isLoading, isError, error } = usePayoutsList(query);
   const total = data?.meta.total ?? 0;
-  const pageCount = total > 0 ? Math.ceil(total / PAGE_SIZE) : 1;
 
   const setParam = (next: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams);
@@ -118,39 +141,6 @@ export const PayoutsPage = () => {
 
       <ScopedAdminBanner />
 
-      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
-        <Select
-          value={status}
-          onChange={(e) => setParam({ status: e.target.value })}
-          className="w-44"
-        >
-          {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-        <Select
-          value={schedule}
-          onChange={(e) => setParam({ schedule: e.target.value })}
-          className="w-44"
-        >
-          {SCHEDULE_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-        <Box sx={{ width: 288 }}>
-          <UserPicker
-            role={UserRole.SELLER}
-            value={sellerId || null}
-            onChange={(id) => setParam({ sellerId: id ?? '' })}
-            placeholder="Filter by seller…"
-          />
-        </Box>
-      </Stack>
-
       {isLoading && (
         <div className="space-y-2">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -165,115 +155,125 @@ export const PayoutsPage = () => {
       )}
 
       {!isLoading && !isError && (
-        <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-px" />
-                <TableHead>Seller</TableHead>
-                <TableHead>Schedule</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Gross</TableHead>
-                <TableHead className="text-right">Commission</TableHead>
-                <TableHead className="text-right">Net</TableHead>
-                <TableHead className="text-right">Orders</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Paid</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(data?.items ?? []).map((p) => {
-                const isExp = expanded[p.id];
-                return (
-                  <Fragment key={p.id}>
-                    <TableRow
-                      className="cursor-pointer"
-                      onClick={() => setExpanded((prev) => ({ ...prev, [p.id]: !prev[p.id] }))}
-                    >
-                      <TableCell>
-                        {isExp ? (
-                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <div className="font-medium">{p.sellerName ?? '—'}</div>
-                        {(p.sellerMobile || p.sellerEmail) && (
-                          <div className="text-xs text-muted-foreground">
-                            {p.sellerMobile ?? p.sellerEmail}
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell className="capitalize">{p.schedule.replace('_', ' ')}</TableCell>
-                      <TableCell>
-                        <Badge variant={statusVariant[p.status]}>{p.status}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">{formatInr(p.totalGrossInr)}</TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        − {formatInr(p.totalCommissionInr)}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">{formatInr(p.netInr)}</TableCell>
-                      <TableCell className="text-right">{p.orderCount}</TableCell>
-                      <TableCell className="text-xs">{formatDateTime(p.createdAt)}</TableCell>
-                      <TableCell className="text-xs">
-                        {p.paidAt ? formatDateTime(p.paidAt) : '—'}
-                      </TableCell>
-                    </TableRow>
-                    {isExp && (
-                      <TableRow>
-                        <TableCell colSpan={10} className="bg-secondary/30">
-                          <PayoutDetail payout={p} />
+        <Card>
+          <Stack
+            direction="row"
+            spacing={2}
+            flexWrap="wrap"
+            alignItems="center"
+            sx={{ p: 2.5 }}
+          >
+            <TextField
+              select
+              label="Status"
+              value={status}
+              onChange={(e) => setParam({ status: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: 200 }}
+            >
+              {STATUS_OPTIONS.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label="Schedule"
+              value={schedule}
+              onChange={(e) => setParam({ schedule: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: 200 }}
+            >
+              {SCHEDULE_OPTIONS.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </TextField>
+            <Box sx={{ width: 288 }}>
+              <UserPicker
+                role={UserRole.SELLER}
+                value={sellerId || null}
+                onChange={(id) => setParam({ sellerId: id ?? '' })}
+                placeholder="Filter by seller…"
+              />
+            </Box>
+          </Stack>
+
+          <Scrollbar>
+            <Table sx={{ minWidth: 960 }}>
+              <TableHeadCustom headLabel={HEAD} />
+              <TableBody>
+                {(data?.items ?? []).map((p) => {
+                  const isExp = expanded[p.id];
+                  return (
+                    <Fragment key={p.id}>
+                      <TableRow
+                        hover
+                        sx={{ cursor: 'pointer' }}
+                        onClick={() => setExpanded((prev) => ({ ...prev, [p.id]: !prev[p.id] }))}
+                      >
+                        <TableCell>
+                          {isExp ? (
+                            <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                          ) : (
+                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ fontWeight: 600 }}>{p.sellerName ?? '—'}</Box>
+                          {(p.sellerMobile || p.sellerEmail) && (
+                            <Box sx={{ color: 'text.secondary', typography: 'caption' }}>
+                              {p.sellerMobile ?? p.sellerEmail}
+                            </Box>
+                          )}
+                        </TableCell>
+                        <TableCell sx={{ textTransform: 'capitalize' }}>
+                          {p.schedule.replace('_', ' ')}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant={statusVariant[p.status]}>{p.status}</Badge>
+                        </TableCell>
+                        <TableCell align="right">{formatInr(p.totalGrossInr)}</TableCell>
+                        <TableCell align="right" sx={{ color: 'text.secondary' }}>
+                          − {formatInr(p.totalCommissionInr)}
+                        </TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 600 }}>
+                          {formatInr(p.netInr)}
+                        </TableCell>
+                        <TableCell align="right">{p.orderCount}</TableCell>
+                        <TableCell sx={{ typography: 'caption' }}>
+                          {formatDateTime(p.createdAt)}
+                        </TableCell>
+                        <TableCell sx={{ typography: 'caption' }}>
+                          {p.paidAt ? formatDateTime(p.paidAt) : '—'}
                         </TableCell>
                       </TableRow>
-                    )}
-                  </Fragment>
-                );
-              })}
-              {(data?.items.length ?? 0) === 0 && (
-                <TableRow>
-                  <TableCell colSpan={10} className="py-12 text-center text-sm text-muted-foreground">
-                    No payouts match the current filter.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                      {isExp && (
+                        <TableRow>
+                          <TableCell colSpan={10} sx={{ bgcolor: 'background.neutral' }}>
+                            <PayoutDetail payout={p} />
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </Fragment>
+                  );
+                })}
+                <TableNoData notFound={!isLoading && (data?.items.length ?? 0) === 0} />
+              </TableBody>
+            </Table>
+          </Scrollbar>
 
-          <Box
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              fontSize: 14,
-              color: 'text.secondary',
-            }}
-          >
-            <span>
-              {data?.items.length ?? 0} of {total} · page {page} / {pageCount}
-            </span>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.max(1, page - 1)) })}
-                disabled={page <= 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Prev
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.min(pageCount, page + 1)) })}
-                disabled={page >= pageCount}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </Box>
-        </>
+          <TablePaginationCustom
+            count={total}
+            page={page - 1}
+            rowsPerPage={PAGE_SIZE}
+            rowsPerPageOptions={[10, 25, 50]}
+            onPageChange={(_e, newPage) => setParam({ page: String(newPage + 1) })}
+            onRowsPerPageChange={(e) => setParam({ limit: e.target.value, page: '1' })}
+          />
+        </Card>
       )}
 
       <RunBatchDialog open={batchOpen} onClose={() => setBatchOpen(false)} />
@@ -283,7 +283,7 @@ export const PayoutsPage = () => {
 
 const PayoutDetail = ({ payout }: { payout: import('./types').Payout }) => (
   <div className="space-y-4 px-4 py-3">
-    <Card>
+    <UiCard>
       <CardHeader className="pb-2">
         <CardTitle className="text-base">Line items</CardTitle>
         <CardDescription>
@@ -291,38 +291,32 @@ const PayoutDetail = ({ payout }: { payout: import('./types').Payout }) => (
         </CardDescription>
       </CardHeader>
       <CardContent className="p-0">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Product</TableHead>
-              <TableHead>Order</TableHead>
-              <TableHead className="text-right">Gross</TableHead>
-              <TableHead className="text-right">Rate %</TableHead>
-              <TableHead>Source</TableHead>
-              <TableHead className="text-right">Commission</TableHead>
-              <TableHead className="text-right">Net</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {payout.lineItems.map((li, i) => (
-              <TableRow key={`${li.orderId}-${li.orderItemId}-${i}`}>
-                <TableCell className="font-medium">{li.productName}</TableCell>
-                <TableCell className="text-xs">{li.orderNumber ?? '—'}</TableCell>
-                <TableCell className="text-right">{formatInr(li.grossInr)}</TableCell>
-                <TableCell className="text-right">{li.commissionRatePercent}%</TableCell>
-                <TableCell>
-                  <Badge variant="muted">{li.commissionSource}</Badge>
-                </TableCell>
-                <TableCell className="text-right text-muted-foreground">
-                  − {formatInr(li.commissionInr)}
-                </TableCell>
-                <TableCell className="text-right font-medium">{formatInr(li.netInr)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <Scrollbar>
+          <Table sx={{ minWidth: 800 }}>
+            <TableHeadCustom headLabel={LINE_ITEM_HEAD} />
+            <TableBody>
+              {payout.lineItems.map((li, i) => (
+                <TableRow key={`${li.orderId}-${li.orderItemId}-${i}`} hover>
+                  <TableCell sx={{ fontWeight: 600 }}>{li.productName}</TableCell>
+                  <TableCell sx={{ typography: 'caption' }}>{li.orderNumber ?? '—'}</TableCell>
+                  <TableCell align="right">{formatInr(li.grossInr)}</TableCell>
+                  <TableCell align="right">{li.commissionRatePercent}%</TableCell>
+                  <TableCell>
+                    <Badge variant="muted">{li.commissionSource}</Badge>
+                  </TableCell>
+                  <TableCell align="right" sx={{ color: 'text.secondary' }}>
+                    − {formatInr(li.commissionInr)}
+                  </TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 600 }}>
+                    {formatInr(li.netInr)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Scrollbar>
       </CardContent>
-    </Card>
+    </UiCard>
     {payout.notes && (
       <div className="rounded-md bg-secondary p-3 text-sm">
         <p className="text-xs font-semibold uppercase text-muted-foreground">Notes</p>

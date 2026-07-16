@@ -1,7 +1,15 @@
 import { Fragment, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Play } from 'lucide-react';
+import { ChevronDown, ChevronUp, Play } from 'lucide-react';
+import Box from '@mui/material/Box';
+import MuiCard from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
+import MuiTable from '@mui/material/Table';
+import MenuItem from '@mui/material/MenuItem';
+import MuiTableRow from '@mui/material/TableRow';
+import MuiTableBody from '@mui/material/TableBody';
+import MuiTableCell from '@mui/material/TableCell';
+import TextField from '@mui/material/TextField';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
@@ -12,7 +20,6 @@ import {
   CardTitle,
 } from '@/components/ui/Card';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
   Table,
@@ -22,6 +29,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
 import { useSellerMe, useSetPayoutPreference } from '@/features/seller/profile/api';
 import { formatDateTime, formatInr } from '@/lib/format';
 import { ApiError } from '@/types/api';
@@ -54,6 +63,18 @@ const statusVariant: Record<PayoutStatus, 'warning' | 'info' | 'success' | 'dest
 
 const PAGE_SIZE = 20;
 
+const HEAD = [
+  { id: 'expand', label: '' },
+  { id: 'schedule', label: 'Schedule' },
+  { id: 'status', label: 'Status' },
+  { id: 'gross', label: 'Gross', align: 'right' as const },
+  { id: 'commission', label: 'Commission', align: 'right' as const },
+  { id: 'net', label: 'Net', align: 'right' as const },
+  { id: 'orders', label: 'Orders', align: 'right' as const },
+  { id: 'created', label: 'Created' },
+  { id: 'paid', label: 'Paid' },
+];
+
 export const MyPayoutsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const status = (searchParams.get('status') as PayoutStatus | null) ?? '';
@@ -67,7 +88,6 @@ export const MyPayoutsPage = () => {
 
   const { data, isLoading } = useMyPayouts(query);
   const total = data?.meta.total ?? 0;
-  const pageCount = total > 0 ? Math.ceil(total / PAGE_SIZE) : 1;
 
   const setParam = (next: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams);
@@ -90,162 +110,154 @@ export const MyPayoutsPage = () => {
 
       <PayoutPreferenceCard />
 
-      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
-        <Select
-          value={status}
-          onChange={(e) => setParam({ status: e.target.value })}
-          className="w-44"
+      <MuiCard>
+        <Stack
+          direction="row"
+          spacing={2}
+          flexWrap="wrap"
+          alignItems="center"
+          sx={{ p: 2.5 }}
         >
-          {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-        <Select
-          value={schedule}
-          onChange={(e) => setParam({ schedule: e.target.value })}
-          className="w-44"
-        >
-          {SCHEDULE_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-      </Stack>
+          <TextField
+            select
+            label="Status"
+            value={status}
+            onChange={(e) => setParam({ status: e.target.value })}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 176 }}
+          >
+            {STATUS_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            label="Schedule"
+            value={schedule}
+            onChange={(e) => setParam({ schedule: e.target.value })}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 176 }}
+          >
+            {SCHEDULE_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Stack>
 
-      {isLoading && <Skeleton className="h-40 w-full" />}
+        {isLoading && (
+          <Box sx={{ p: 2.5 }}>
+            <Skeleton className="h-40 w-full" />
+          </Box>
+        )}
 
-      {!isLoading && (
-        <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-px" />
-                <TableHead>Schedule</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Gross</TableHead>
-                <TableHead className="text-right">Commission</TableHead>
-                <TableHead className="text-right">Net</TableHead>
-                <TableHead className="text-right">Orders</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Paid</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(data?.items ?? []).map((p) => {
-                const isExp = expanded[p.id];
-                return (
-                  <Fragment key={p.id}>
-                    <TableRow
-                      className="cursor-pointer"
-                      onClick={() => setExpanded((prev) => ({ ...prev, [p.id]: !prev[p.id] }))}
-                    >
-                      <TableCell>
-                        {isExp ? (
-                          <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+        {!isLoading && (
+          <>
+            <Scrollbar>
+              <MuiTable sx={{ minWidth: 800 }}>
+                <TableHeadCustom headLabel={HEAD} />
+                <MuiTableBody>
+                  {(data?.items ?? []).map((p) => {
+                    const isExp = expanded[p.id];
+                    return (
+                      <Fragment key={p.id}>
+                        <MuiTableRow
+                          hover
+                          sx={{ cursor: 'pointer' }}
+                          onClick={() => setExpanded((prev) => ({ ...prev, [p.id]: !prev[p.id] }))}
+                        >
+                          <MuiTableCell>
+                            {isExp ? (
+                              <ChevronUp className="h-4 w-4 text-muted-foreground" />
+                            ) : (
+                              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </MuiTableCell>
+                          <MuiTableCell sx={{ textTransform: 'capitalize' }}>
+                            {p.schedule.replace('_', ' ')}
+                          </MuiTableCell>
+                          <MuiTableCell>
+                            <Badge variant={statusVariant[p.status]}>{p.status}</Badge>
+                          </MuiTableCell>
+                          <MuiTableCell align="right">{formatInr(p.totalGrossInr)}</MuiTableCell>
+                          <MuiTableCell align="right" sx={{ color: 'text.secondary' }}>
+                            − {formatInr(p.totalCommissionInr)}
+                          </MuiTableCell>
+                          <MuiTableCell align="right" sx={{ fontWeight: 600 }}>
+                            {formatInr(p.netInr)}
+                          </MuiTableCell>
+                          <MuiTableCell align="right">{p.orderCount}</MuiTableCell>
+                          <MuiTableCell sx={{ typography: 'caption' }}>
+                            {formatDateTime(p.createdAt)}
+                          </MuiTableCell>
+                          <MuiTableCell sx={{ typography: 'caption' }}>
+                            {p.paidAt ? formatDateTime(p.paidAt) : '—'}
+                          </MuiTableCell>
+                        </MuiTableRow>
+                        {isExp && (
+                          <MuiTableRow>
+                            <MuiTableCell colSpan={9} sx={{ bgcolor: 'background.neutral' }}>
+                              <Card>
+                                <CardHeader className="pb-2">
+                                  <CardTitle className="text-base">Line items</CardTitle>
+                                  <CardDescription>
+                                    {p.lineItems.length} order item(s)
+                                  </CardDescription>
+                                </CardHeader>
+                                <CardContent className="p-0">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>Product</TableHead>
+                                        <TableHead className="text-right">Gross</TableHead>
+                                        <TableHead className="text-right">Rate %</TableHead>
+                                        <TableHead>Source</TableHead>
+                                        <TableHead className="text-right">Net</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {p.lineItems.map((li, i) => (
+                                        <TableRow key={`${li.orderId}-${i}`}>
+                                          <TableCell className="font-medium">{li.productName}</TableCell>
+                                          <TableCell className="text-right">{formatInr(li.grossInr)}</TableCell>
+                                          <TableCell className="text-right">{li.commissionRatePercent}%</TableCell>
+                                          <TableCell>
+                                            <Badge variant="muted">{li.commissionSource}</Badge>
+                                          </TableCell>
+                                          <TableCell className="text-right font-medium">
+                                            {formatInr(li.netInr)}
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </CardContent>
+                              </Card>
+                            </MuiTableCell>
+                          </MuiTableRow>
                         )}
-                      </TableCell>
-                      <TableCell className="capitalize">{p.schedule.replace('_', ' ')}</TableCell>
-                      <TableCell>
-                        <Badge variant={statusVariant[p.status]}>{p.status}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right">{formatInr(p.totalGrossInr)}</TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        − {formatInr(p.totalCommissionInr)}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">{formatInr(p.netInr)}</TableCell>
-                      <TableCell className="text-right">{p.orderCount}</TableCell>
-                      <TableCell className="text-xs">{formatDateTime(p.createdAt)}</TableCell>
-                      <TableCell className="text-xs">
-                        {p.paidAt ? formatDateTime(p.paidAt) : '—'}
-                      </TableCell>
-                    </TableRow>
-                    {isExp && (
-                      <TableRow>
-                        <TableCell colSpan={9} className="bg-secondary/30">
-                          <Card>
-                            <CardHeader className="pb-2">
-                              <CardTitle className="text-base">Line items</CardTitle>
-                              <CardDescription>
-                                {p.lineItems.length} order item(s)
-                              </CardDescription>
-                            </CardHeader>
-                            <CardContent className="p-0">
-                              <Table>
-                                <TableHeader>
-                                  <TableRow>
-                                    <TableHead>Product</TableHead>
-                                    <TableHead className="text-right">Gross</TableHead>
-                                    <TableHead className="text-right">Rate %</TableHead>
-                                    <TableHead>Source</TableHead>
-                                    <TableHead className="text-right">Net</TableHead>
-                                  </TableRow>
-                                </TableHeader>
-                                <TableBody>
-                                  {p.lineItems.map((li, i) => (
-                                    <TableRow key={`${li.orderId}-${i}`}>
-                                      <TableCell className="font-medium">{li.productName}</TableCell>
-                                      <TableCell className="text-right">{formatInr(li.grossInr)}</TableCell>
-                                      <TableCell className="text-right">{li.commissionRatePercent}%</TableCell>
-                                      <TableCell>
-                                        <Badge variant="muted">{li.commissionSource}</Badge>
-                                      </TableCell>
-                                      <TableCell className="text-right font-medium">
-                                        {formatInr(li.netInr)}
-                                      </TableCell>
-                                    </TableRow>
-                                  ))}
-                                </TableBody>
-                              </Table>
-                            </CardContent>
-                          </Card>
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </Fragment>
-                );
-              })}
-              {(data?.items.length ?? 0) === 0 && (
-                <TableRow>
-                  <TableCell colSpan={9} className="py-12 text-center text-sm text-muted-foreground">
-                    No payouts yet — they'll appear after your first order's return window closes.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                      </Fragment>
+                    );
+                  })}
+                  <TableNoData notFound={!isLoading && (data?.items.length ?? 0) === 0} />
+                </MuiTableBody>
+              </MuiTable>
+            </Scrollbar>
 
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>
-              {data?.items.length ?? 0} of {total} · page {page} / {pageCount}
-            </span>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.max(1, page - 1)) })}
-                disabled={page <= 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Prev
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.min(pageCount, page + 1)) })}
-                disabled={page >= pageCount}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </>
-      )}
+            <TablePaginationCustom
+              count={total}
+              page={page - 1}
+              rowsPerPage={PAGE_SIZE}
+              rowsPerPageOptions={[10, 25, 50]}
+              onPageChange={(_e, newPage) => setParam({ page: String(newPage + 1) })}
+              onRowsPerPageChange={() => {}}
+            />
+          </>
+        )}
+      </MuiCard>
     </Stack>
   );
 };
@@ -278,18 +290,21 @@ const PayoutPreferenceCard = () => {
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-wrap items-end gap-3">
-        <Select
+        <TextField
+          select
+          label="Preference"
           value={me?.payoutPreference ?? 'daily'}
           onChange={(e) =>
             setPref.mutate(e.target.value as 'daily' | 'weekly' | 'on_demand')
           }
           disabled={setPref.isPending}
-          className="w-44"
+          InputLabelProps={{ shrink: true }}
+          sx={{ width: 176 }}
         >
-          <option value="daily">Daily</option>
-          <option value="weekly">Weekly</option>
-          <option value="on_demand">On demand</option>
-        </Select>
+          <MenuItem value="daily">Daily</MenuItem>
+          <MenuItem value="weekly">Weekly</MenuItem>
+          <MenuItem value="on_demand">On demand</MenuItem>
+        </TextField>
         {me?.payoutPreference === 'on_demand' && (
           <Button onClick={onRequest} disabled={request.isPending}>
             <Play className="h-4 w-4" />

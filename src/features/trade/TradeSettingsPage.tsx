@@ -1,15 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
   Plus,
   Save,
   Sparkles,
   Trash2,
   XCircle,
 } from 'lucide-react';
+import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import MenuItem from '@mui/material/MenuItem';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TextField from '@mui/material/TextField';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
@@ -22,18 +27,10 @@ import {
   CardTitle,
 } from '@/components/ui/Card';
 import { Dialog } from '@/components/ui/Dialog';
-import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
 import { Textarea } from '@/components/ui/Textarea';
 import { useAuth } from '@/lib/auth';
 import { formatDateTime, formatInr } from '@/lib/format';
@@ -46,6 +43,16 @@ import {
   useTradeListings,
 } from './api';
 import type { TradeCategoryOverride, TradeListingStatus } from './types';
+
+const REVIEW_HEAD = [
+  { id: 'listing', label: 'Listing' },
+  { id: 'status', label: 'Status' },
+  { id: 'seller', label: 'Seller' },
+  { id: 'price', label: 'Unit ₹', align: 'right' as const },
+  { id: 'avail', label: 'Avail / Total', align: 'right' as const },
+  { id: 'submitted', label: 'Submitted' },
+  { id: 'actions', label: '' },
+];
 
 // Local editor state: commissionPercent is a string while typing, and `key`
 // gives each row a stable React identity independent of the chosen category.
@@ -170,39 +177,36 @@ export const TradeSettingsPage = () => {
             </p>
           )}
           {config && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="t-comm">Inter-cluster commission %</Label>
-                <Input
-                  id="t-comm"
-                  type="number"
-                  min={0}
-                  max={100}
-                  step="0.1"
-                  value={commission}
-                  onChange={(e) => setCommission(e.target.value)}
-                  disabled={!isSuper}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Currently {config.interClusterCommissionPercent}%
-                </p>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="t-fee">Platform fee (₹) per order</Label>
-                <Input
-                  id="t-fee"
-                  type="number"
-                  min={0}
-                  step="1"
-                  value={platformFee}
-                  onChange={(e) => setPlatformFee(e.target.value)}
-                  disabled={!isSuper}
-                />
-                <p className="text-xs text-muted-foreground">
-                  Currently {formatInr(config.platformFeeInr)}
-                </p>
-              </div>
-            </div>
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 2.5,
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+              }}
+            >
+              <TextField
+                fullWidth
+                type="number"
+                label="Inter-cluster commission %"
+                value={commission}
+                onChange={(e) => setCommission(e.target.value)}
+                disabled={!isSuper}
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ min: 0, max: 100, step: '0.1' }}
+                helperText={`Currently ${config.interClusterCommissionPercent}%`}
+              />
+              <TextField
+                fullWidth
+                type="number"
+                label="Platform fee (₹) per order"
+                value={platformFee}
+                onChange={(e) => setPlatformFee(e.target.value)}
+                disabled={!isSuper}
+                InputLabelProps={{ shrink: true }}
+                inputProps={{ min: 0, step: '1' }}
+                helperText={`Currently ${formatInr(config.platformFeeInr)}`}
+              />
+            </Box>
           )}
 
           {config && (
@@ -240,22 +244,23 @@ export const TradeSettingsPage = () => {
                         placeholder="Pick a category…"
                       />
                     </div>
-                    <div className="flex items-center gap-1.5">
-                      <Input
-                        type="number"
-                        min={0}
-                        max={100}
-                        step="0.1"
-                        value={row.commissionPercent}
-                        onChange={(e) =>
-                          updateOverride(row.key, { commissionPercent: e.target.value })
-                        }
-                        disabled={!isSuper}
-                        className="w-28"
-                        aria-label="Override commission percent"
-                      />
-                      <span className="text-sm text-muted-foreground">%</span>
-                    </div>
+                    <TextField
+                      type="number"
+                      size="small"
+                      value={row.commissionPercent}
+                      onChange={(e) =>
+                        updateOverride(row.key, { commissionPercent: e.target.value })
+                      }
+                      disabled={!isSuper}
+                      inputProps={{
+                        min: 0,
+                        max: 100,
+                        step: '0.1',
+                        'aria-label': 'Override commission percent',
+                      }}
+                      InputProps={{ endAdornment: '%' }}
+                      sx={{ width: 120 }}
+                    />
                     {isSuper && (
                       <Button
                         type="button"
@@ -347,7 +352,6 @@ const ListingReviewPanel = () => {
   if (!canReview) return null;
 
   const total = data?.meta.total ?? 0;
-  const pageCount = total > 0 ? Math.ceil(total / PAGE_SIZE) : 1;
 
   return (
     <Card>
@@ -358,136 +362,95 @@ const ListingReviewPanel = () => {
           buyers in other clusters; reject to send back with notes.
         </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-3">
-        <div className="flex flex-wrap items-center gap-3">
-          <Select
+      <Box>
+        <Stack direction="row" spacing={2} flexWrap="wrap" alignItems="center" sx={{ p: 2.5 }}>
+          <TextField
+            select
+            label="Status"
             value={status}
             onChange={(e) => {
               setStatus(e.target.value as '' | TradeListingStatus);
               setPage(1);
             }}
-            className="w-48"
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 200 }}
           >
             {STATUS_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
+              <MenuItem key={opt.value} value={opt.value}>
                 {opt.label}
-              </option>
+              </MenuItem>
             ))}
-          </Select>
-        </div>
+          </TextField>
+        </Stack>
 
-        {isLoading && <Skeleton className="h-40 w-full" />}
         {isError && (
-          <p className="text-sm text-destructive">
+          <Box sx={{ px: 2.5, pb: 2, color: 'error.main', typography: 'body2' }}>
             {error instanceof Error ? error.message : 'Failed to load listings'}
-          </p>
+          </Box>
         )}
 
-        {!isLoading && !isError && (
-          <>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Listing</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Seller</TableHead>
-                  <TableHead className="text-right">Unit ₹</TableHead>
-                  <TableHead className="text-right">Avail / Total</TableHead>
-                  <TableHead>Submitted</TableHead>
-                  <TableHead className="w-px" />
+        <Scrollbar>
+          <Table sx={{ minWidth: 900 }}>
+            <TableHeadCustom headLabel={REVIEW_HEAD} />
+            <TableBody>
+              {(data?.items ?? []).map((l) => (
+                <TableRow key={l.id ?? l._id} hover>
+                  <TableCell sx={{ fontWeight: 600 }}>
+                    {l.name}
+                    <Box sx={{ color: 'text.secondary', typography: 'caption' }}>
+                      {l.unit} · {l.weightGramsPerUnit}g
+                    </Box>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={statusVariant[l.status]}>{l.status}</Badge>
+                  </TableCell>
+                  <TableCell sx={{ fontFamily: 'monospace', typography: 'caption' }}>
+                    {l.sellerId.slice(-8)}
+                  </TableCell>
+                  <TableCell align="right">{formatInr(l.unitPriceInr)}</TableCell>
+                  <TableCell align="right">
+                    {l.availableUnits} / {l.totalUnits}
+                  </TableCell>
+                  <TableCell sx={{ typography: 'caption' }}>{formatDateTime(l.createdAt)}</TableCell>
+                  <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
+                    {l.status === 'PENDING' && (
+                      <>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setReviewing({ id: l.id ?? l._id, action: 'approve' })}
+                          title="Approve"
+                          disabled={approve.isPending}
+                        >
+                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setReviewing({ id: l.id ?? l._id, action: 'reject' })}
+                          title="Reject"
+                          disabled={reject.isPending}
+                        >
+                          <XCircle className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </>
+                    )}
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(data?.items ?? []).map((l) => (
-                  <TableRow key={l.id ?? l._id}>
-                    <TableCell className="font-medium">
-                      {l.name}
-                      <div className="text-xs text-muted-foreground">
-                        {l.unit} · {l.weightGramsPerUnit}g
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={statusVariant[l.status]}>{l.status}</Badge>
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {l.sellerId.slice(-8)}
-                    </TableCell>
-                    <TableCell className="text-right">{formatInr(l.unitPriceInr)}</TableCell>
-                    <TableCell className="text-right">
-                      {l.availableUnits} / {l.totalUnits}
-                    </TableCell>
-                    <TableCell className="text-xs">{formatDateTime(l.createdAt)}</TableCell>
-                    <TableCell className="space-x-1 whitespace-nowrap">
-                      {l.status === 'PENDING' && (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() =>
-                              setReviewing({ id: l.id ?? l._id, action: 'approve' })
-                            }
-                            title="Approve"
-                            disabled={approve.isPending}
-                          >
-                            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() =>
-                              setReviewing({ id: l.id ?? l._id, action: 'reject' })
-                            }
-                            title="Reject"
-                            disabled={reject.isPending}
-                          >
-                            <XCircle className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {(data?.items.length ?? 0) === 0 && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={7}
-                      className="py-12 text-center text-sm text-muted-foreground"
-                    >
-                      No listings match the current filter.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+              ))}
+              <TableNoData notFound={!isLoading && (data?.items.length ?? 0) === 0} />
+            </TableBody>
+          </Table>
+        </Scrollbar>
 
-            <div className="flex items-center justify-between text-sm text-muted-foreground">
-              <span>
-                {data?.items.length ?? 0} of {total} · page {page} / {pageCount}
-              </span>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page <= 1}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                  Prev
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-                  disabled={page >= pageCount}
-                >
-                  Next
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </>
-        )}
-      </CardContent>
+        <TablePaginationCustom
+          count={total}
+          page={page - 1}
+          rowsPerPage={PAGE_SIZE}
+          rowsPerPageOptions={[PAGE_SIZE]}
+          onPageChange={(_e, p) => setPage(p + 1)}
+        />
+      </Box>
       <TradeReviewDialog
         open={reviewing !== null}
         action={reviewing?.action ?? null}

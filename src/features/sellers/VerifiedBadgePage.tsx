@@ -1,22 +1,22 @@
 import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
-import { BadgeCheck, ChevronLeft, ChevronRight, ShieldCheck } from 'lucide-react';
+import Table from '@mui/material/Table';
+import MenuItem from '@mui/material/MenuItem';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TextField from '@mui/material/TextField';
+import { BadgeCheck, ShieldCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatCard } from '@/components/ui/StatCard';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
 import { formatDate } from '@/lib/format';
 import { useSellersList, useToggleVerifiedBadge } from './api';
 import type { SellersListQuery } from './types';
@@ -26,6 +26,15 @@ const FILTER_OPTIONS = [
   { value: 'all', label: 'All approved sellers' },
   { value: 'verified', label: 'Verified only' },
   { value: 'not_verified', label: 'Not verified yet' },
+];
+
+const HEAD = [
+  { id: 'farm', label: 'Farm' },
+  { id: 'pincode', label: 'Pincode' },
+  { id: 'storefront', label: 'Storefront' },
+  { id: 'verified', label: 'Verified' },
+  { id: 'approved', label: 'Approved' },
+  { id: 'action', label: '' },
 ];
 
 export const VerifiedBadgePage = () => {
@@ -83,46 +92,47 @@ export const VerifiedBadgePage = () => {
         <StatCard label="Total approved on platform" value={total} />
       </Box>
 
-      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
-        <Select
-          value={verifiedFilter}
-          onChange={(e) => setParam({ filter: e.target.value })}
-          className="w-64"
-        >
-          {FILTER_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-      </Stack>
-
       {isLoading && <Skeleton className="h-40 w-full" />}
-      {isError && (
-        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
-          {error instanceof Error ? error.message : 'Failed to load sellers'}
-        </div>
-      )}
 
-      {!isLoading && !isError && (
-        <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Farm</TableHead>
-                <TableHead>Pincode</TableHead>
-                <TableHead>Storefront</TableHead>
-                <TableHead>Verified</TableHead>
-                <TableHead>Approved</TableHead>
-                <TableHead className="w-px" />
-              </TableRow>
-            </TableHeader>
+      <Card>
+        <Stack
+          direction="row"
+          spacing={2}
+          flexWrap="wrap"
+          alignItems="center"
+          sx={{ p: 2.5 }}
+        >
+          <TextField
+            select
+            label="Filter"
+            value={verifiedFilter}
+            onChange={(e) => setParam({ filter: e.target.value })}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 240 }}
+          >
+            {FILTER_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Stack>
+
+        {isError && (
+          <Box sx={{ px: 2.5, pb: 2, color: 'error.main', typography: 'body2' }}>
+            {error instanceof Error ? error.message : 'Failed to load sellers'}
+          </Box>
+        )}
+
+        <Scrollbar>
+          <Table sx={{ minWidth: 800 }}>
+            <TableHeadCustom headLabel={HEAD} />
             <TableBody>
               {filtered.map((s) => (
-                <TableRow key={s.id}>
-                  <TableCell className="font-medium">
+                <TableRow key={s.id} hover>
+                  <TableCell sx={{ fontWeight: 500 }}>
                     {s.farmName}
-                    <div className="text-xs text-muted-foreground">{s.id}</div>
+                    <Box sx={{ color: 'text.secondary', typography: 'caption' }}>{s.id}</Box>
                   </TableCell>
                   <TableCell>{s.pincode}</TableCell>
                   <TableCell>
@@ -140,10 +150,12 @@ export const VerifiedBadgePage = () => {
                         Verified
                       </Badge>
                     ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
+                      <Box component="span" sx={{ color: 'text.secondary', typography: 'caption' }}>
+                        —
+                      </Box>
                     )}
                   </TableCell>
-                  <TableCell className="text-xs">
+                  <TableCell sx={{ typography: 'caption' }}>
                     {s.liveAt ? formatDate(s.liveAt) : formatDate(s.createdAt)}
                   </TableCell>
                   <TableCell>
@@ -161,48 +173,22 @@ export const VerifiedBadgePage = () => {
                   </TableCell>
                 </TableRow>
               ))}
-              {filtered.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="py-12 text-center text-sm text-muted-foreground">
-                    No sellers match the current filter.
-                  </TableCell>
-                </TableRow>
-              )}
+              <TableNoData notFound={!isLoading && filtered.length === 0} />
             </TableBody>
           </Table>
+        </Scrollbar>
 
-          <Stack
-            direction="row"
-            alignItems="center"
-            justifyContent="space-between"
-            sx={{ fontSize: 14, color: 'text.secondary' }}
-          >
-            <span>
-              Showing {filtered.length} of {total} approved · page {page} / {pageCount}
-            </span>
-            <Stack direction="row" spacing={1}>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.max(1, page - 1)) })}
-                disabled={page <= 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Prev
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.min(pageCount, page + 1)) })}
-                disabled={page >= pageCount}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </Stack>
-          </Stack>
-        </>
-      )}
+        <TablePaginationCustom
+          count={total}
+          page={page - 1}
+          rowsPerPage={PAGE_SIZE}
+          rowsPerPageOptions={[10, 25, 50]}
+          onPageChange={(_e, newPage) =>
+            setParam({ page: String(Math.max(1, Math.min(pageCount, newPage + 1))) })
+          }
+          onRowsPerPageChange={() => setParam({ page: '1' })}
+        />
+      </Card>
     </Stack>
   );
 };

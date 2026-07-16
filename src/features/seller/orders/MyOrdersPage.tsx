@@ -1,20 +1,21 @@
 import { useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom';
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
+import Link from '@mui/material/Link';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import MenuItem from '@mui/material/MenuItem';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TextField from '@mui/material/TextField';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
 import { useOrdersList } from '@/features/orders/api';
 import { OrderStatusBadge, PaymentStatusBadge } from '@/features/orders/status-badge';
 import { formatDate, formatInr } from '@/lib/format';
@@ -33,6 +34,17 @@ const STATUS_OPTIONS: Array<{ value: '' | OrderStatus; label: string }> = [
 
 const PAGE_SIZE = 25;
 
+const HEAD = [
+  { id: 'order', label: 'Order' },
+  { id: 'customer', label: 'Customer' },
+  { id: 'status', label: 'Status' },
+  { id: 'payment', label: 'Payment' },
+  { id: 'items', label: 'My items', align: 'right' as const },
+  { id: 'total', label: 'My total', align: 'right' as const },
+  { id: 'placed', label: 'Placed' },
+  { id: 'action', label: '' },
+];
+
 export const MyOrdersPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -47,7 +59,6 @@ export const MyOrdersPage = () => {
 
   const { data, isLoading } = useOrdersList(query);
   const total = data?.meta.total ?? 0;
-  const pageCount = total > 0 ? Math.ceil(total / PAGE_SIZE) : 1;
 
   const setParam = (next: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams);
@@ -74,130 +85,112 @@ export const MyOrdersPage = () => {
         description="Buyer orders that contain your products. Move them along the pipeline: Placed → Packed → Dispatched → Delivered."
       />
 
-      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
-        <Select
-          value={status}
-          onChange={(e) => setParam({ status: e.target.value })}
-          className="w-56"
+      <Card>
+        <Stack
+          direction="row"
+          spacing={2}
+          flexWrap="wrap"
+          alignItems="center"
+          sx={{ p: 2.5 }}
         >
-          {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-        <input
-          type="search"
-          placeholder="Quick filter: order number"
-          value={scrub}
-          onChange={(e) => setScrub(e.target.value)}
-          className="h-10 w-72 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-      </Stack>
+          <TextField
+            select
+            label="Status"
+            value={status}
+            onChange={(e) => setParam({ status: e.target.value })}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 224 }}
+          >
+            {STATUS_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            type="search"
+            label="Quick filter"
+            value={scrub}
+            onChange={(e) => setScrub(e.target.value)}
+            placeholder="Order number"
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 288 }}
+          />
+        </Stack>
 
-      {isLoading && <Skeleton className="h-40 w-full" />}
+        {isLoading && <Skeleton className="h-40 w-full" />}
 
-      {!isLoading && (
-        <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Order</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Payment</TableHead>
-                <TableHead className="text-right">My items</TableHead>
-                <TableHead className="text-right">My total</TableHead>
-                <TableHead>Placed</TableHead>
-                <TableHead className="w-px" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visible.map((o) => {
-                const myItems = o.items.filter((it) => it.sellerId === user?.id);
-                const myTotal = myItems.reduce((sum, it) => sum + it.subtotalInr, 0);
-                return (
-                  <TableRow
-                    key={o.id}
-                    className="cursor-pointer"
-                    onClick={() => navigate(`/seller/orders/${o.id}`)}
-                  >
-                    <TableCell className="font-medium">
-                      {o.orderNumber}
-                      <div className="text-xs text-muted-foreground">
-                        {o.items.length} item{o.items.length === 1 ? '' : 's'} in order
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="font-medium">{o.shippingAddress.name}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {o.shippingAddress.phone} · {o.shippingAddress.city}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <OrderStatusBadge status={o.status} />
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-1">
-                        <Badge variant="muted">{o.payment.mode}</Badge>
-                        <PaymentStatusBadge status={o.payment.status} />
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">{myItems.length}</TableCell>
-                    <TableCell className="text-right font-medium">{formatInr(myTotal)}</TableCell>
-                    <TableCell>{formatDate(o.createdAt)}</TableCell>
-                    <TableCell>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/seller/orders/${o.id}`);
-                        }}
-                      >
-                        Open
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-              {visible.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
-                    No orders here.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+        {!isLoading && (
+          <>
+            <Scrollbar>
+              <Table sx={{ minWidth: 800 }}>
+                <TableHeadCustom headLabel={HEAD} />
+                <TableBody>
+                  {visible.map((o) => {
+                    const myItems = o.items.filter((it) => it.sellerId === user?.id);
+                    const myTotal = myItems.reduce((sum, it) => sum + it.subtotalInr, 0);
+                    return (
+                      <TableRow key={o.id} hover>
+                        <TableCell sx={{ fontWeight: 600 }}>
+                          <Link
+                            component={RouterLink}
+                            to={`/seller/orders/${o.id}`}
+                            color="inherit"
+                          >
+                            {o.orderNumber}
+                          </Link>
+                          <Box sx={{ color: 'text.secondary', typography: 'caption' }}>
+                            {o.items.length} item{o.items.length === 1 ? '' : 's'} in order
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ fontWeight: 600 }}>{o.shippingAddress.name}</Box>
+                          <Box sx={{ color: 'text.secondary', typography: 'caption' }}>
+                            {o.shippingAddress.phone} · {o.shippingAddress.city}
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <OrderStatusBadge status={o.status} />
+                        </TableCell>
+                        <TableCell>
+                          <Stack spacing={0.5} alignItems="flex-start">
+                            <Badge variant="muted">{o.payment.mode}</Badge>
+                            <PaymentStatusBadge status={o.payment.status} />
+                          </Stack>
+                        </TableCell>
+                        <TableCell align="right">{myItems.length}</TableCell>
+                        <TableCell align="right" sx={{ fontWeight: 600 }}>
+                          {formatInr(myTotal)}
+                        </TableCell>
+                        <TableCell>{formatDate(o.createdAt)}</TableCell>
+                        <TableCell align="right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => navigate(`/seller/orders/${o.id}`)}
+                          >
+                            Open
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  <TableNoData notFound={!isLoading && visible.length === 0} />
+                </TableBody>
+              </Table>
+            </Scrollbar>
 
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>
-              {visible.length} of {total} · page {page} / {pageCount}
-            </span>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.max(1, page - 1)) })}
-                disabled={page <= 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Prev
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.min(pageCount, page + 1)) })}
-                disabled={page >= pageCount}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </>
-      )}
+            <TablePaginationCustom
+              count={total}
+              page={page - 1}
+              rowsPerPage={PAGE_SIZE}
+              rowsPerPageOptions={[10, 25, 50]}
+              onPageChange={(_e, newPage) => setParam({ page: String(newPage + 1) })}
+              onRowsPerPageChange={() => {}}
+            />
+          </>
+        )}
+      </Card>
     </Stack>
   );
 };

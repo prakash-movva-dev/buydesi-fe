@@ -1,22 +1,23 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
-import { ChevronLeft, ChevronRight, UserPlus } from 'lucide-react';
+import Table from '@mui/material/Table';
+import MenuItem from '@mui/material/MenuItem';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TextField from '@mui/material/TextField';
+import { UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
 import { useAuth } from '@/lib/auth';
 import { UserRole } from '@/types/api';
 import { DirectRegisterSellerDialog } from './DirectRegisterSellerDialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
 import { ScopedAdminBanner } from '@/features/scoped-admin/ScopedAdminBanner';
 import { formatDate } from '@/lib/format';
 import { useSellersList } from './api';
@@ -29,6 +30,16 @@ const STATUS_OPTIONS: Array<{ value: '' | SellerStatus; label: string }> = [
   { value: 'INFO_REQUESTED', label: 'Info requested' },
   { value: 'APPROVED', label: 'Approved' },
   { value: 'REJECTED', label: 'Rejected' },
+];
+
+const HEAD = [
+  { id: 'farm', label: 'Farm' },
+  { id: 'status', label: 'Status' },
+  { id: 'pincode', label: 'Pincode' },
+  { id: 'kyc', label: 'KYC docs' },
+  { id: 'verified', label: 'Verified' },
+  { id: 'submitted', label: 'Submitted' },
+  { id: 'action', label: '' },
 ];
 
 const PAGE_SIZE = 20;
@@ -109,28 +120,6 @@ export const SellersListPage = () => {
 
       <ScopedAdminBanner />
 
-      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
-        <Select
-          value={status}
-          onChange={(e) => setStatus(e.target.value as '' | SellerStatus)}
-          className="w-56"
-          aria-label="Filter by status"
-        >
-          {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-        <input
-          type="search"
-          placeholder="Quick filter (page only): farm, pincode, id"
-          value={scrub}
-          onChange={(e) => setScrub(e.target.value)}
-          className="h-10 w-96 rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        />
-      </Stack>
-
       {isLoading && (
         <Stack spacing={1}>
           {Array.from({ length: 6 }).map((_, i) => (
@@ -139,35 +128,57 @@ export const SellersListPage = () => {
         </Stack>
       )}
 
-      {isError && (
-        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
-          {error instanceof Error ? error.message : 'Failed to load sellers'}
-        </div>
-      )}
+      <Card>
+        <Stack
+          direction="row"
+          spacing={2}
+          flexWrap="wrap"
+          alignItems="center"
+          sx={{ p: 2.5 }}
+        >
+          <TextField
+            select
+            label="Status"
+            value={status}
+            onChange={(e) => setStatus(e.target.value as '' | SellerStatus)}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 200 }}
+          >
+            {STATUS_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            label="Quick filter"
+            type="search"
+            placeholder="Page only: farm, pincode, id"
+            value={scrub}
+            onChange={(e) => setScrub(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 320 }}
+          />
+        </Stack>
 
-      {!isLoading && !isError && (
-        <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Farm</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Pincode</TableHead>
-                <TableHead>KYC docs</TableHead>
-                <TableHead>Verified</TableHead>
-                <TableHead>Submitted</TableHead>
-                <TableHead className="w-px" />
-              </TableRow>
-            </TableHeader>
+        {isError && (
+          <Box sx={{ px: 2.5, pb: 2, color: 'error.main', typography: 'body2' }}>
+            {error instanceof Error ? error.message : 'Failed to load sellers'}
+          </Box>
+        )}
+
+        <Scrollbar>
+          <Table sx={{ minWidth: 800 }}>
+            <TableHeadCustom headLabel={HEAD} />
             <TableBody>
               {visible.map((seller) => (
-                <TableRow key={seller.id} className="cursor-pointer">
+                <TableRow key={seller.id} hover sx={{ cursor: 'pointer' }}>
                   <TableCell
-                    className="font-medium"
+                    sx={{ fontWeight: 500 }}
                     onClick={() => navigate(`/admin/sellers/${seller.id}`)}
                   >
-                    <div>{seller.farmName}</div>
-                    <div className="text-xs text-muted-foreground">{seller.id}</div>
+                    <Box>{seller.farmName}</Box>
+                    <Box sx={{ color: 'text.secondary', typography: 'caption' }}>{seller.id}</Box>
                   </TableCell>
                   <TableCell onClick={() => navigate(`/admin/sellers/${seller.id}`)}>
                     <SellerStatusBadge status={seller.status} />
@@ -195,51 +206,20 @@ export const SellersListPage = () => {
                   </TableCell>
                 </TableRow>
               ))}
-              {visible.length === 0 && (
-                <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    className="py-12 text-center text-sm text-muted-foreground"
-                  >
-                    No sellers match the current filter.
-                  </TableCell>
-                </TableRow>
-              )}
+              <TableNoData notFound={!isLoading && visible.length === 0} />
             </TableBody>
           </Table>
+        </Scrollbar>
 
-          <Stack
-            direction="row"
-            alignItems="center"
-            justifyContent="space-between"
-            sx={{ fontSize: 14, color: 'text.secondary' }}
-          >
-            <span>
-              Showing {visible.length} of {total} · page {page} / {pageCount}
-            </span>
-            <Stack direction="row" spacing={1}>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(page - 1)}
-                disabled={page <= 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Prev
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPage(page + 1)}
-                disabled={page >= pageCount}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </Stack>
-          </Stack>
-        </>
-      )}
+        <TablePaginationCustom
+          count={total}
+          page={page - 1}
+          rowsPerPage={PAGE_SIZE}
+          rowsPerPageOptions={[10, 25, 50]}
+          onPageChange={(_e, newPage) => setPage(newPage + 1)}
+          onRowsPerPageChange={() => setPage(1)}
+        />
+      </Card>
     </Stack>
   );
 };

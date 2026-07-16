@@ -1,18 +1,17 @@
 import { useQuery } from '@tanstack/react-query';
 import { ReceiptText } from 'lucide-react';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import Typography from '@mui/material/Typography';
 import { Badge } from '@/components/ui/Badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData } from '@/components/table';
 import { api } from '@/lib/api';
 import { formatDate } from '@/lib/format';
 import type { CommissionRate } from '@/features/commission/types';
@@ -27,6 +26,17 @@ export const MyCommissionPage = () => {
     queryKey: ['commission', 'mine'],
     queryFn: () => api.get<MyCommissionResponse>('/commission/rates/mine'),
   });
+
+  const rates = data?.rates ?? [];
+
+  const head = [
+    { id: 'scope', label: 'Scope' },
+    { id: 'target', label: 'Target' },
+    { id: 'rate', label: 'Rate', align: 'right' as const },
+    { id: 'active', label: 'Active' },
+    { id: 'from', label: 'From' },
+    { id: 'to', label: 'To' },
+  ];
 
   return (
     <Stack spacing={3}>
@@ -56,52 +66,41 @@ export const MyCommissionPage = () => {
         <CardContent className="p-0">
           {isLoading && <Skeleton className="m-4 h-40" />}
           {isError && (
-            <p className="p-4 text-sm text-destructive">
+            <Typography variant="body2" sx={{ p: 2, color: 'error.main' }}>
               {error instanceof Error ? error.message : 'Failed to load rules'}
-            </p>
+            </Typography>
           )}
           {!isLoading && !isError && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Scope</TableHead>
-                  <TableHead>Target</TableHead>
-                  <TableHead className="text-right">Rate</TableHead>
-                  <TableHead>Active</TableHead>
-                  <TableHead>From</TableHead>
-                  <TableHead>To</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {(data?.rates ?? []).map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell>
-                      <Badge variant="muted">{r.scope}</Badge>
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {r.categoryId ?? r.productId ?? r.sellerId ?? '—'}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">{r.ratePercent}%</TableCell>
-                    <TableCell>
-                      <Badge variant={r.active ? 'success' : 'muted'}>
-                        {r.active ? 'active' : 'inactive'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs">{formatDate(r.effectiveFrom)}</TableCell>
-                    <TableCell className="text-xs">
-                      {r.effectiveTo ? formatDate(r.effectiveTo) : 'open-ended'}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {(data?.rates.length ?? 0) === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">
-                      No overrides specific to you — the category default applies.
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+            <Scrollbar>
+              <Table sx={{ minWidth: 800 }}>
+                <TableHeadCustom headLabel={head} />
+                <TableBody>
+                  {rates.map((r) => (
+                    <TableRow key={r.id} hover>
+                      <TableCell>
+                        <Badge variant="muted">{r.scope}</Badge>
+                      </TableCell>
+                      <TableCell sx={{ fontFamily: 'monospace', typography: 'caption' }}>
+                        {r.categoryId ?? r.productId ?? r.sellerId ?? '—'}
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600 }}>
+                        {r.ratePercent}%
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={r.active ? 'success' : 'muted'}>
+                          {r.active ? 'active' : 'inactive'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell sx={{ typography: 'caption' }}>{formatDate(r.effectiveFrom)}</TableCell>
+                      <TableCell sx={{ typography: 'caption' }}>
+                        {r.effectiveTo ? formatDate(r.effectiveTo) : 'open-ended'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  <TableNoData notFound={!isLoading && !isError && rates.length === 0} />
+                </TableBody>
+              </Table>
+            </Scrollbar>
           )}
         </CardContent>
       </Card>

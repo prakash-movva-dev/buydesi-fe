@@ -1,17 +1,18 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import MenuItem from '@mui/material/MenuItem';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TextField from '@mui/material/TextField';
 import { Badge } from '@/components/ui/Badge';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData } from '@/components/table';
 import { useAuth } from '@/lib/auth';
 import { formatDate, formatInr } from '@/lib/format';
 import { useMyTradeOrders } from './api';
@@ -48,6 +49,18 @@ export const MyTradeOrdersPage = () => {
     setSearchParams(params);
   };
 
+  const items = data?.items ?? [];
+
+  const head = [
+    { id: 'order', label: 'Order' },
+    { id: 'role', label: 'My role' },
+    { id: 'status', label: 'Status' },
+    { id: 'payment', label: 'Payment' },
+    { id: 'units', label: 'Units', align: 'right' as const },
+    { id: 'total', label: 'Total', align: 'right' as const },
+    { id: 'placed', label: 'Placed' },
+  ];
+
   return (
     <Stack spacing={3}>
       <PageHeader
@@ -55,72 +68,76 @@ export const MyTradeOrdersPage = () => {
         description="B2B inter-cluster orders. Buyer and seller views are combined here — filter to one role for a focused list."
       />
 
-      <Select
-        value={role}
-        onChange={(e) => setParam({ role: e.target.value })}
-        className="w-56"
-      >
-        {ROLE_OPTIONS.map((opt) => (
-          <option key={opt.value} value={opt.value}>
-            {opt.label}
-          </option>
-        ))}
-      </Select>
+      <Card>
+        <Stack
+          direction="row"
+          spacing={2}
+          flexWrap="wrap"
+          alignItems="center"
+          sx={{ p: 2.5 }}
+        >
+          <TextField
+            select
+            label="Role"
+            value={role}
+            onChange={(e) => setParam({ role: e.target.value })}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 224 }}
+          >
+            {ROLE_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Stack>
 
-      {isLoading && <Skeleton className="h-40 w-full" />}
+        {isLoading && <Skeleton className="mx-4 mb-4 h-40" />}
 
-      {!isLoading && (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Order</TableHead>
-              <TableHead>My role</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Payment</TableHead>
-              <TableHead className="text-right">Units</TableHead>
-              <TableHead className="text-right">Total</TableHead>
-              <TableHead>Placed</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {(data?.items ?? []).map((o) => {
-              const id = o.id ?? o._id;
-              const myRole = o.sellerId === user?.id ? 'seller' : 'buyer';
-              return (
-                <TableRow
-                  key={id}
-                  className="cursor-pointer"
-                  onClick={() => navigate(`/seller/trade/orders/${id}`)}
-                >
-                  <TableCell className="font-medium">
-                    {o.productName}
-                    <div className="text-xs text-muted-foreground">id {id.slice(-8)}</div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="muted">{myRole}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={statusVariant[o.status]}>{o.status}</Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="muted">{o.paymentMode}</Badge>
-                  </TableCell>
-                  <TableCell className="text-right">{o.units}</TableCell>
-                  <TableCell className="text-right font-medium">{formatInr(o.totalInr)}</TableCell>
-                  <TableCell className="text-xs">{formatDate(o.createdAt)}</TableCell>
-                </TableRow>
-              );
-            })}
-            {(data?.items.length ?? 0) === 0 && (
-              <TableRow>
-                <TableCell colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
-                  No trade orders yet.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      )}
+        {!isLoading && (
+          <Scrollbar>
+            <Table sx={{ minWidth: 800 }}>
+              <TableHeadCustom headLabel={head} />
+              <TableBody>
+                {items.map((o) => {
+                  const id = o.id ?? o._id;
+                  const myRole = o.sellerId === user?.id ? 'seller' : 'buyer';
+                  return (
+                    <TableRow
+                      key={id}
+                      hover
+                      sx={{ cursor: 'pointer' }}
+                      onClick={() => navigate(`/seller/trade/orders/${id}`)}
+                    >
+                      <TableCell sx={{ fontWeight: 600 }}>
+                        {o.productName}
+                        <Box sx={{ color: 'text.secondary', typography: 'caption' }}>
+                          id {id.slice(-8)}
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="muted">{myRole}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={statusVariant[o.status]}>{o.status}</Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="muted">{o.paymentMode}</Badge>
+                      </TableCell>
+                      <TableCell align="right">{o.units}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600 }}>
+                        {formatInr(o.totalInr)}
+                      </TableCell>
+                      <TableCell sx={{ typography: 'caption' }}>{formatDate(o.createdAt)}</TableCell>
+                    </TableRow>
+                  );
+                })}
+                <TableNoData notFound={!isLoading && items.length === 0} />
+              </TableBody>
+            </Table>
+          </Scrollbar>
+        )}
+      </Card>
     </Stack>
   );
 };

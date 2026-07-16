@@ -1,24 +1,24 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Wallet as WalletIcon } from 'lucide-react';
+import { Wallet as WalletIcon } from 'lucide-react';
 import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import MenuItem from '@mui/material/MenuItem';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TextField from '@mui/material/TextField';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
 import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatCard } from '@/components/ui/StatCard';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
 import { Textarea } from '@/components/ui/Textarea';
 import { TxSourceBadge, TxStatusBadge, TxTypeBadge } from '@/features/wallet/status-badge';
 import { formatDate, formatInr } from '@/lib/format';
@@ -55,6 +55,15 @@ const SOURCE_OPTIONS: Array<{ value: '' | WalletTxSource; label: string }> = [
 
 const PAGE_SIZE = 25;
 
+const HEAD = [
+  { id: 'type', label: 'Type' },
+  { id: 'source', label: 'Source' },
+  { id: 'status', label: 'Status' },
+  { id: 'amount', label: 'Amount', align: 'right' as const },
+  { id: 'notes', label: 'Notes' },
+  { id: 'created', label: 'Created' },
+];
+
 export const MyWalletPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const type = (searchParams.get('type') as WalletTxType | null) ?? '';
@@ -71,7 +80,6 @@ export const MyWalletPage = () => {
     limit: PAGE_SIZE,
   });
   const total = txs.data?.meta.total ?? 0;
-  const pageCount = total > 0 ? Math.ceil(total / PAGE_SIZE) : 1;
 
   const setParam = (next: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams);
@@ -124,116 +132,118 @@ export const MyWalletPage = () => {
         />
       </Box>
 
-      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
-        <Select
-          value={type}
-          onChange={(e) => setParam({ type: e.target.value })}
-          className="w-36"
+      <Card>
+        <Stack
+          direction="row"
+          spacing={2}
+          flexWrap="wrap"
+          alignItems="center"
+          sx={{ p: 2.5 }}
         >
-          {TYPE_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-        <Select
-          value={status}
-          onChange={(e) => setParam({ status: e.target.value })}
-          className="w-40"
-        >
-          {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-        <Select
-          value={source}
-          onChange={(e) => setParam({ source: e.target.value })}
-          className="w-48"
-        >
-          {SOURCE_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-      </Stack>
+          <TextField
+            select
+            label="Type"
+            value={type}
+            onChange={(e) => setParam({ type: e.target.value })}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 144 }}
+          >
+            {TYPE_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            label="Status"
+            value={status}
+            onChange={(e) => setParam({ status: e.target.value })}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 160 }}
+          >
+            {STATUS_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            label="Source"
+            value={source}
+            onChange={(e) => setParam({ source: e.target.value })}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 192 }}
+          >
+            {SOURCE_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </TextField>
+        </Stack>
 
-      {txs.isLoading && <Skeleton className="h-40 w-full" />}
+        {txs.isLoading && (
+          <Box sx={{ p: 2.5 }}>
+            <Skeleton className="h-40 w-full" />
+          </Box>
+        )}
 
-      {!txs.isLoading && (
-        <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Type</TableHead>
-                <TableHead>Source</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead>Notes</TableHead>
-                <TableHead>Created</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(txs.data?.items ?? []).map((tx) => (
-                <TableRow key={tx.id}>
-                  <TableCell>
-                    <TxTypeBadge type={tx.type} />
-                  </TableCell>
-                  <TableCell>
-                    <TxSourceBadge source={tx.source} />
-                  </TableCell>
-                  <TableCell>
-                    <TxStatusBadge status={tx.status} />
-                  </TableCell>
-                  <TableCell className="text-right font-medium">
-                    {tx.type === 'DEBIT' ? '−' : '+'}
-                    {formatInr(tx.amountInr)}
-                  </TableCell>
-                  <TableCell className="max-w-xs truncate text-xs text-muted-foreground" title={tx.notes ?? ''}>
-                    {tx.notes ?? '—'}
-                  </TableCell>
-                  <TableCell className="text-xs">{formatDate(tx.createdAt)}</TableCell>
-                </TableRow>
-              ))}
-              {(txs.data?.items.length ?? 0) === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="py-12 text-center text-sm text-muted-foreground">
-                    No transactions yet.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+        {!txs.isLoading && (
+          <>
+            <Scrollbar>
+              <Table sx={{ minWidth: 800 }}>
+                <TableHeadCustom headLabel={HEAD} />
+                <TableBody>
+                  {(txs.data?.items ?? []).map((tx) => (
+                    <TableRow key={tx.id} hover>
+                      <TableCell>
+                        <TxTypeBadge type={tx.type} />
+                      </TableCell>
+                      <TableCell>
+                        <TxSourceBadge source={tx.source} />
+                      </TableCell>
+                      <TableCell>
+                        <TxStatusBadge status={tx.status} />
+                      </TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 600 }}>
+                        {tx.type === 'DEBIT' ? '−' : '+'}
+                        {formatInr(tx.amountInr)}
+                      </TableCell>
+                      <TableCell
+                        sx={{ maxWidth: 320, color: 'text.secondary', typography: 'caption' }}
+                        title={tx.notes ?? ''}
+                      >
+                        <Box
+                          sx={{
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {tx.notes ?? '—'}
+                        </Box>
+                      </TableCell>
+                      <TableCell sx={{ typography: 'caption' }}>{formatDate(tx.createdAt)}</TableCell>
+                    </TableRow>
+                  ))}
+                  <TableNoData notFound={!txs.isLoading && (txs.data?.items.length ?? 0) === 0} />
+                </TableBody>
+              </Table>
+            </Scrollbar>
 
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>
-              {txs.data?.items.length ?? 0} of {total} · page {page} / {pageCount}
-            </span>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.max(1, page - 1)) })}
-                disabled={page <= 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Prev
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.min(pageCount, page + 1)) })}
-                disabled={page >= pageCount}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </>
-      )}
+            <TablePaginationCustom
+              count={total}
+              page={page - 1}
+              rowsPerPage={PAGE_SIZE}
+              rowsPerPageOptions={[10, 25, 50]}
+              onPageChange={(_e, newPage) => setParam({ page: String(newPage + 1) })}
+              onRowsPerPageChange={() => {}}
+            />
+          </>
+        )}
+      </Card>
 
       <WithdrawDialog
         open={withdrawOpen}

@@ -1,20 +1,21 @@
 import { useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Copy, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Copy, Pencil, Plus, Trash2 } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import MenuItem from '@mui/material/MenuItem';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TextField from '@mui/material/TextField';
+import { useSearchParams } from 'react-router-dom';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
 import { useAuth } from '@/lib/auth';
 import { formatDate, formatInr } from '@/lib/format';
 import { UserRole } from '@/types/api';
@@ -22,6 +23,17 @@ import { useDeletePromoter, usePromotersList } from './api';
 import { PromoterFormDialog } from './PromoterFormDialog';
 import { PromoterPerformancePanel } from './PromoterPerformancePanel';
 import type { Promoter, PromotersListQuery } from './types';
+
+const HEAD = [
+  { id: 'name', label: 'Name' },
+  { id: 'contact', label: 'Contact' },
+  { id: 'status', label: 'Status' },
+  { id: 'discount', label: 'Discount given' },
+  { id: 'cluster', label: 'Cluster' },
+  { id: 'user', label: 'Linked user' },
+  { id: 'created', label: 'Created' },
+  { id: 'actions', label: '' },
+];
 
 const PAGE_SIZE = 25;
 
@@ -58,7 +70,6 @@ export const PromotersPage = () => {
 
   const { data, isLoading, isError, error } = usePromotersList(query);
   const total = data?.meta.total ?? 0;
-  const pageCount = total > 0 ? Math.ceil(total / PAGE_SIZE) : 1;
   const deleteMut = useDeletePromoter();
 
   const setParam = (next: Record<string, string | null>) => {
@@ -128,18 +139,6 @@ export const PromotersPage = () => {
 
       <PromoterPerformancePanel />
 
-      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
-        <Select
-          value={active}
-          onChange={(e) => setParam({ active: e.target.value })}
-          className="w-44"
-        >
-          <option value="">Any status</option>
-          <option value="true">Active</option>
-          <option value="false">Inactive</option>
-        </Select>
-      </Stack>
-
       {isLoading && <Skeleton className="h-40 w-full" />}
       {isError && (
         <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
@@ -148,106 +147,97 @@ export const PromotersPage = () => {
       )}
 
       {!isLoading && !isError && (
-        <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Discount given</TableHead>
-                <TableHead>Cluster</TableHead>
-                <TableHead>Linked user</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="w-px" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(data?.items ?? []).map((p) => {
-                const id = p.id ?? p._id!;
-                return (
-                  <TableRow key={id}>
-                    <TableCell className="font-medium">{p.name}</TableCell>
-                    <TableCell className="text-xs">
-                      {p.mobile && <div>{p.mobile}</div>}
-                      {p.email && <div className="text-muted-foreground">{p.email}</div>}
-                      {!p.mobile && !p.email && <span className="text-muted-foreground">—</span>}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={p.active ? 'success' : 'muted'}>
-                        {p.active ? 'Active' : 'Inactive'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-xs">{formatDiscount(p)}</TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {p.clusterId ?? '—'}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {p.userId ?? '—'}
-                    </TableCell>
-                    <TableCell className="text-xs">{formatDate(p.createdAt)}</TableCell>
-                    <TableCell className="space-x-1 whitespace-nowrap">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => {
-                          setEditing(p);
-                          setDialogOpen(true);
-                        }}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      {isSuper && (
+        <Card>
+          <Stack
+            direction="row"
+            spacing={2}
+            flexWrap="wrap"
+            alignItems="center"
+            sx={{ p: 2.5 }}
+          >
+            <TextField
+              select
+              label="Status"
+              value={active}
+              onChange={(e) => setParam({ active: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: 200 }}
+            >
+              <MenuItem value="">Any status</MenuItem>
+              <MenuItem value="true">Active</MenuItem>
+              <MenuItem value="false">Inactive</MenuItem>
+            </TextField>
+          </Stack>
+
+          <Scrollbar>
+            <Table sx={{ minWidth: 800 }}>
+              <TableHeadCustom headLabel={HEAD} />
+              <TableBody>
+                {(data?.items ?? []).map((p) => {
+                  const id = p.id ?? p._id!;
+                  return (
+                    <TableRow key={id} hover>
+                      <TableCell sx={{ fontWeight: 500 }}>{p.name}</TableCell>
+                      <TableCell sx={{ typography: 'caption' }}>
+                        {p.mobile && <Box>{p.mobile}</Box>}
+                        {p.email && <Box sx={{ color: 'text.secondary' }}>{p.email}</Box>}
+                        {!p.mobile && !p.email && (
+                          <Box component="span" sx={{ color: 'text.secondary' }}>—</Box>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={p.active ? 'success' : 'muted'}>
+                          {p.active ? 'Active' : 'Inactive'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell sx={{ typography: 'caption' }}>{formatDiscount(p)}</TableCell>
+                      <TableCell sx={{ fontFamily: 'monospace', typography: 'caption' }}>
+                        {p.clusterId ?? '—'}
+                      </TableCell>
+                      <TableCell sx={{ fontFamily: 'monospace', typography: 'caption' }}>
+                        {p.userId ?? '—'}
+                      </TableCell>
+                      <TableCell sx={{ typography: 'caption' }}>{formatDate(p.createdAt)}</TableCell>
+                      <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
                         <Button
                           size="sm"
                           variant="ghost"
-                          onClick={() => onConfirmDelete(id)}
-                          disabled={deleteMut.isPending}
-                          title="Deactivate"
+                          onClick={() => {
+                            setEditing(p);
+                            setDialogOpen(true);
+                          }}
                         >
-                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          <Pencil className="h-3.5 w-3.5" />
                         </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-              {(data?.items.length ?? 0) === 0 && (
-                <TableRow>
-                  <TableCell colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
-                    No promoters yet.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+                        {isSuper && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => onConfirmDelete(id)}
+                            disabled={deleteMut.isPending}
+                            title="Deactivate"
+                          >
+                            <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                <TableNoData notFound={!isLoading && (data?.items.length ?? 0) === 0} />
+              </TableBody>
+            </Table>
+          </Scrollbar>
 
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>
-              {data?.items.length ?? 0} of {total} · page {page} / {pageCount}
-            </span>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.max(1, page - 1)) })}
-                disabled={page <= 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Prev
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.min(pageCount, page + 1)) })}
-                disabled={page >= pageCount}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </>
+          <TablePaginationCustom
+            count={total}
+            page={page - 1}
+            rowsPerPage={PAGE_SIZE}
+            rowsPerPageOptions={[10, 25, 50]}
+            onPageChange={(_e, newPage) => setParam({ page: String(newPage + 1) })}
+            onRowsPerPageChange={() => {}}
+          />
+        </Card>
       )}
 
       <PromoterFormDialog

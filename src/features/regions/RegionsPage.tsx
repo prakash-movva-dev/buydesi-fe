@@ -1,7 +1,15 @@
 import { useMemo, useState } from 'react';
 import { Download, Map, Pencil, Plus, Trash2 } from 'lucide-react';
+import MuiCard from '@mui/material/Card';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import MenuItem from '@mui/material/MenuItem';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
@@ -11,20 +19,11 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
-import { Label } from '@/components/ui/Label';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatCard } from '@/components/ui/StatCard';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData } from '@/components/table';
 import { useAuth } from '@/lib/auth';
 import { formatInr } from '@/lib/format';
 import { UserRole } from '@/types/api';
@@ -44,6 +43,24 @@ const defaultFrom = (): string => {
 };
 
 const defaultTo = (): string => new Date().toISOString().slice(0, 10);
+
+const REGIONS_HEAD = (canManage: boolean) => [
+  { id: 'name', label: 'Name' },
+  { id: 'state', label: 'State' },
+  { id: 'clusters', label: 'Clusters', align: 'right' as const },
+  ...(canManage ? [{ id: 'edit', label: '' }] : []),
+  ...(canManage ? [{ id: 'delete', label: '' }] : []),
+];
+
+const PERF_HEAD = [
+  { id: 'cluster', label: 'Cluster' },
+  { id: 'state', label: 'State' },
+  { id: 'sellers', label: 'Sellers', align: 'right' as const },
+  { id: 'live', label: 'Live listings', align: 'right' as const },
+  { id: 'orders', label: 'Orders', align: 'right' as const },
+  { id: 'revenue', label: 'Revenue', align: 'right' as const },
+  { id: 'tickets', label: 'Open tickets', align: 'right' as const },
+];
 
 export const RegionsPage = () => {
   const { user } = useAuth();
@@ -117,66 +134,53 @@ export const RegionsPage = () => {
       )}
 
       {!isLoading && !isError && (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>State</TableHead>
-              <TableHead className="text-right">Clusters</TableHead>
-              {canManage && <TableHead className="w-px" />}
-              {canManage && <TableHead className="w-px" />}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {(regions ?? []).map((r) => (
-              <TableRow key={r.id}>
-                <TableCell className="font-medium">{r.name}</TableCell>
-                <TableCell className="text-xs text-muted-foreground">
-                  {r.state ?? '—'}
-                </TableCell>
-                <TableCell className="text-right">
-                  <Badge variant="muted">{r.clusterIds.length}</Badge>
-                </TableCell>
-                {canManage && (
-                  <TableCell>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => {
-                        setEditing(r);
-                        setDialogOpen(true);
-                      }}
-                    >
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                  </TableCell>
-                )}
-                {canManage && (
-                  <TableCell>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => handleDelete(r)}
-                      disabled={deleteMut.isPending}
-                    >
-                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                    </Button>
-                  </TableCell>
-                )}
-              </TableRow>
-            ))}
-            {(regions?.length ?? 0) === 0 && (
-              <TableRow>
-                <TableCell
-                  colSpan={canManage ? 5 : 3}
-                  className="py-12 text-center text-sm text-muted-foreground"
-                >
-                  No regions yet. Create one to group clusters together.
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+        <MuiCard>
+          <Scrollbar>
+            <Table sx={{ minWidth: 800 }}>
+              <TableHeadCustom headLabel={REGIONS_HEAD(canManage)} />
+              <TableBody>
+                {(regions ?? []).map((r) => (
+                  <TableRow key={r.id} hover>
+                    <TableCell sx={{ fontWeight: 500 }}>{r.name}</TableCell>
+                    <TableCell sx={{ color: 'text.secondary', typography: 'caption' }}>
+                      {r.state ?? '—'}
+                    </TableCell>
+                    <TableCell align="right">
+                      <Badge variant="muted">{r.clusterIds.length}</Badge>
+                    </TableCell>
+                    {canManage && (
+                      <TableCell align="right">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setEditing(r);
+                            setDialogOpen(true);
+                          }}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                      </TableCell>
+                    )}
+                    {canManage && (
+                      <TableCell align="right">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDelete(r)}
+                          disabled={deleteMut.isPending}
+                        >
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                        </Button>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+                <TableNoData notFound={!isLoading && (regions?.length ?? 0) === 0} />
+              </TableBody>
+            </Table>
+          </Scrollbar>
+        </MuiCard>
       )}
 
       {/* ─── Region performance ───────────────────────────────────────────── */}
@@ -191,43 +195,41 @@ export const RegionsPage = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-5">
-          <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="flex-end">
-            <div className="space-y-1.5">
-              <Label htmlFor="perf-region">Region</Label>
-              <Select
-                id="perf-region"
-                value={perfRegionId}
-                onChange={(e) => setPerfRegionId(e.target.value)}
-                className="w-56"
-              >
-                <option value="">Select a region…</option>
-                {(regions ?? []).map((r) => (
-                  <option key={r.id} value={r.id}>
-                    {r.name}
-                  </option>
-                ))}
-              </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="perf-from">From</Label>
-              <Input
-                id="perf-from"
-                type="date"
-                value={from}
-                onChange={(e) => setFrom(e.target.value)}
-                className="w-40"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="perf-to">To</Label>
-              <Input
-                id="perf-to"
-                type="date"
-                value={to}
-                onChange={(e) => setTo(e.target.value)}
-                className="w-40"
-              />
-            </div>
+          <Stack direction="row" spacing={2} flexWrap="wrap" alignItems="flex-end">
+            <TextField
+              select
+              id="perf-region"
+              label="Region"
+              value={perfRegionId}
+              onChange={(e) => setPerfRegionId(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: 224 }}
+            >
+              <MenuItem value="">Select a region…</MenuItem>
+              {(regions ?? []).map((r) => (
+                <MenuItem key={r.id} value={r.id}>
+                  {r.name}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              id="perf-from"
+              label="From"
+              type="date"
+              value={from}
+              onChange={(e) => setFrom(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: 160 }}
+            />
+            <TextField
+              id="perf-to"
+              label="To"
+              type="date"
+              value={to}
+              onChange={(e) => setTo(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: 160 }}
+            />
             <Button
               variant="outline"
               onClick={download}
@@ -241,9 +243,9 @@ export const RegionsPage = () => {
           {downloadError && <p className="text-sm text-destructive">{downloadError}</p>}
 
           {!perfRegionId && (
-            <p className="text-sm text-muted-foreground">
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               Pick a region above to see aggregated performance.
-            </p>
+            </Typography>
           )}
 
           {perfRegionId && perf.isLoading && <Skeleton className="h-40 w-full" />}
@@ -279,44 +281,27 @@ export const RegionsPage = () => {
                 />
               </Box>
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Cluster</TableHead>
-                    <TableHead>State</TableHead>
-                    <TableHead className="text-right">Sellers</TableHead>
-                    <TableHead className="text-right">Live listings</TableHead>
-                    <TableHead className="text-right">Orders</TableHead>
-                    <TableHead className="text-right">Revenue</TableHead>
-                    <TableHead className="text-right">Open tickets</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {perf.data.rows.map((row) => (
-                    <TableRow key={row.clusterId}>
-                      <TableCell className="font-medium">{row.clusterName}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">
-                        {row.state}
-                      </TableCell>
-                      <TableCell className="text-right">{row.sellers}</TableCell>
-                      <TableCell className="text-right">{row.liveListings}</TableCell>
-                      <TableCell className="text-right">{row.orders}</TableCell>
-                      <TableCell className="text-right">{formatInr(row.revenueInr)}</TableCell>
-                      <TableCell className="text-right">{row.openTickets}</TableCell>
-                    </TableRow>
-                  ))}
-                  {perf.data.rows.length === 0 && (
-                    <TableRow>
-                      <TableCell
-                        colSpan={7}
-                        className="py-8 text-center text-sm text-muted-foreground"
-                      >
-                        This region has no clusters assigned.
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+              <Scrollbar>
+                <Table sx={{ minWidth: 800 }}>
+                  <TableHeadCustom headLabel={PERF_HEAD} />
+                  <TableBody>
+                    {perf.data.rows.map((row) => (
+                      <TableRow key={row.clusterId} hover>
+                        <TableCell sx={{ fontWeight: 500 }}>{row.clusterName}</TableCell>
+                        <TableCell sx={{ color: 'text.secondary', typography: 'caption' }}>
+                          {row.state}
+                        </TableCell>
+                        <TableCell align="right">{row.sellers}</TableCell>
+                        <TableCell align="right">{row.liveListings}</TableCell>
+                        <TableCell align="right">{row.orders}</TableCell>
+                        <TableCell align="right">{formatInr(row.revenueInr)}</TableCell>
+                        <TableCell align="right">{row.openTickets}</TableCell>
+                      </TableRow>
+                    ))}
+                    <TableNoData notFound={perf.data.rows.length === 0} />
+                  </TableBody>
+                </Table>
+              </Scrollbar>
             </>
           )}
         </CardContent>

@@ -2,29 +2,28 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
   EyeOff,
   RotateCcw,
   Star,
   Trash2,
 } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import MenuItem from '@mui/material/MenuItem';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TextField from '@mui/material/TextField';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
 import { Label } from '@/components/ui/Label';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Select } from '@/components/ui/Select';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
 import { Textarea } from '@/components/ui/Textarea';
 import { ScopedAdminBanner } from '@/features/scoped-admin/ScopedAdminBanner';
 import { useAuth } from '@/lib/auth';
@@ -106,7 +105,6 @@ export const ReviewsPage = () => {
   const moderate = useModerateReview();
   const remove = useDeleteReview();
   const total = data?.meta.total ?? 0;
-  const pageCount = total > 0 ? Math.ceil(total / PAGE_SIZE) : 1;
 
   const setParam = (next: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams);
@@ -128,6 +126,16 @@ export const ReviewsPage = () => {
     remove.mutate(id);
   };
 
+  const head = [
+    { id: 'status', label: 'Status' },
+    { id: 'target', label: 'Target' },
+    { id: 'rating', label: 'Rating' },
+    { id: 'text', label: 'Text' },
+    { id: 'rater', label: 'Rater' },
+    { id: 'posted', label: 'Posted' },
+    { id: 'actions', label: '' },
+  ];
+
   return (
     <Stack spacing={3}>
       <PageHeader
@@ -136,42 +144,6 @@ export const ReviewsPage = () => {
       />
 
       <ScopedAdminBanner />
-
-      <Stack direction="row" spacing={1.5} flexWrap="wrap" alignItems="center">
-        <Select
-          value={status}
-          onChange={(e) => setParam({ status: e.target.value })}
-          className="w-48"
-        >
-          {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-        <Select
-          value={targetType}
-          onChange={(e) => setParam({ targetType: e.target.value })}
-          className="w-44"
-        >
-          {TARGET_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-        <Select
-          value={rating}
-          onChange={(e) => setParam({ rating: e.target.value })}
-          className="w-36"
-        >
-          {RATING_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-      </Stack>
 
       {isLoading && (
         <div className="space-y-2">
@@ -187,136 +159,151 @@ export const ReviewsPage = () => {
       )}
 
       {!isLoading && !isError && (
-        <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Status</TableHead>
-                <TableHead>Target</TableHead>
-                <TableHead>Rating</TableHead>
-                <TableHead>Text</TableHead>
-                <TableHead>Rater</TableHead>
-                <TableHead>Posted</TableHead>
-                <TableHead className="w-px" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {(data?.items ?? []).map((r) => {
-                const id = r.id ?? r._id;
-                return (
-                  <TableRow key={id}>
-                    <TableCell>
-                      <Badge variant={statusVariant[r.status]}>{r.status}</Badge>
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      <Badge variant="muted">{r.targetType}</Badge>
-                      <div className="mt-0.5 font-medium">
-                        {r.targetName ?? <span className="font-mono">{r.targetId.slice(-10)}</span>}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-0.5">
-                        {Array.from({ length: 5 }).map((_, i) => (
-                          <Star
-                            key={i}
-                            className={`h-3.5 w-3.5 ${i < r.rating ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'}`}
-                          />
-                        ))}
-                      </div>
-                    </TableCell>
-                    <TableCell className="max-w-md truncate text-xs" title={r.text ?? ''}>
-                      {r.text ?? <span className="text-muted-foreground">— rating only —</span>}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">{r.raterId.slice(-8)}</TableCell>
-                    <TableCell className="text-xs">{formatDateTime(r.createdAt)}</TableCell>
-                    <TableCell className="space-x-1 whitespace-nowrap">
-                      {r.status !== 'approved' && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setModerating({ id, action: 'approve' })}
-                          title="Approve"
-                          disabled={moderate.isPending}
-                        >
-                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                        </Button>
-                      )}
-                      {r.status !== 'hidden' && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setModerating({ id, action: 'hide' })}
-                          title="Hide"
-                          disabled={moderate.isPending}
-                        >
-                          <EyeOff className="h-4 w-4 text-amber-700" />
-                        </Button>
-                      )}
-                      {r.status === 'hidden' && (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => setModerating({ id, action: 'approve' })}
-                          title="Restore"
-                          disabled={moderate.isPending}
-                        >
-                          <RotateCcw className="h-4 w-4" />
-                        </Button>
-                      )}
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => onDelete(id)}
-                        title="Delete permanently"
-                        disabled={remove.isPending}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-              {(data?.items.length ?? 0) === 0 && (
-                <TableRow>
-                  <TableCell colSpan={7} className="py-12 text-center text-sm text-muted-foreground">
-                    No reviews match the current filter.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-
+        <Card>
           <Stack
             direction="row"
+            spacing={2}
+            flexWrap="wrap"
             alignItems="center"
-            justifyContent="space-between"
-            sx={{ fontSize: 14, color: 'text.secondary' }}
+            sx={{ p: 2.5 }}
           >
-            <span>
-              {data?.items.length ?? 0} of {total} · page {page} / {pageCount}
-            </span>
-            <Stack direction="row" spacing={1}>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.max(1, page - 1)) })}
-                disabled={page <= 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Prev
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.min(pageCount, page + 1)) })}
-                disabled={page >= pageCount}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </Stack>
+            <TextField
+              select
+              label="Status"
+              value={status}
+              onChange={(e) => setParam({ status: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: 200 }}
+            >
+              {STATUS_OPTIONS.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label="Target"
+              value={targetType}
+              onChange={(e) => setParam({ targetType: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: 200 }}
+            >
+              {TARGET_OPTIONS.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              select
+              label="Rating"
+              value={rating}
+              onChange={(e) => setParam({ rating: e.target.value })}
+              InputLabelProps={{ shrink: true }}
+              sx={{ width: 160 }}
+            >
+              {RATING_OPTIONS.map((opt) => (
+                <MenuItem key={opt.value} value={opt.value}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </TextField>
           </Stack>
-        </>
+
+          <Scrollbar>
+            <Table sx={{ minWidth: 800 }}>
+              <TableHeadCustom headLabel={head} />
+              <TableBody>
+                {(data?.items ?? []).map((r) => {
+                  const id = r.id ?? r._id;
+                  return (
+                    <TableRow key={id} hover>
+                      <TableCell>
+                        <Badge variant={statusVariant[r.status]}>{r.status}</Badge>
+                      </TableCell>
+                      <TableCell sx={{ typography: 'caption' }}>
+                        <Badge variant="muted">{r.targetType}</Badge>
+                        <Box sx={{ mt: 0.25, fontWeight: 500 }}>
+                          {r.targetName ?? <span className="font-mono">{r.targetId.slice(-10)}</span>}
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`h-3.5 w-3.5 ${i < r.rating ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'}`}
+                            />
+                          ))}
+                        </Box>
+                      </TableCell>
+                      <TableCell className="max-w-md truncate text-xs" title={r.text ?? ''}>
+                        {r.text ?? <span className="text-muted-foreground">— rating only —</span>}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">{r.raterId.slice(-8)}</TableCell>
+                      <TableCell className="text-xs">{formatDateTime(r.createdAt)}</TableCell>
+                      <TableCell className="space-x-1 whitespace-nowrap">
+                        {r.status !== 'approved' && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setModerating({ id, action: 'approve' })}
+                            title="Approve"
+                            disabled={moderate.isPending}
+                          >
+                            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                          </Button>
+                        )}
+                        {r.status !== 'hidden' && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setModerating({ id, action: 'hide' })}
+                            title="Hide"
+                            disabled={moderate.isPending}
+                          >
+                            <EyeOff className="h-4 w-4 text-amber-700" />
+                          </Button>
+                        )}
+                        {r.status === 'hidden' && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setModerating({ id, action: 'approve' })}
+                            title="Restore"
+                            disabled={moderate.isPending}
+                          >
+                            <RotateCcw className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => onDelete(id)}
+                          title="Delete permanently"
+                          disabled={remove.isPending}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+                <TableNoData notFound={!isLoading && (data?.items.length ?? 0) === 0} />
+              </TableBody>
+            </Table>
+          </Scrollbar>
+
+          <TablePaginationCustom
+            count={total}
+            page={page - 1}
+            rowsPerPage={PAGE_SIZE}
+            rowsPerPageOptions={[10, 25, 50]}
+            onPageChange={(_e, newPage) => setParam({ page: String(newPage + 1) })}
+            onRowsPerPageChange={(e) => setParam({ limit: e.target.value, page: '1' })}
+          />
+        </Card>
       )}
 
       <ModerateDialog

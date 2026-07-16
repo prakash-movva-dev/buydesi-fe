@@ -1,27 +1,26 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, Plus, ShieldOff, Users as UsersIcon } from 'lucide-react';
+import { Plus, ShieldOff, Users as UsersIcon } from 'lucide-react';
 import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import MenuItem from '@mui/material/MenuItem';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
 import { ClusterPicker } from '@/components/pickers/ClusterPicker';
 import { useClustersList } from '@/features/clusters/api';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Card, CardDescription, CardHeader } from '@/components/ui/Card';
-import { Input } from '@/components/ui/Input';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Select } from '@/components/ui/Select';
 import { useAuth } from '@/lib/auth';
 import { CreateUserDialog } from './CreateUserDialog';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
 import { formatDate } from '@/lib/format';
 import { UserRole } from '@/types/api';
 import { useUsersList } from './api';
@@ -46,6 +45,17 @@ const STATUS_OPTIONS: Array<{ value: '' | UserStatus; label: string }> = [
   { value: 'active', label: 'Active' },
   { value: 'pending', label: 'Pending' },
   { value: 'suspended', label: 'Suspended' },
+];
+
+const HEAD = [
+  { id: 'name', label: 'Name' },
+  { id: 'role', label: 'Role' },
+  { id: 'status', label: 'Status' },
+  { id: 'contact', label: 'Contact' },
+  { id: 'cluster', label: 'Cluster' },
+  { id: 'lastLogin', label: 'Last login' },
+  { id: 'created', label: 'Created' },
+  { id: 'action', label: '' },
 ];
 
 const statusVariant: Record<UserStatus, 'success' | 'warning' | 'destructive'> = {
@@ -150,81 +160,88 @@ export const UsersPage = () => {
         }
       />
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardDescription className="flex items-center gap-2">
-            <ShieldOff className="h-4 w-4" />
+      <Card sx={{ p: 2.5 }}>
+        <Stack direction="row" alignItems="flex-start" spacing={1} sx={{ color: 'text.secondary' }}>
+          <ShieldOff className="h-4 w-4" />
+          <Typography variant="body2" color="text.secondary">
             Suspending a user blocks login immediately and revokes every refresh token. Any
             in-flight 15-min access token will keep working until it expires; for a true hard
             cut, suspend then wait the access-TTL window.
-          </CardDescription>
-        </CardHeader>
+          </Typography>
+        </Stack>
       </Card>
 
-      <Box
-        sx={{
-          display: 'grid',
-          gap: 2,
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2,1fr)', lg: 'repeat(4,1fr)' },
-        }}
-      >
-        <Select value={role} onChange={(e) => setParam({ role: e.target.value })}>
-          {ROLE_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-        <Select value={status} onChange={(e) => setParam({ status: e.target.value })}>
-          {STATUS_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
-        </Select>
-        <ClusterPicker
-          value={clusterId || null}
-          onChange={(id) => setParam({ clusterId: id ?? '' })}
-          placeholder="Filter by cluster…"
-        />
-        <Input
-          value={scrub}
-          onChange={(e) => setScrub(e.target.value)}
-          placeholder="Search by name / email / mobile"
-        />
-      </Box>
+      <Card>
+        <Stack
+          direction="row"
+          spacing={2}
+          flexWrap="wrap"
+          alignItems="center"
+          sx={{ p: 2.5 }}
+        >
+          <TextField
+            select
+            label="Role"
+            value={role}
+            onChange={(e) => setParam({ role: e.target.value })}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 200 }}
+          >
+            {ROLE_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </TextField>
+          <TextField
+            select
+            label="Status"
+            value={status}
+            onChange={(e) => setParam({ status: e.target.value })}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 200 }}
+          >
+            {STATUS_OPTIONS.map((opt) => (
+              <MenuItem key={opt.value} value={opt.value}>
+                {opt.label}
+              </MenuItem>
+            ))}
+          </TextField>
+          <Box sx={{ width: 240 }}>
+            <ClusterPicker
+              value={clusterId || null}
+              onChange={(id) => setParam({ clusterId: id ?? '' })}
+              placeholder="Filter by cluster…"
+            />
+          </Box>
+          <TextField
+            label="Search"
+            value={scrub}
+            onChange={(e) => setScrub(e.target.value)}
+            placeholder="Name / email / mobile"
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: 240 }}
+          />
+        </Stack>
 
-      {isLoading && <Skeleton className="h-40 w-full" />}
-      {isError && (
-        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
-          {error instanceof Error ? error.message : 'Failed to load users'}
-        </div>
-      )}
+        {isError && (
+          <Box sx={{ px: 2.5, pb: 2, color: 'error.main', typography: 'body2' }}>
+            {error instanceof Error ? error.message : 'Failed to load users'}
+          </Box>
+        )}
 
-      {!isLoading && !isError && (
-        <>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Contact</TableHead>
-                <TableHead>Cluster</TableHead>
-                <TableHead>Last login</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead className="w-px" />
-              </TableRow>
-            </TableHeader>
+        <Scrollbar>
+          <Table sx={{ minWidth: 800 }}>
+            <TableHeadCustom headLabel={HEAD} />
             <TableBody>
               {visible.map((u) => (
-                <TableRow key={u.id}>
-                  <TableCell className="font-medium">
-                    <div className="flex items-center gap-2">
+                <TableRow key={u.id} hover>
+                  <TableCell sx={{ fontWeight: 500 }}>
+                    <Stack direction="row" alignItems="center" spacing={1}>
                       <UsersIcon className="h-3.5 w-3.5 text-muted-foreground" />
                       {u.name}
-                    </div>
-                    <div className="text-xs text-muted-foreground">{u.id}</div>
+                    </Stack>
+                    <Box sx={{ color: 'text.secondary', typography: 'caption' }}>{u.id}</Box>
                   </TableCell>
                   <TableCell>
                     <Badge variant={roleVariant(u.role)}>{u.role}</Badge>
@@ -232,17 +249,17 @@ export const UsersPage = () => {
                   <TableCell>
                     <Badge variant={statusVariant[u.status]}>{u.status}</Badge>
                   </TableCell>
-                  <TableCell className="text-xs">
-                    {u.email && <div>{u.email}</div>}
-                    {u.mobile && <div className="text-muted-foreground">{u.mobile}</div>}
+                  <TableCell sx={{ typography: 'caption' }}>
+                    {u.email && <Box>{u.email}</Box>}
+                    {u.mobile && <Box sx={{ color: 'text.secondary' }}>{u.mobile}</Box>}
                   </TableCell>
-                  <TableCell className="text-xs">
+                  <TableCell sx={{ typography: 'caption' }}>
                     {u.clusterId ? (clusterName.get(u.clusterId) ?? u.clusterId.slice(-10)) : '—'}
                   </TableCell>
-                  <TableCell className="text-xs">
+                  <TableCell sx={{ typography: 'caption' }}>
                     {u.lastLoginAt ? formatDate(u.lastLoginAt) : '—'}
                   </TableCell>
-                  <TableCell className="text-xs">{formatDate(u.createdAt)}</TableCell>
+                  <TableCell sx={{ typography: 'caption' }}>{formatDate(u.createdAt)}</TableCell>
                   <TableCell>
                     <Button size="sm" variant="outline" onClick={() => setEditing(u)}>
                       Update status
@@ -250,43 +267,24 @@ export const UsersPage = () => {
                   </TableCell>
                 </TableRow>
               ))}
-              {visible.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={8} className="py-12 text-center text-sm text-muted-foreground">
-                    No users match the current filter.
-                  </TableCell>
-                </TableRow>
-              )}
+              <TableNoData notFound={!isLoading && visible.length === 0} />
             </TableBody>
           </Table>
+        </Scrollbar>
 
-          <div className="flex items-center justify-between text-sm text-muted-foreground">
-            <span>
-              {visible.length} of {total} · page {page} / {pageCount}
-            </span>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.max(1, page - 1)) })}
-                disabled={page <= 1}
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Prev
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setParam({ page: String(Math.min(pageCount, page + 1)) })}
-                disabled={page >= pageCount}
-              >
-                Next
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </>
-      )}
+        <TablePaginationCustom
+          count={total}
+          page={page - 1}
+          rowsPerPage={PAGE_SIZE}
+          rowsPerPageOptions={[10, 25, 50]}
+          onPageChange={(_e, newPage) =>
+            setParam({ page: String(Math.max(1, Math.min(pageCount, newPage + 1))) })
+          }
+          onRowsPerPageChange={() => setParam({ page: '1' })}
+        />
+      </Card>
+
+      {isLoading && <Skeleton className="h-40 w-full" />}
 
       <UserStatusDialog open={editing !== null} user={editing} onClose={() => setEditing(null)} />
       <CreateUserDialog open={createOpen} onClose={() => setCreateOpen(false)} />

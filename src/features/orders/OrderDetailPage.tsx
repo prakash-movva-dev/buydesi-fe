@@ -11,6 +11,11 @@ import {
 } from 'lucide-react';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import Typography from '@mui/material/Typography';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import {
@@ -22,14 +27,8 @@ import {
 } from '@/components/ui/Card';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom } from '@/components/table';
 import { useAuth } from '@/lib/auth';
 import { formatDateTime, formatInr } from '@/lib/format';
 import { UserRole } from '@/types/api';
@@ -159,39 +158,43 @@ export const OrderDetailPage = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Product</TableHead>
-                  <TableHead>Tier</TableHead>
-                  <TableHead>Seller</TableHead>
-                  <TableHead className="text-right">Qty</TableHead>
-                  <TableHead className="text-right">Unit ₹</TableHead>
-                  <TableHead className="text-right">Subtotal</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {items.map((it, idx) => (
-                  <TableRow key={it.id ?? `${it.productId}-${idx}`}>
-                    <TableCell className="font-medium">
-                      <div>{it.name}</div>
-                      <div className="text-xs text-muted-foreground">{it.unit}</div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="muted">{it.tier}</Badge>
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {it.sellerId.slice(-6)}
-                    </TableCell>
-                    <TableCell className="text-right">{it.quantity}</TableCell>
-                    <TableCell className="text-right">{formatInr(it.unitPriceInr)}</TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatInr(it.subtotalInr)}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <Scrollbar>
+              <Table sx={{ minWidth: 800 }}>
+                <TableHeadCustom
+                  headLabel={[
+                    { id: 'product', label: 'Product' },
+                    { id: 'tier', label: 'Tier' },
+                    { id: 'seller', label: 'Seller' },
+                    { id: 'qty', label: 'Qty', align: 'right' },
+                    { id: 'unit', label: 'Unit ₹', align: 'right' },
+                    { id: 'subtotal', label: 'Subtotal', align: 'right' },
+                  ]}
+                />
+                <TableBody>
+                  {items.map((it, idx) => (
+                    <TableRow key={it.id ?? `${it.productId}-${idx}`} hover>
+                      <TableCell sx={{ fontWeight: 500 }}>
+                        <Box>{it.name}</Box>
+                        <Box sx={{ color: 'text.secondary', typography: 'caption' }}>
+                          {it.unit}
+                        </Box>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="muted">{it.tier}</Badge>
+                      </TableCell>
+                      <TableCell sx={{ color: 'text.secondary', typography: 'caption' }}>
+                        {it.sellerId.slice(-6)}
+                      </TableCell>
+                      <TableCell align="right">{it.quantity}</TableCell>
+                      <TableCell align="right">{formatInr(it.unitPriceInr)}</TableCell>
+                      <TableCell align="right" sx={{ fontWeight: 500 }}>
+                        {formatInr(it.subtotalInr)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </Scrollbar>
           </CardContent>
         </Card>
 
@@ -235,7 +238,9 @@ export const OrderDetailPage = () => {
                 </p>
               </>
             ) : (
-              <p className="text-muted-foreground">No shipping address on file.</p>
+              <Typography variant="body2" color="text.secondary">
+                No shipping address on file.
+              </Typography>
             )}
             {order.delhiveryShipmentId && (
               <p className="pt-2 text-xs text-muted-foreground">
@@ -324,18 +329,18 @@ export const OrderDetailPage = () => {
           <CardContent>
             {escrowAudit.isLoading && <Skeleton className="h-24 w-full" />}
             {escrowAudit.isError && (
-              <p className="text-sm text-destructive">
+              <Typography variant="body2" color="error.main">
                 {escrowAudit.error instanceof Error
                   ? escrowAudit.error.message
                   : 'Failed to load audit'}
-              </p>
+              </Typography>
             )}
             {!escrowAudit.isLoading && !escrowAudit.isError && (
               <>
                 {(escrowAudit.data?.length ?? 0) === 0 ? (
-                  <p className="text-sm text-muted-foreground">
+                  <Typography variant="body2" color="text.secondary">
                     No escrow transitions recorded for this order.
-                  </p>
+                  </Typography>
                 ) : (
                   <ol className="space-y-3">
                     {(escrowAudit.data ?? []).map((e) => (

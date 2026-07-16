@@ -1,18 +1,19 @@
 import { useMemo, useState } from 'react';
-import { ArrowDown, ArrowUp, FolderTree, Pencil, Plus } from 'lucide-react';
+import { ArrowDown, ArrowUp, Pencil, Plus } from 'lucide-react';
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import IconButton from '@mui/material/IconButton';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData } from '@/components/table';
 import { ScopedAdminBanner } from '@/features/scoped-admin/ScopedAdminBanner';
 import { useAuth } from '@/lib/auth';
 import { UserRole } from '@/types/api';
@@ -53,6 +54,14 @@ export const CategoriesPage = () => {
     user?.role === UserRole.CATEGORY_ADMIN;
 
   const reorderMut = useReorderCategories();
+
+  const head = [
+    { id: 'name', label: 'Category' },
+    { id: 'slug', label: 'Slug' },
+    { id: 'commission', label: 'Default commission', align: 'right' as const },
+    { id: 'status', label: 'Status' },
+    { id: 'actions', label: '' },
+  ];
 
   // Move a category up/down by renormalising the whole list's displayOrder to
   // its new positions, then persisting in one call.
@@ -97,81 +106,67 @@ export const CategoriesPage = () => {
       )}
 
       {!isLoading && !isError && (
-        <div className="rounded-lg border border-border bg-card">
-          {categories.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
-              <FolderTree className="h-6 w-6" />
-              No categories yet. Create one to get started.
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Slug</TableHead>
-                  <TableHead className="text-right">Default commission</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="w-px" />
-                </TableRow>
-              </TableHeader>
+        <Card>
+          <Scrollbar>
+            <Table sx={{ minWidth: 800 }}>
+              <TableHeadCustom headLabel={head} />
               <TableBody>
                 {categories.map((cat, index) => (
-                  <TableRow key={cat.id}>
-                    <TableCell className="font-medium">
-                      <div className="flex items-center gap-2">
+                  <TableRow key={cat.id} hover>
+                    <TableCell sx={{ fontWeight: 500 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         {cat.name}
                         {cat.adminId && (
                           <Badge variant="info" title={`Admin: ${cat.adminId}`}>
                             Admin assigned
                           </Badge>
                         )}
-                      </div>
+                      </Box>
                     </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">{cat.slug}</TableCell>
-                    <TableCell className="text-right">{cat.defaultCommissionRate}%</TableCell>
+                    <TableCell sx={{ color: 'text.secondary', typography: 'caption' }}>{cat.slug}</TableCell>
+                    <TableCell align="right">{cat.defaultCommissionRate}%</TableCell>
                     <TableCell>
                       <Badge variant={cat.status === 'active' ? 'success' : 'muted'}>
                         {cat.status}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center justify-end gap-1">
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5 }}>
                         {canReorder && (
                           <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
+                            <IconButton
+                              size="small"
                               disabled={index === 0 || reorderMut.isPending}
                               onClick={() => move(index, -1)}
                               aria-label="Move up"
                               title="Move up"
                             >
                               <ArrowUp className="h-4 w-4" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
+                            </IconButton>
+                            <IconButton
+                              size="small"
                               disabled={index === categories.length - 1 || reorderMut.isPending}
                               onClick={() => move(index, 1)}
                               aria-label="Move down"
                               title="Move down"
                             >
                               <ArrowDown className="h-4 w-4" />
-                            </Button>
+                            </IconButton>
                           </>
                         )}
                         <Button variant="ghost" size="sm" onClick={() => openEdit(cat)}>
                           <Pencil className="h-4 w-4" />
                           Edit
                         </Button>
-                      </div>
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))}
+                <TableNoData notFound={!isLoading && categories.length === 0} />
               </TableBody>
             </Table>
-          )}
-        </div>
+          </Scrollbar>
+        </Card>
       )}
 
       <CategoryFormDialog

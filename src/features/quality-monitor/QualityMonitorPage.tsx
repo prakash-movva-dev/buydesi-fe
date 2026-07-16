@@ -2,7 +2,12 @@ import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ExternalLink, ShieldAlert, Star, TicketPlus } from 'lucide-react';
 import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
 import Stack from '@mui/material/Stack';
+import Table from '@mui/material/Table';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
 import Typography from '@mui/material/Typography';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -10,14 +15,8 @@ import { Dialog } from '@/components/ui/Dialog';
 import { Label } from '@/components/ui/Label';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/Table';
+import { Scrollbar } from '@/components/scrollbar';
+import { TableHeadCustom, TableNoData } from '@/components/table';
 import { Textarea } from '@/components/ui/Textarea';
 import { useCreateTicket } from '@/features/support/api';
 import type { Review } from '@/features/reviews/types';
@@ -53,6 +52,16 @@ export const QualityMonitorPage = () => {
 
   const reviews = data?.items ?? [];
 
+  const head = [
+    { id: 'target', label: 'Product / seller' },
+    { id: 'reviewer', label: 'Reviewer' },
+    { id: 'rating', label: 'Rating' },
+    { id: 'comment', label: 'Comment' },
+    { id: 'order', label: 'Order' },
+    { id: 'date', label: 'Date' },
+    { id: 'actions', label: '' },
+  ];
+
   return (
     <Stack spacing={3}>
       <PageHeader
@@ -83,78 +92,63 @@ export const QualityMonitorPage = () => {
         )}
 
         {!isLoading && !isError && (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Product / seller</TableHead>
-                <TableHead>Reviewer</TableHead>
-                <TableHead>Rating</TableHead>
-                <TableHead>Comment</TableHead>
-                <TableHead>Order</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="w-px" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {reviews.map((r) => {
-                const id = r.id ?? r._id;
-                return (
-                  <TableRow key={id}>
-                    <TableCell className="text-xs">
-                      <Badge variant="muted">{r.targetType}</Badge>
-                      <div className="mt-0.5 font-medium">
-                        {r.targetName ?? '—'}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-xs font-medium">
-                      {r.raterName ?? 'Anonymous'}
-                    </TableCell>
-                    <TableCell>
-                      <StarRating rating={r.rating} />
-                    </TableCell>
-                    <TableCell
-                      className="max-w-md truncate text-xs"
-                      title={r.text ?? ''}
-                    >
-                      {r.text ?? (
-                        <span className="text-muted-foreground">— rating only —</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      {r.orderNumber ? (
-                        <span className="font-mono">{r.orderNumber}</span>
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      {formatDateTime(r.createdAt)}
-                    </TableCell>
-                    <TableCell className="whitespace-nowrap">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => setTicketFor(r)}
-                      >
-                        <TicketPlus className="h-4 w-4" />
-                        Create ticket
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-              {reviews.length === 0 && (
-                <TableRow>
-                  <TableCell
-                    colSpan={7}
-                    className="py-12 text-center text-sm text-muted-foreground"
-                  >
-                    No low-rated reviews. Quality is looking good.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+          <Card>
+            <Scrollbar>
+              <Table sx={{ minWidth: 800 }}>
+                <TableHeadCustom headLabel={head} />
+                <TableBody>
+                  {reviews.map((r) => {
+                    const id = r.id ?? r._id;
+                    return (
+                      <TableRow key={id} hover>
+                        <TableCell sx={{ typography: 'caption' }}>
+                          <Badge variant="muted">{r.targetType}</Badge>
+                          <Box sx={{ mt: 0.25, fontWeight: 500 }}>
+                            {r.targetName ?? '—'}
+                          </Box>
+                        </TableCell>
+                        <TableCell className="text-xs font-medium">
+                          {r.raterName ?? 'Anonymous'}
+                        </TableCell>
+                        <TableCell>
+                          <StarRating rating={r.rating} />
+                        </TableCell>
+                        <TableCell
+                          className="max-w-md truncate text-xs"
+                          title={r.text ?? ''}
+                        >
+                          {r.text ?? (
+                            <span className="text-muted-foreground">— rating only —</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {r.orderNumber ? (
+                            <span className="font-mono">{r.orderNumber}</span>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          {formatDateTime(r.createdAt)}
+                        </TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setTicketFor(r)}
+                          >
+                            <TicketPlus className="h-4 w-4" />
+                            Create ticket
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                  <TableNoData notFound={!isLoading && reviews.length === 0} />
+                </TableBody>
+              </Table>
+            </Scrollbar>
+          </Card>
         )}
       </Stack>
 
