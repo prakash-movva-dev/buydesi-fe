@@ -273,9 +273,16 @@ const ClusterAdminsCard = ({ cluster }: { cluster: SafeCluster }) => {
   const updateCluster = useUpdateCluster();
   const [adding, setAdding] = useState<NewAdminRole | null>(null);
 
-  // Only super-tier can (re)assign the lead Cluster Admin (cluster mutations).
-  const canSetLead =
+  const isSuperTier =
     user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.SUB_SUPER_ADMIN;
+  // Super-tier and the Regional Admin (who runs the region) can (re)assign the
+  // lead Cluster Admin.
+  const canSetLead = isSuperTier || user?.role === UserRole.REGIONAL_ADMIN;
+  // Who may appoint the delegated Category/Support admins for this cluster.
+  const canAppoint =
+    isSuperTier ||
+    user?.role === UserRole.REGIONAL_ADMIN ||
+    user?.role === UserRole.CLUSTER_ADMIN;
 
   const rows = admins.data ?? [];
   const category = rows.filter((u) => u.role === UserRole.CATEGORY_ADMIN);
@@ -290,16 +297,18 @@ const ClusterAdminsCard = ({ cluster }: { cluster: SafeCluster }) => {
             The lead Cluster Admin, plus the Category & Support admins who report to them.
           </CardDescription>
         </div>
-        <div className="flex gap-2">
-          <Button size="sm" variant="outline" onClick={() => setAdding('CATEGORY_ADMIN')}>
-            <Plus className="h-4 w-4" />
-            Category admin
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => setAdding('SUPPORT_ADMIN')}>
-            <Plus className="h-4 w-4" />
-            Support admin
-          </Button>
-        </div>
+        {canAppoint && (
+          <div className="flex gap-2">
+            <Button size="sm" variant="outline" onClick={() => setAdding('CATEGORY_ADMIN')}>
+              <Plus className="h-4 w-4" />
+              Category admin
+            </Button>
+            <Button size="sm" variant="outline" onClick={() => setAdding('SUPPORT_ADMIN')}>
+              <Plus className="h-4 w-4" />
+              Support admin
+            </Button>
+          </div>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Lead Cluster Admin */}

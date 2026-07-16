@@ -143,7 +143,7 @@ export const SupportAdminDashboard = () => {
           tone={slaCounts.breached > 0 ? 'destructive' : 'warning'}
         />
         <Metric
-          label="All open (platform)"
+          label={canCrossCluster ? 'All open (platform)' : 'Open in my cluster'}
           value={overview.isLoading ? null : platformOpen ?? 0}
           secondary={`${escalatedCount} escalated open`}
           tone="info"
