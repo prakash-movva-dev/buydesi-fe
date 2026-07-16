@@ -63,6 +63,7 @@ export const ProductDetailPage = () => {
   const [action, setAction] = useState<StatusAction | null>(null);
   const [dupCandidate, setDupCandidate] = useState<DuplicateCandidate | null>(null);
   const [tab, setTab] = useState<'details' | 'reviews' | 'quality' | 'duplicates'>('details');
+  const [activeImage, setActiveImage] = useState(0);
 
   const categoryName = useMemo(
     () => categories?.find((c) => c.id === product?.categoryId)?.name ?? product?.categoryId,
@@ -190,31 +191,102 @@ export const ProductDetailPage = () => {
 
       {tab === 'details' && (
       <Stack spacing={3}>
-      <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', lg: 'repeat(3, 1fr)' } }}>
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Description</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="whitespace-pre-wrap text-sm">{product.description}</p>
-            {product.descriptionI18n && Object.keys(product.descriptionI18n).length > 0 && (
-              <details className="mt-4 rounded-md border border-border bg-secondary/30 p-3 text-sm">
-                <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Translations ({Object.keys(product.descriptionI18n).length})
-                </summary>
-                <dl className="mt-2 space-y-2">
-                  {Object.entries(product.descriptionI18n).map(([locale, value]) => (
-                    <div key={locale}>
-                      <dt className="text-xs font-medium uppercase">{locale}</dt>
-                      <dd className="whitespace-pre-wrap text-sm">{value}</dd>
-                    </div>
-                  ))}
-                </dl>
-              </details>
+      <Box
+        sx={{
+          display: 'grid',
+          gap: 3,
+          alignItems: 'start',
+          gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 440px) 1fr' },
+        }}
+      >
+        {/* Image gallery — main image + thumbnail strip */}
+        <Card>
+          <Box sx={{ p: 2 }}>
+            {product.images.length === 0 ? (
+              <Stack
+                spacing={1}
+                alignItems="center"
+                justifyContent="center"
+                sx={{
+                  aspectRatio: '1 / 1',
+                  borderRadius: 2,
+                  bgcolor: 'background.neutral',
+                  color: 'text.disabled',
+                  textAlign: 'center',
+                  px: 2,
+                }}
+              >
+                <ImageIcon className="h-8 w-8" />
+                <Typography variant="body2">
+                  No images. Sellers should upload at least one before approval.
+                </Typography>
+              </Stack>
+            ) : (
+              <Stack spacing={1.5}>
+                <Box
+                  component="a"
+                  href={product.images[activeImage] ?? product.images[0]}
+                  target="_blank"
+                  rel="noreferrer"
+                  sx={{
+                    display: 'block',
+                    aspectRatio: '1 / 1',
+                    borderRadius: 2,
+                    overflow: 'hidden',
+                    bgcolor: 'background.neutral',
+                    border: (t) => `1px solid ${t.vars.palette.divider}`,
+                  }}
+                >
+                  <Box
+                    component="img"
+                    src={product.images[activeImage] ?? product.images[0]}
+                    alt={product.name}
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).style.visibility = 'hidden';
+                    }}
+                    sx={{ width: 1, height: 1, objectFit: 'cover' }}
+                  />
+                </Box>
+                {product.images.length > 1 && (
+                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 1 }}>
+                    {product.images.map((src, i) => (
+                      <Box
+                        key={src}
+                        component="button"
+                        type="button"
+                        onClick={() => setActiveImage(i)}
+                        sx={{
+                          p: 0,
+                          aspectRatio: '1 / 1',
+                          borderRadius: 1,
+                          overflow: 'hidden',
+                          cursor: 'pointer',
+                          bgcolor: 'background.neutral',
+                          border: (t) =>
+                            i === activeImage
+                              ? `2px solid ${t.vars.palette.primary.main}`
+                              : `1px solid ${t.vars.palette.divider}`,
+                        }}
+                      >
+                        <Box
+                          component="img"
+                          src={src}
+                          alt={`${product.name} ${i + 1}`}
+                          onError={(e) => {
+                            (e.currentTarget as HTMLImageElement).style.visibility = 'hidden';
+                          }}
+                          sx={{ width: 1, height: 1, objectFit: 'cover', display: 'block' }}
+                        />
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+              </Stack>
             )}
-          </CardContent>
+          </Box>
         </Card>
 
+        {/* Pricing, stock & at-a-glance facts */}
         <Card>
           <CardHeader>
             <CardTitle>Pricing & stock</CardTitle>
@@ -248,55 +320,44 @@ export const ProductDetailPage = () => {
                 <span>{product.weightGrams} g</span>
               </div>
             )}
+            <hr className="my-2 border-border" />
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Category</span>
+              <span className="font-medium">{categoryName}</span>
+            </div>
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-muted-foreground">Seller</span>
+              <span className="truncate font-mono text-xs">{product.sellerId}</span>
+            </div>
           </CardContent>
         </Card>
       </Box>
 
-      <ListingDetails product={product} />
-
       <Card>
         <CardHeader>
-          <CardTitle>Images</CardTitle>
-          <CardDescription>{product.images.length} image(s) uploaded.</CardDescription>
+          <CardTitle>Description</CardTitle>
         </CardHeader>
         <CardContent>
-          {product.images.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
-              <ImageIcon className="h-6 w-6" />
-              No images. Sellers should upload at least one before approval.
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6">
-              {product.images.map((src, i) => (
-                <a
-                  key={src}
-                  href={src}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="group relative overflow-hidden rounded-md border border-border bg-secondary"
-                >
-                  <img
-                    src={src}
-                    alt={`${product.name} image ${i + 1}`}
-                    onError={(e) => {
-                      // Legacy bare-key images won't resolve — hide the broken
-                      // glyph and show a neutral placeholder background instead.
-                      const img = e.currentTarget;
-                      img.style.visibility = 'hidden';
-                      img.parentElement?.classList.add(
-                        'flex',
-                        'items-center',
-                        'justify-center',
-                      );
-                    }}
-                    className="aspect-square w-full object-cover transition group-hover:scale-105"
-                  />
-                </a>
-              ))}
-            </div>
+          <p className="whitespace-pre-wrap text-sm">{product.description}</p>
+          {product.descriptionI18n && Object.keys(product.descriptionI18n).length > 0 && (
+            <details className="mt-4 rounded-md border border-border bg-secondary/30 p-3 text-sm">
+              <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Translations ({Object.keys(product.descriptionI18n).length})
+              </summary>
+              <dl className="mt-2 space-y-2">
+                {Object.entries(product.descriptionI18n).map(([locale, value]) => (
+                  <div key={locale}>
+                    <dt className="text-xs font-medium uppercase">{locale}</dt>
+                    <dd className="whitespace-pre-wrap text-sm">{value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </details>
           )}
         </CardContent>
       </Card>
+
+      <ListingDetails product={product} />
       </Stack>
       )}
 
