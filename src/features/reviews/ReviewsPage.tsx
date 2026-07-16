@@ -224,7 +224,7 @@ export const ReviewsPage = () => {
                       <TableCell sx={{ typography: 'caption' }}>
                         <Badge variant="muted">{r.targetType}</Badge>
                         <Box sx={{ mt: 0.25, fontWeight: 500 }}>
-                          {r.targetName ?? <span className="font-mono">{r.targetId.slice(-10)}</span>}
+                          {r.targetName ?? '—'}
                         </Box>
                       </TableCell>
                       <TableCell>
@@ -240,7 +240,7 @@ export const ReviewsPage = () => {
                       <TableCell className="max-w-md truncate text-xs" title={r.text ?? ''}>
                         {r.text ?? <span className="text-muted-foreground">— rating only —</span>}
                       </TableCell>
-                      <TableCell className="font-mono text-xs">{r.raterId.slice(-8)}</TableCell>
+                      <TableCell className="text-xs">{r.raterName ?? 'Anonymous'}</TableCell>
                       <TableCell className="text-xs">{formatDateTime(r.createdAt)}</TableCell>
                       <TableCell className="space-x-1 whitespace-nowrap">
                         {r.status !== 'approved' && (

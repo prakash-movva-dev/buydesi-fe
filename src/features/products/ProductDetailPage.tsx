@@ -36,6 +36,7 @@ import TextField from '@mui/material/TextField';
 import { Scrollbar } from '@/components/scrollbar';
 import { TableHeadCustom } from '@/components/table';
 import { useCategoriesList } from '@/features/categories/api';
+import { useUser } from '@/features/users/api';
 import { formatDate, formatDateTime, formatInr } from '@/lib/format';
 import { ApiError } from '@/types/api';
 import {
@@ -69,6 +70,9 @@ export const ProductDetailPage = () => {
     () => categories?.find((c) => c.id === product?.categoryId)?.name ?? product?.categoryId,
     [categories, product?.categoryId],
   );
+
+  const seller = useUser(product?.sellerId);
+  const sellerName = seller.data?.name ?? '—';
 
   if (isLoading) {
     return (
@@ -141,7 +145,7 @@ export const ProductDetailPage = () => {
             {product.name}
           </Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            ID {product.id} · category {categoryName} · seller {product.sellerId}
+            category {categoryName} · seller {sellerName}
           </Typography>
           <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center" sx={{ mt: 1 }}>
             <ProductStatusBadge status={product.status} />
@@ -327,7 +331,7 @@ export const ProductDetailPage = () => {
             </div>
             <div className="flex items-center justify-between gap-2">
               <span className="text-muted-foreground">Seller</span>
-              <span className="truncate font-mono text-xs">{product.sellerId}</span>
+              <span className="truncate font-medium">{sellerName}</span>
             </div>
           </CardContent>
         </Card>

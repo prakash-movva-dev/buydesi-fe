@@ -19,6 +19,7 @@ import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/component
 import { useAuth } from '@/lib/auth';
 import { formatDate, formatInr } from '@/lib/format';
 import { UserRole } from '@/types/api';
+import { useClustersList } from '@/features/clusters/api';
 import { useDeletePromoter, usePromotersList } from './api';
 import { PromoterFormDialog } from './PromoterFormDialog';
 import { PromoterPerformancePanel } from './PromoterPerformancePanel';
@@ -71,6 +72,13 @@ export const PromotersPage = () => {
   const { data, isLoading, isError, error } = usePromotersList(query);
   const total = data?.meta.total ?? 0;
   const deleteMut = useDeletePromoter();
+
+  const { data: clustersData } = useClustersList({ page: 1, limit: 100 });
+  const clusterName = useMemo(() => {
+    const map = new Map<string, string>();
+    (clustersData?.items ?? []).forEach((c) => map.set(c.id, c.name));
+    return map;
+  }, [clustersData]);
 
   const setParam = (next: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams);
@@ -191,11 +199,13 @@ export const PromotersPage = () => {
                         </Badge>
                       </TableCell>
                       <TableCell sx={{ typography: 'caption' }}>{formatDiscount(p)}</TableCell>
-                      <TableCell sx={{ fontFamily: 'monospace', typography: 'caption' }}>
-                        {p.clusterId ?? '—'}
+                      <TableCell sx={{ typography: 'caption' }}>
+                        {p.clusterId ? (clusterName.get(p.clusterId) ?? '—') : '—'}
                       </TableCell>
-                      <TableCell sx={{ fontFamily: 'monospace', typography: 'caption' }}>
-                        {p.userId ?? '—'}
+                      <TableCell sx={{ typography: 'caption' }}>
+                        <Badge variant={p.userId ? 'success' : 'muted'}>
+                          {p.userId ? 'Linked' : 'Not linked'}
+                        </Badge>
                       </TableCell>
                       <TableCell sx={{ typography: 'caption' }}>{formatDate(p.createdAt)}</TableCell>
                       <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>

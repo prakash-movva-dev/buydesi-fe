@@ -80,8 +80,8 @@ export const MyCommissionPage = () => {
                       <TableCell>
                         <Badge variant="muted">{r.scope}</Badge>
                       </TableCell>
-                      <TableCell sx={{ fontFamily: 'monospace', typography: 'caption' }}>
-                        {r.categoryId ?? r.productId ?? r.sellerId ?? '—'}
+                      <TableCell sx={{ typography: 'caption' }}>
+                        {r.targetName ?? '—'}
                       </TableCell>
                       <TableCell align="right" sx={{ fontWeight: 600 }}>
                         {r.ratePercent}%

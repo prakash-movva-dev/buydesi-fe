@@ -117,7 +117,7 @@ export const CategoriesPage = () => {
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         {cat.name}
                         {cat.adminId && (
-                          <Badge variant="info" title={`Admin: ${cat.adminId}`}>
+                          <Badge variant="info" title="A category admin is assigned">
                             Admin assigned
                           </Badge>
                         )}

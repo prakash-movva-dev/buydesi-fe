@@ -34,6 +34,7 @@ import { TableHeadCustom } from '@/components/table';
 import { useAuth } from '@/lib/auth';
 import { formatDateTime, formatInr } from '@/lib/format';
 import { UserRole } from '@/types/api';
+import { useUser } from '@/features/users/api';
 import { useOrder } from './api';
 import { useEscrowAudit, type EscrowAuditEntry } from './escrow-api';
 import { CancelOrderDialog, RefundOrderDialog } from './OrderActionDialogs';
@@ -75,6 +76,9 @@ export const OrderDetailPage = () => {
 
   const canSeeEscrowAudit = user ? ESCROW_VIEWER_ROLES.has(user.role) : false;
   const escrowAudit = useEscrowAudit(canSeeEscrowAudit ? id : undefined);
+
+  const buyer = useUser(order?.buyerId);
+  const buyerName = buyer.data?.name ?? 'buyer';
 
   if (isLoading) {
     return (
@@ -126,7 +130,7 @@ export const OrderDetailPage = () => {
       <Stack spacing={2}>
         <PageHeader
           title={order.orderNumber}
-          description={`placed ${formatDateTime(order.createdAt)} · buyer ${order.buyerId} · ${order.kind}`}
+          description={`placed ${formatDateTime(order.createdAt)} · buyer ${buyerName} · ${order.kind}`}
           action={
             <>
               {canRefund && (

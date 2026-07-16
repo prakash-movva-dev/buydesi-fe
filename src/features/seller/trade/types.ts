@@ -16,6 +16,8 @@ export interface TradeOrder {
   sellerClusterId: string | null;
   buyerId: string;
   buyerClusterId: string | null;
+  buyerName?: string | null;
+  sellerName?: string | null;
   productName: string;
   unit: string;
   units: number;

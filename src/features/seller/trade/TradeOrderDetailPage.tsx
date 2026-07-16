@@ -179,7 +179,9 @@ export const TradeOrderDetailPage = () => {
             </CardDescription>
           </CardHeader>
           <CardContent className="text-sm">
-            <p className="font-mono text-xs">{isSeller ? o.buyerId : o.sellerId}</p>
+            <p className="font-medium">
+              {(isSeller ? o.buyerName : o.sellerName) ?? '—'}
+            </p>
             {o.shipmentId && (
               <p className="mt-3 text-xs text-muted-foreground">
                 Shipment {o.shipmentId}

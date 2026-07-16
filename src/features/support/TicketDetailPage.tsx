@@ -35,6 +35,7 @@ import { Dialog } from '@/components/ui/Dialog';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useOrder } from '@/features/orders/api';
+import { useUser } from '@/features/users/api';
 import {
   readBoolean,
   useExposedSettingMap,
@@ -660,6 +661,7 @@ const OrderContextCard = ({
 }) => {
   const navigate = useNavigate();
   const order = useOrder(orderId ?? undefined);
+  const buyer = useUser(order.data?.buyerId);
 
   if (!orderId) {
     return (
@@ -742,10 +744,7 @@ const OrderContextCard = ({
                 )}
               </ul>
             </div>
-            <Row
-              label="Buyer"
-              value={<span className="font-mono text-xs">{order.data.buyerId}</span>}
-            />
+            <Row label="Buyer" value={buyer.data?.name ?? '—'} />
           </>
         )}
       </CardContent>

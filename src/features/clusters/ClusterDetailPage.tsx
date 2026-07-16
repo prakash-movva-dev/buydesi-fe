@@ -359,7 +359,7 @@ const ClusterAdminsCard = ({ cluster }: { cluster: SafeCluster }) => {
                 subtitle={lead.data.email ?? lead.data.mobile ?? '—'}
               />
             ) : (
-              <AdminRow name="Assigned admin" subtitle={cluster.adminId} />
+              <AdminRow name="Assigned admin" subtitle="Details unavailable" />
             )
           ) : (
             <EmptyRow text="No lead admin assigned yet." />
