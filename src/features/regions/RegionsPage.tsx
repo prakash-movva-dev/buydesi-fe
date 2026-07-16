@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { Download, Map, Pencil, Plus, Trash2 } from 'lucide-react';
 import MuiCard from '@mui/material/Card';
 import Box from '@mui/material/Box';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
 import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
 import MenuItem from '@mui/material/MenuItem';
@@ -72,6 +74,7 @@ export const RegionsPage = () => {
   const { data: regions, isLoading, isError, error } = useRegionsList();
   const deleteMut = useDeleteRegion();
 
+  const [tab, setTab] = useState<'list' | 'performance'>('list');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<SafeRegion | null>(null);
 
@@ -108,12 +111,12 @@ export const RegionsPage = () => {
   };
 
   return (
-    <Stack spacing={4}>
+    <Stack spacing={3}>
       <PageHeader
         title="Regions"
         description="A region groups multiple clusters for oversight and aggregated performance reporting. Grouping clusters here does not change each cluster's operational scoping."
         action={
-          canManage ? (
+          canManage && tab === 'list' ? (
             <Button
               onClick={() => {
                 setEditing(null);
@@ -127,14 +130,23 @@ export const RegionsPage = () => {
         }
       />
 
-      {isLoading && <Skeleton className="h-40 w-full" />}
-      {isError && (
+      <Tabs
+        value={tab}
+        onChange={(_e, v) => setTab(v)}
+        sx={{ borderBottom: 1, borderColor: 'divider' }}
+      >
+        <Tab value="list" label="List" />
+        <Tab value="performance" label="Performance" />
+      </Tabs>
+
+      {tab === 'list' && isLoading && <Skeleton className="h-40 w-full" />}
+      {tab === 'list' && isError && (
         <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
           {error instanceof Error ? error.message : 'Failed to load regions'}
         </div>
       )}
 
-      {!isLoading && !isError && (
+      {tab === 'list' && !isLoading && !isError && (
         <MuiCard>
           <Scrollbar>
             <Table sx={{ minWidth: 800 }}>
@@ -185,6 +197,7 @@ export const RegionsPage = () => {
       )}
 
       {/* ─── Region performance ───────────────────────────────────────────── */}
+      {tab === 'performance' && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -301,6 +314,7 @@ export const RegionsPage = () => {
           )}
         </CardContent>
       </Card>
+      )}
 
       <RegionFormDialog
         open={dialogOpen}
