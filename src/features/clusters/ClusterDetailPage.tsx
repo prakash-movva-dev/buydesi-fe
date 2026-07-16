@@ -5,6 +5,8 @@ import { ArrowLeft, Headset, Plus, ShieldCheck, Trash2 } from 'lucide-react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { Badge } from '@/components/ui/Badge';
@@ -69,6 +71,8 @@ export const ClusterDetailPage = () => {
 
   const c = cluster.data;
 
+  const [tab, setTab] = useState<'overview' | 'admins' | 'performance'>('overview');
+
   return (
     <Stack spacing={3}>
       <Link
@@ -102,90 +106,112 @@ export const ClusterDetailPage = () => {
             </Typography>
           </Stack>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Cluster stats</CardTitle>
-              <CardDescription>Current sellers, pin codes and active categories.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {stats.isLoading && <Skeleton className="h-20 w-full" />}
-              {stats.isError && (
-                <p className="text-sm text-destructive">
-                  {stats.error instanceof Error ? stats.error.message : 'Failed to load stats'}
-                </p>
-              )}
-              {stats.data && (
-                <Box
-                  sx={{
-                    display: 'grid',
-                    gap: 2,
-                    gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
-                  }}
-                >
-                  <StatCard label="Sellers" value={String(stats.data.sellerCount)} />
-                  <StatCard label="Pin codes served" value={String(stats.data.pinCodeCount)} />
-                  <StatCard
-                    label="Active categories"
-                    value={String(stats.data.activeCategoryCount)}
-                  />
-                </Box>
-              )}
-            </CardContent>
-          </Card>
+          <Tabs
+            value={tab}
+            onChange={(_e, v) => setTab(v)}
+            sx={{ borderBottom: 1, borderColor: 'divider' }}
+          >
+            <Tab value="overview" label="Overview" />
+            <Tab value="admins" label="Admins" />
+            <Tab value="performance" label="Performance" />
+          </Tabs>
 
-          <ClusterDetailsCard cluster={c} />
+          {tab === 'overview' && (
+            <Stack spacing={3}>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Cluster stats</CardTitle>
+                  <CardDescription>Current sellers, pin codes and active categories.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {stats.isLoading && <Skeleton className="h-20 w-full" />}
+                  {stats.isError && (
+                    <p className="text-sm text-destructive">
+                      {stats.error instanceof Error ? stats.error.message : 'Failed to load stats'}
+                    </p>
+                  )}
+                  {stats.data && (
+                    <Box
+                      sx={{
+                        display: 'grid',
+                        gap: 2,
+                        gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+                      }}
+                    >
+                      <StatCard label="Sellers" value={String(stats.data.sellerCount)} />
+                      <StatCard label="Pin codes served" value={String(stats.data.pinCodeCount)} />
+                      <StatCard
+                        label="Active categories"
+                        value={String(stats.data.activeCategoryCount)}
+                      />
+                    </Box>
+                  )}
+                </CardContent>
+              </Card>
 
-          <ClusterAdminsCard cluster={c} />
+              <ClusterDetailsCard cluster={c} />
+            </Stack>
+          )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Performance (last 30 days)</CardTitle>
-              <CardDescription>
-                {range.from.slice(0, 10)} → {range.to.slice(0, 10)}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {performance.isLoading && <Skeleton className="h-20 w-full" />}
-              {performance.isError && (
-                <p className="text-sm text-destructive">
-                  {performance.error instanceof Error
-                    ? performance.error.message
-                    : 'Failed to load performance'}
-                </p>
-              )}
-              {performance.data && !perfRow && (
-                <p className="text-sm text-muted-foreground">
-                  No performance data for this cluster in the selected range.
-                </p>
-              )}
-              {perfRow && (
-                <Box
-                  sx={{
-                    display: 'grid',
-                    gap: 2,
-                    gridTemplateColumns: {
-                      xs: '1fr',
-                      sm: 'repeat(2, 1fr)',
-                      lg: 'repeat(3, 1fr)',
-                    },
-                  }}
-                >
-                  <StatCard label="Orders" value={String(perfRow.orders)} />
-                  <StatCard label="Revenue (₹)" value={formatInr(perfRow.revenueInr)} />
-                  <StatCard label="Live listings" value={String(perfRow.liveListings)} />
-                  <StatCard label="Open tickets" value={String(perfRow.openTickets)} />
-                  <StatCard
-                    label="Avg delivery"
-                    value={
-                      perfRow.avgDeliveryHours
-                        ? `${perfRow.avgDeliveryHours.toFixed(1)} h`
-                        : '—'
-                    }
-                  />
-                </Box>
-              )}
-            </CardContent>
-          </Card>
+          {tab === 'admins' && (
+            <Stack spacing={3}>
+              <ClusterAdminsCard cluster={c} />
+            </Stack>
+          )}
+
+          {tab === 'performance' && (
+            <Stack spacing={3}>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Performance (last 30 days)</CardTitle>
+                  <CardDescription>
+                    {range.from.slice(0, 10)} → {range.to.slice(0, 10)}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {performance.isLoading && <Skeleton className="h-20 w-full" />}
+                  {performance.isError && (
+                    <p className="text-sm text-destructive">
+                      {performance.error instanceof Error
+                        ? performance.error.message
+                        : 'Failed to load performance'}
+                    </p>
+                  )}
+                  {performance.data && !perfRow && (
+                    <p className="text-sm text-muted-foreground">
+                      No performance data for this cluster in the selected range.
+                    </p>
+                  )}
+                  {perfRow && (
+                    <Box
+                      sx={{
+                        display: 'grid',
+                        gap: 2,
+                        gridTemplateColumns: {
+                          xs: '1fr',
+                          sm: 'repeat(2, 1fr)',
+                          lg: 'repeat(3, 1fr)',
+                        },
+                      }}
+                    >
+                      <StatCard label="Orders" value={String(perfRow.orders)} />
+                      <StatCard label="Revenue (₹)" value={formatInr(perfRow.revenueInr)} />
+                      <StatCard label="Live listings" value={String(perfRow.liveListings)} />
+                      <StatCard label="Open tickets" value={String(perfRow.openTickets)} />
+                      <StatCard
+                        label="Avg delivery"
+                        value={
+                          perfRow.avgDeliveryHours
+                            ? `${perfRow.avgDeliveryHours.toFixed(1)} h`
+                            : '—'
+                        }
+                      />
+                    </Box>
+                  )}
+                </CardContent>
+              </Card>
+            </Stack>
+          )}
         </>
       )}
     </Stack>

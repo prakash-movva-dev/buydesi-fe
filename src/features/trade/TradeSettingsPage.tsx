@@ -10,6 +10,8 @@ import {
 import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
 import Stack from '@mui/material/Stack';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
 import Table from '@mui/material/Table';
 import MenuItem from '@mui/material/MenuItem';
 import TableRow from '@mui/material/TableRow';
@@ -73,6 +75,7 @@ export const TradeSettingsPage = () => {
   const { data: config, isLoading, isError, error } = useTradeConfig();
   const setMut = useSetTradeConfig();
 
+  const [tab, setTab] = useState<'settings' | 'review'>('settings');
   const [commission, setCommission] = useState('');
   const [platformFee, setPlatformFee] = useState('');
   const [overrides, setOverrides] = useState<OverrideRow[]>([]);
@@ -157,6 +160,16 @@ export const TradeSettingsPage = () => {
         description="Configuration for the inter-cluster B2B marketplace (Buy Desi Trade). These values apply globally to every trade order placed across clusters."
       />
 
+      <Tabs
+        value={tab}
+        onChange={(_e, v) => setTab(v)}
+        sx={{ borderBottom: 1, borderColor: 'divider' }}
+      >
+        <Tab value="settings" label="Settings" />
+        <Tab value="review" label="Listing review" />
+      </Tabs>
+
+      {tab === 'settings' && (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
@@ -301,8 +314,9 @@ export const TradeSettingsPage = () => {
           )}
         </CardContent>
       </Card>
+      )}
 
-      <ListingReviewPanel />
+      {tab === 'review' && <ListingReviewPanel />}
     </Stack>
   );
 };

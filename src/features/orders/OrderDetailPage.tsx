@@ -11,6 +11,8 @@ import {
 } from 'lucide-react';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
 import Table from '@mui/material/Table';
 import TableRow from '@mui/material/TableRow';
 import TableBody from '@mui/material/TableBody';
@@ -69,6 +71,7 @@ export const OrderDetailPage = () => {
 
   const [cancelOpen, setCancelOpen] = useState(false);
   const [refundOpen, setRefundOpen] = useState(false);
+  const [tab, setTab] = useState<'summary' | 'timeline' | 'escrow'>('summary');
 
   const canSeeEscrowAudit = user ? ESCROW_VIEWER_ROLES.has(user.role) : false;
   const escrowAudit = useEscrowAudit(canSeeEscrowAudit ? id : undefined);
@@ -149,6 +152,18 @@ export const OrderDetailPage = () => {
         </Stack>
       </Stack>
 
+      <Tabs
+        value={tab}
+        onChange={(_e, v) => setTab(v)}
+        sx={{ borderBottom: 1, borderColor: 'divider' }}
+      >
+        <Tab value="summary" label="Summary" />
+        <Tab value="timeline" label="Timeline" />
+        {canSeeEscrowAudit && <Tab value="escrow" label="Escrow" />}
+      </Tabs>
+
+      {tab === 'summary' && (
+      <Stack spacing={3}>
       <div className="grid gap-6 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -285,6 +300,53 @@ export const OrderDetailPage = () => {
         </Card>
       </div>
 
+      {order.cancellation && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Cancellation</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <Row label="Reason" value={order.cancellation.reason ?? '—'} />
+            <Row
+              label="Cancelled at"
+              value={order.cancellation.at ? formatDateTime(order.cancellation.at) : '—'}
+            />
+            <Row
+              label="Refunded at"
+              value={
+                order.cancellation.refundedAt
+                  ? formatDateTime(order.cancellation.refundedAt)
+                  : 'Not yet'
+              }
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {items.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">
+              <Package className="mr-2 inline h-4 w-4" />
+              Sellers on this order
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-1 text-sm">
+              {Array.from(new Set(items.map((i) => i.sellerId))).map((sid) => (
+                <li key={sid} className="font-mono text-xs">
+                  {sid}
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+      </Stack>
+      )}
+
+      {tab === 'timeline' && (
+      <Stack spacing={3}>
       <Card>
         <CardHeader>
           <CardTitle>Status history</CardTitle>
@@ -313,8 +375,11 @@ export const OrderDetailPage = () => {
           </ol>
         </CardContent>
       </Card>
+      </Stack>
+      )}
 
-      {canSeeEscrowAudit && (
+      {tab === 'escrow' && canSeeEscrowAudit && (
+      <Stack spacing={3}>
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
@@ -377,49 +442,7 @@ export const OrderDetailPage = () => {
             )}
           </CardContent>
         </Card>
-      )}
-
-      {order.cancellation && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Cancellation</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <Row label="Reason" value={order.cancellation.reason ?? '—'} />
-            <Row
-              label="Cancelled at"
-              value={order.cancellation.at ? formatDateTime(order.cancellation.at) : '—'}
-            />
-            <Row
-              label="Refunded at"
-              value={
-                order.cancellation.refundedAt
-                  ? formatDateTime(order.cancellation.refundedAt)
-                  : 'Not yet'
-              }
-            />
-          </CardContent>
-        </Card>
-      )}
-
-      {items.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">
-              <Package className="mr-2 inline h-4 w-4" />
-              Sellers on this order
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-1 text-sm">
-              {Array.from(new Set(items.map((i) => i.sellerId))).map((sid) => (
-                <li key={sid} className="font-mono text-xs">
-                  {sid}
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
+      </Stack>
       )}
 
       <CancelOrderDialog

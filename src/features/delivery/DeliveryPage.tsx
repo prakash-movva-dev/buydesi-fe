@@ -4,6 +4,8 @@ import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
 import TextField from '@mui/material/TextField';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -40,6 +42,8 @@ const statusVariant: Record<ShipmentStatus, 'info' | 'warning' | 'success' | 'de
 };
 
 export const DeliveryPage = () => {
+  const [tab, setTab] = useState<'track' | 'quote' | 'create'>('track');
+
   return (
     <Stack spacing={3}>
       <PageHeader
@@ -49,12 +53,19 @@ export const DeliveryPage = () => {
 
       <ScopedAdminBanner />
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <TrackPanel />
-        <RatePanel />
-      </div>
+      <Tabs
+        value={tab}
+        onChange={(_e, v) => setTab(v)}
+        sx={{ borderBottom: 1, borderColor: 'divider' }}
+      >
+        <Tab value="track" label="Track" />
+        <Tab value="quote" label="Rate quote" />
+        <Tab value="create" label="Create shipment" />
+      </Tabs>
 
-      <CreateShipmentPanel />
+      {tab === 'track' && <TrackPanel />}
+      {tab === 'quote' && <RatePanel />}
+      {tab === 'create' && <CreateShipmentPanel />}
     </Stack>
   );
 };

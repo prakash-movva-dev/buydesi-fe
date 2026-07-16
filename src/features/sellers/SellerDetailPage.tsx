@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
 import Typography from '@mui/material/Typography';
 import {
   AlertTriangle,
@@ -99,6 +101,7 @@ export const SellerDetailPage = () => {
 
   const [dialogAction, setDialogAction] = useState<ReviewAction | null>(null);
   const [disciplinaryAction, setDisciplinaryAction] = useState<DisciplinaryAction | null>(null);
+  const [tab, setTab] = useState<'profile' | 'kyc' | 'reviews' | 'disciplinary'>('profile');
 
   // Resolve category + cluster ids to readable names.
   const { data: categories } = useCategoriesList();
@@ -220,8 +223,20 @@ export const SellerDetailPage = () => {
         </Box>
       </Box>
 
-      <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', lg: 'repeat(3, 1fr)' } }}>
-        <Card className="lg:col-span-2">
+      <Tabs
+        value={tab}
+        onChange={(_e, v) => setTab(v)}
+        sx={{ borderBottom: 1, borderColor: 'divider' }}
+      >
+        <Tab value="profile" label="Profile" />
+        <Tab value="kyc" label="KYC" />
+        <Tab value="reviews" label="Reviews" />
+        <Tab value="disciplinary" label="Disciplinary" />
+      </Tabs>
+
+      {tab === 'profile' && (
+      <Stack spacing={3}>
+        <Card>
           <CardHeader>
             <CardTitle>Farm & business</CardTitle>
           </CardHeader>
@@ -327,54 +342,8 @@ export const SellerDetailPage = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Review history</CardTitle>
-            <CardDescription>Latest admin action on this profile.</CardDescription>
+            <CardTitle>Storefront</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <Field label="Last reviewed" value={formatDateTime(seller.reviewedAt)} />
-            <Field label="Live since" value={formatDateTime(seller.liveAt)} />
-            <Field
-              label="Notes"
-              value={
-                seller.reviewNotes ? (
-                  <span className="whitespace-pre-wrap">{seller.reviewNotes}</span>
-                ) : (
-                  <span className="text-muted-foreground">No notes recorded</span>
-                )
-              }
-            />
-          </CardContent>
-        </Card>
-      </Box>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>KYC documents</CardTitle>
-          <CardDescription>{seller.kycDocuments.length} document(s) uploaded.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {seller.kycDocuments.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No documents uploaded.</p>
-          ) : (
-            <Box
-              sx={{
-                display: 'grid',
-                gap: 2,
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' },
-              }}
-            >
-              {seller.kycDocuments.map((doc) => (
-                <KycDocCard key={`${doc.type}-${doc.s3Key}`} sellerId={seller.id} doc={doc} />
-              ))}
-            </Box>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Storefront</CardTitle>
-        </CardHeader>
         <CardContent className="space-y-3 text-sm">
           <div className="grid grid-cols-2 gap-4">
             <Field
@@ -440,7 +409,64 @@ export const SellerDetailPage = () => {
           />
         </CardContent>
       </Card>
+      </Stack>
+      )}
 
+      {tab === 'kyc' && (
+      <Stack spacing={3}>
+        <Card>
+          <CardHeader>
+            <CardTitle>KYC documents</CardTitle>
+            <CardDescription>{seller.kycDocuments.length} document(s) uploaded.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {seller.kycDocuments.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No documents uploaded.</p>
+            ) : (
+              <Box
+                sx={{
+                  display: 'grid',
+                  gap: 2,
+                  gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' },
+                }}
+              >
+                {seller.kycDocuments.map((doc) => (
+                  <KycDocCard key={`${doc.type}-${doc.s3Key}`} sellerId={seller.id} doc={doc} />
+                ))}
+              </Box>
+            )}
+          </CardContent>
+        </Card>
+      </Stack>
+      )}
+
+      {tab === 'reviews' && (
+      <Stack spacing={3}>
+        <Card>
+          <CardHeader>
+            <CardTitle>Review history</CardTitle>
+            <CardDescription>Latest admin action on this profile.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <Field label="Last reviewed" value={formatDateTime(seller.reviewedAt)} />
+            <Field label="Live since" value={formatDateTime(seller.liveAt)} />
+            <Field
+              label="Notes"
+              value={
+                seller.reviewNotes ? (
+                  <span className="whitespace-pre-wrap">{seller.reviewNotes}</span>
+                ) : (
+                  <span className="text-muted-foreground">No notes recorded</span>
+                )
+              }
+            />
+          </CardContent>
+        </Card>
+      </Stack>
+      )}
+
+      {tab === 'disciplinary' && (
+      <Stack spacing={3}>
       {canDiscipline && (
         <Card>
           <CardHeader>
@@ -476,6 +502,8 @@ export const SellerDetailPage = () => {
             )}
           </CardContent>
         </Card>
+      )}
+      </Stack>
       )}
 
       <ReviewDialog

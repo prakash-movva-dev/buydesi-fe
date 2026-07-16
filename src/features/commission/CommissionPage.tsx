@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { Pencil, Plus, ReceiptText, Wand2 } from 'lucide-react';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
 import Table from '@mui/material/Table';
 import MenuItem from '@mui/material/MenuItem';
 import TableRow from '@mui/material/TableRow';
@@ -69,6 +71,7 @@ const RULE_HEAD_SUPER = [...RULE_HEAD, { id: 'edit', label: '' }];
 export const CommissionPage = () => {
   const { user } = useAuth();
   const isSuper = user?.role === UserRole.SUPER_ADMIN;
+  const [tab, setTab] = useState<'rules' | 'resolve'>('rules');
   const [scope, setScope] = useState<'' | CommissionScope>('');
   const [activeOnly, setActiveOnly] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -99,7 +102,7 @@ export const CommissionPage = () => {
         title="Commission rules"
         description="Resolution order — seller > product > category > category default. The payout pipeline picks the most specific live rule at payout time."
         action={
-          isSuper ? (
+          isSuper && tab === 'rules' ? (
             <Button
               onClick={() => {
                 setEditing(null);
@@ -115,8 +118,18 @@ export const CommissionPage = () => {
 
       <ScopedAdminBanner />
 
-      <ResolveTool />
+      <Tabs
+        value={tab}
+        onChange={(_e, v) => setTab(v)}
+        sx={{ borderBottom: 1, borderColor: 'divider' }}
+      >
+        <Tab value="rules" label="Rules" />
+        <Tab value="resolve" label="Resolve" />
+      </Tabs>
 
+      {tab === 'resolve' && <ResolveTool />}
+
+      {tab === 'rules' && (
       <Stack direction="row" spacing={2} flexWrap="wrap" alignItems="center">
         <TextField
           select
@@ -141,15 +154,16 @@ export const CommissionPage = () => {
           Active only
         </label>
       </Stack>
+      )}
 
-      {isLoading && <Skeleton className="h-40 w-full" />}
-      {isError && (
+      {tab === 'rules' && isLoading && <Skeleton className="h-40 w-full" />}
+      {tab === 'rules' && isError && (
         <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
           {error instanceof Error ? error.message : 'Failed to load rules'}
         </div>
       )}
 
-      {!isLoading && !isError && (
+      {tab === 'rules' && !isLoading && !isError && (
         <Stack spacing={3}>
           {(['seller', 'product', 'category'] as const).map((s) => (
             <Card key={s}>

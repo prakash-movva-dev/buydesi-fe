@@ -13,6 +13,8 @@ import {
 } from 'lucide-react';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
 import Table from '@mui/material/Table';
 import TableRow from '@mui/material/TableRow';
 import TableBody from '@mui/material/TableBody';
@@ -60,6 +62,7 @@ export const ProductDetailPage = () => {
   const setStatusMut = useSetProductStatus();
   const [action, setAction] = useState<StatusAction | null>(null);
   const [dupCandidate, setDupCandidate] = useState<DuplicateCandidate | null>(null);
+  const [tab, setTab] = useState<'details' | 'reviews' | 'quality' | 'duplicates'>('details');
 
   const categoryName = useMemo(
     () => categories?.find((c) => c.id === product?.categoryId)?.name ?? product?.categoryId,
@@ -174,6 +177,19 @@ export const ProductDetailPage = () => {
         </Box>
       </Box>
 
+      <Tabs
+        value={tab}
+        onChange={(_e, v) => setTab(v)}
+        sx={{ borderBottom: 1, borderColor: 'divider' }}
+      >
+        <Tab value="details" label="Details" />
+        <Tab value="reviews" label="Reviews" />
+        <Tab value="quality" label="Quality" />
+        <Tab value="duplicates" label="Duplicates" />
+      </Tabs>
+
+      {tab === 'details' && (
+      <Stack spacing={3}>
       <Box sx={{ display: 'grid', gap: 3, gridTemplateColumns: { xs: '1fr', lg: 'repeat(3, 1fr)' } }}>
         <Card className="lg:col-span-2">
           <CardHeader>
@@ -281,15 +297,27 @@ export const ProductDetailPage = () => {
           )}
         </CardContent>
       </Card>
+      </Stack>
+      )}
 
+      {tab === 'quality' && (
+      <Stack spacing={3}>
       <QualityChecklist productId={product.id} />
+      </Stack>
+      )}
 
+      {tab === 'duplicates' && (
+      <Stack spacing={3}>
       <DuplicateCheck
         productId={product.id}
         categoryName={categoryName}
         onMarkDuplicate={setDupCandidate}
       />
+      </Stack>
+      )}
 
+      {tab === 'reviews' && (
+      <Stack spacing={3}>
       <Card>
         <CardHeader>
           <CardTitle>Review history</CardTitle>
@@ -313,6 +341,8 @@ export const ProductDetailPage = () => {
           </div>
         </CardContent>
       </Card>
+      </Stack>
+      )}
 
       <StatusReviewDialog
         open={action !== null}
