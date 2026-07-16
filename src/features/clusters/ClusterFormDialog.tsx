@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
-import { MapPin, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { MapPin } from 'lucide-react';
 import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import MenuItem from '@mui/material/MenuItem';
@@ -10,12 +11,12 @@ import StepButton from '@mui/material/StepButton';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import Autocomplete from '@mui/material/Autocomplete';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { PhoneInput } from '@/components/phone-input';
 import { Button } from '@/components/ui/Button';
 import { DateField } from '@/components/ui/DateField';
 import { Dialog } from '@/components/ui/Dialog';
-import { Label } from '@/components/ui/Label';
 import { useRegionsList } from '@/features/regions/api';
 import { INDIA_STATES, districtsForState } from '@/utils/india-geo';
 import { ApiError } from '@/types/api';
@@ -514,13 +515,17 @@ const PincodeInput = ({
   pins: string[];
   onChange: (next: string[]) => void;
 }) => {
-  const [draft, setDraft] = useState('');
+  const [inputValue, setInputValue] = useState('');
   const [warn, setWarn] = useState<string | null>(null);
 
-  const addTokens = (raw: string) => {
-    const tokens = raw.split(/[\s,]+/).map((t) => t.trim()).filter(Boolean);
-    if (tokens.length === 0) return;
-    let next = [...pins];
+  // Autocomplete hands us the full desired value; re-derive the clean, deduped,
+  // 6-digit-only list (existing chips already pass), flagging any bad token.
+  const commit = (raw: string[]) => {
+    const tokens = raw
+      .flatMap((v) => v.split(/[\s,]+/))
+      .map((t) => t.trim())
+      .filter(Boolean);
+    const next: string[] = [];
     let bad = '';
     for (const t of tokens) {
       if (!/^\d{6}$/.test(t)) {
@@ -530,73 +535,55 @@ const PincodeInput = ({
       if (!next.includes(t)) next.push(t);
     }
     onChange(next);
-    setDraft('');
     setWarn(bad ? `"${bad}" isn't a 6-digit PIN code` : null);
   };
 
-  const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' || e.key === ',' || e.key === ' ') {
-      e.preventDefault();
-      addTokens(draft);
-    } else if (e.key === 'Backspace' && !draft && pins.length) {
-      onChange(pins.slice(0, -1));
-    }
-  };
-
-  const remove = (pin: string) => onChange(pins.filter((p) => p !== pin));
-  const sorted = useMemo(() => [...pins].sort(), [pins]);
-
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between">
-        <Label htmlFor="cl-pins">
-          PIN codes <span className="text-destructive">*</span>
-        </Label>
-        <span className="text-xs text-muted-foreground">
-          {pins.length} PIN code{pins.length === 1 ? '' : 's'}
-        </span>
-      </div>
-      <div className="flex min-h-11 flex-wrap items-center gap-1.5 rounded-md border border-input bg-background p-2">
-        {sorted.map((pin) => (
-          <span
-            key={pin}
-            className="inline-flex items-center gap-1 rounded-md bg-secondary px-2 py-1 text-xs font-medium"
-          >
-            <MapPin className="h-3 w-3 text-muted-foreground" />
-            {pin}
-            <button
-              type="button"
-              onClick={() => remove(pin)}
-              className="text-muted-foreground hover:text-foreground"
-              aria-label={`Remove ${pin}`}
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </span>
-        ))}
-        <input
-          id="cl-pins"
-          inputMode="numeric"
-          value={draft}
-          onChange={(e) => {
-            setWarn(null);
-            setDraft(e.target.value.replace(/[^\d,\s]/g, ''));
-          }}
-          onKeyDown={onKeyDown}
-          onBlur={() => draft && addTokens(draft)}
-          maxLength={7}
+    <Autocomplete
+      multiple
+      freeSolo
+      options={[]}
+      value={pins}
+      inputValue={inputValue}
+      onInputChange={(_e, v, reason) => {
+        if (reason === 'reset') {
+          setInputValue('');
+          return;
+        }
+        setWarn(null);
+        setInputValue(v.replace(/[^\d,\s]/g, ''));
+      }}
+      onChange={(_e, newValue) => commit(newValue as string[])}
+      renderTags={(value, getTagProps) =>
+        value.map((pin, index) => {
+          const { key, ...tagProps } = getTagProps({ index });
+          return (
+            <Chip
+              key={pin}
+              {...tagProps}
+              size="small"
+              variant="soft"
+              color="default"
+              icon={<MapPin size={14} />}
+              label={pin}
+            />
+          );
+        })
+      }
+      renderInput={(params) => (
+        <TextField
+          {...params}
+          label="PIN codes"
+          required
           placeholder={pins.length ? 'Add another…' : 'Type a 6-digit PIN and press Enter'}
-          className="min-w-[9rem] flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-muted-foreground"
+          error={Boolean(warn)}
+          helperText={
+            warn ??
+            `A cluster is defined by its PIN codes — paste or type several, separated by spaces or commas.${pins.length ? ` ${pins.length} added.` : ''}`
+          }
+          InputLabelProps={{ shrink: true }}
         />
-      </div>
-      {warn ? (
-        <p className="text-xs text-destructive">{warn}</p>
-      ) : (
-        <p className="text-xs text-muted-foreground">
-          A cluster is defined by its PIN codes. Each PIN belongs to only one cluster — paste or
-          type several, separated by spaces or commas.
-        </p>
       )}
-    </div>
+    />
   );
 };
