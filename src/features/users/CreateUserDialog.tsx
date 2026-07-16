@@ -117,6 +117,7 @@ export const CreateUserDialog = ({ open, onClose }: Props) => {
   const needsCluster =
     role === UserRole.CLUSTER_ADMIN ||
     role === UserRole.SUPPORT_ADMIN ||
+    role === UserRole.CATEGORY_ADMIN ||
     role === UserRole.SELLER ||
     role === UserRole.PROMOTER;
   const needsRegion = role === UserRole.REGIONAL_ADMIN;
@@ -124,10 +125,11 @@ export const CreateUserDialog = ({ open, onClose }: Props) => {
 
   // Mirrors the backend's required-scope rules:
   //   CLUSTER_ADMIN → clusterId, REGIONAL_ADMIN → regionId,
-  //   CATEGORY_ADMIN → category, SUPPORT_ADMIN → clusterId.
+  //   CATEGORY_ADMIN → cluster + category, SUPPORT_ADMIN → clusterId.
   const clusterRequired =
     role === UserRole.CLUSTER_ADMIN ||
     role === UserRole.SUPPORT_ADMIN ||
+    role === UserRole.CATEGORY_ADMIN ||
     role === UserRole.SELLER;
 
   // ── Field-level validation (issue US-CA.1 / US-CA.23) ────────────────────
