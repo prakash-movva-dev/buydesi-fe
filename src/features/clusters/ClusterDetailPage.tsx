@@ -1,13 +1,15 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Headset, Plus, ShieldCheck, Trash2 } from 'lucide-react';
+import { ArrowLeft, Headset, Plus, ShieldCheck, Trash2, UserCog } from 'lucide-react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
 import TextField from '@mui/material/TextField';
+import ToggleButton from '@mui/material/ToggleButton';
+import ToggleButtonGroup from '@mui/material/ToggleButtonGroup';
 import Typography from '@mui/material/Typography';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
@@ -24,11 +26,12 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { StatCard } from '@/components/ui/StatCard';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { UserPicker } from '@/components/pickers/UserPicker';
-import { useAdminCreateUser } from '@/features/users/api';
+import { useAdminCreateUser, useUser, useUsersList } from '@/features/users/api';
 import { useAuth } from '@/lib/auth';
 import { formatDate, formatInr } from '@/lib/format';
 import { ApiError, UserRole } from '@/types/api';
 import {
+  useAttachClusterAdmin,
   useCluster,
   useClusterAdmins,
   useClusterPerformance,
@@ -218,60 +221,99 @@ export const ClusterDetailPage = () => {
   );
 };
 
+const DetailField = ({ label, value }: { label: string; value: string }) => (
+  <Box>
+    <Typography
+      variant="caption"
+      sx={{ display: 'block', color: 'text.secondary', mb: 0.5 }}
+    >
+      {label}
+    </Typography>
+    <Typography variant="body2" sx={{ fontWeight: 600, wordBreak: 'break-word' }}>
+      {value}
+    </Typography>
+  </Box>
+);
+
 const ClusterDetailsCard = ({ cluster }: { cluster: SafeCluster }) => {
   const rows: Array<[string, string]> = [
     ['Cluster code', cluster.code || '—'],
+    ['Default transport', cluster.defaultTradeTransport || '—'],
     ['Launch date', cluster.launchDate ? formatDate(cluster.launchDate) : '—'],
+    ['Cash on Delivery', cluster.codAllowed ? 'Allowed' : 'Disabled'],
     ['Contact phone', cluster.contactPhone || '—'],
     ['Contact email', cluster.contactEmail || '—'],
     ['Pickup hub PIN', cluster.hubPincode || '—'],
-    ['Cash on Delivery', cluster.codAllowed ? 'Allowed' : 'Disabled'],
     ['Min order value', cluster.minOrderValueInr != null ? formatInr(cluster.minOrderValueInr) : '—'],
-    ['PIN codes served', String(cluster.pinCodes.length)],
   ];
   return (
     <Card>
       <CardHeader>
         <CardTitle className="text-base">Details</CardTitle>
-        <CardDescription>Cluster profile & operations.</CardDescription>
+        <CardDescription>Cluster profile &amp; operations.</CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-4">
+      <CardContent>
+        <Box
+          sx={{
+            display: 'grid',
+            columnGap: 3,
+            rowGap: 2.5,
+            gridTemplateColumns: {
+              xs: 'repeat(2, 1fr)',
+              sm: 'repeat(3, 1fr)',
+              lg: 'repeat(4, 1fr)',
+            },
+          }}
+        >
           {rows.map(([label, value]) => (
-            <div key={label}>
-              <dt className="text-xs text-muted-foreground">{label}</dt>
-              <dd className="text-sm font-medium">{value}</dd>
-            </div>
+            <DetailField key={label} label={label} value={value} />
           ))}
-        </dl>
-        {cluster.hubAddress && (
-          <div>
-            <div className="text-xs text-muted-foreground">Pickup hub address</div>
-            <div className="text-sm">{cluster.hubAddress}</div>
-          </div>
-        )}
-        {cluster.description && (
-          <div>
-            <div className="text-xs text-muted-foreground">Description</div>
-            <p className="whitespace-pre-wrap text-sm">{cluster.description}</p>
-          </div>
+        </Box>
+        {(cluster.hubAddress || cluster.description) && (
+          <Stack spacing={2.5} sx={{ mt: 2.5, pt: 2.5, borderTop: 1, borderColor: 'divider' }}>
+            {cluster.hubAddress && (
+              <DetailField label="Pickup hub address" value={cluster.hubAddress} />
+            )}
+            {cluster.description && (
+              <Box>
+                <Typography
+                  variant="caption"
+                  sx={{ display: 'block', color: 'text.secondary', mb: 0.5 }}
+                >
+                  Description
+                </Typography>
+                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                  {cluster.description}
+                </Typography>
+              </Box>
+            )}
+          </Stack>
         )}
       </CardContent>
     </Card>
   );
 };
 
-// ─── Cluster delegated admins (Category + Support) — SOW 4.2 ─────────────────
+// ─── Cluster admins (Lead + Category + Support) — SOW 4.2 ────────────────────
 
-type NewAdminRole = 'CATEGORY_ADMIN' | 'SUPPORT_ADMIN';
+type AssignRole = 'CLUSTER_ADMIN' | 'CATEGORY_ADMIN' | 'SUPPORT_ADMIN';
+
+const ROLE_META: Record<
+  AssignRole,
+  { title: string; pickRole: UserRole; needsCategory: boolean }
+> = {
+  CLUSTER_ADMIN: { title: 'Lead Cluster Admin', pickRole: UserRole.CLUSTER_ADMIN, needsCategory: false },
+  CATEGORY_ADMIN: { title: 'Category Admin', pickRole: UserRole.CATEGORY_ADMIN, needsCategory: true },
+  SUPPORT_ADMIN: { title: 'Support Admin', pickRole: UserRole.SUPPORT_ADMIN, needsCategory: false },
+};
 
 const ClusterAdminsCard = ({ cluster }: { cluster: SafeCluster }) => {
   const clusterId = cluster.id;
   const { user } = useAuth();
   const admins = useClusterAdmins(clusterId || undefined);
   const removeMut = useRemoveClusterAdmin(clusterId);
-  const updateCluster = useUpdateCluster();
-  const [adding, setAdding] = useState<NewAdminRole | null>(null);
+  const lead = useUser(cluster.adminId ?? undefined);
+  const [assigning, setAssigning] = useState<AssignRole | null>(null);
 
   const isSuperTier =
     user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.SUB_SUPER_ADMIN;
@@ -289,147 +331,199 @@ const ClusterAdminsCard = ({ cluster }: { cluster: SafeCluster }) => {
   const support = rows.filter((u) => u.role === UserRole.SUPPORT_ADMIN);
 
   return (
-    <Card>
-      <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
-        <div>
-          <CardTitle className="text-base">Cluster admins</CardTitle>
-          <CardDescription>
-            The lead Cluster Admin, plus the Category & Support admins who report to them.
-          </CardDescription>
-        </div>
-        {canAppoint && (
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" onClick={() => setAdding('CATEGORY_ADMIN')}>
-              <Plus className="h-4 w-4" />
-              Category admin
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => setAdding('SUPPORT_ADMIN')}>
-              <Plus className="h-4 w-4" />
-              Support admin
-            </Button>
+    <>
+      {/* Lead Cluster Admin */}
+      <Card>
+        <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
+          <div>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <ShieldCheck className="h-4 w-4 text-amber-600" />
+              Lead Cluster Admin
+            </CardTitle>
+            <CardDescription>Runs this cluster end-to-end and manages its team.</CardDescription>
           </div>
-        )}
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Lead Cluster Admin */}
-        <div>
-          <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            <ShieldCheck className="h-4 w-4 text-amber-600" />
-            Lead Cluster Admin
-          </div>
-          {canSetLead ? (
-            <UserPicker
-              role={UserRole.CLUSTER_ADMIN}
-              value={cluster.adminId}
-              onChange={(uid) =>
-                updateCluster.mutate({ id: clusterId, patch: { adminId: uid ?? null } })
-              }
-              placeholder="Assign the lead Cluster Admin…"
-            />
-          ) : cluster.adminId ? (
-            <p className="text-sm">Assigned.</p>
+          {canSetLead && (
+            <Button size="sm" variant="outline" onClick={() => setAssigning('CLUSTER_ADMIN')}>
+              <UserCog className="h-4 w-4" />
+              {cluster.adminId ? 'Change lead' : 'Assign lead'}
+            </Button>
+          )}
+        </CardHeader>
+        <CardContent>
+          {cluster.adminId ? (
+            lead.isLoading ? (
+              <Skeleton className="h-12 w-full" />
+            ) : lead.data ? (
+              <AdminRow
+                name={lead.data.name}
+                subtitle={lead.data.email ?? lead.data.mobile ?? '—'}
+              />
+            ) : (
+              <AdminRow name="Assigned admin" subtitle={cluster.adminId} />
+            )
           ) : (
-            <p className="text-sm text-muted-foreground">Not assigned yet.</p>
+            <EmptyRow text="No lead admin assigned yet." />
           )}
-          {updateCluster.isError && (
-            <p className="mt-1 text-xs text-destructive">
-              {(updateCluster.error as Error)?.message ?? 'Failed to update'}
-            </p>
-          )}
-        </div>
+        </CardContent>
+      </Card>
 
-        {admins.isLoading && <Skeleton className="h-16 w-full" />}
-        {admins.isError && (
-          <p className="text-sm text-destructive">
-            {admins.error instanceof Error ? admins.error.message : 'Failed to load admins'}
-          </p>
-        )}
-        {admins.data && (
-          <>
-            <AdminGroup
-              icon={<ShieldCheck className="h-4 w-4 text-blue-600" />}
-              title="Category admins"
-              rows={category}
-              onRemove={(id) => removeMut.mutate(id)}
-              removing={removeMut.isPending}
-            />
-            <AdminGroup
-              icon={<Headset className="h-4 w-4 text-emerald-600" />}
-              title="Support admins"
-              rows={support}
-              onRemove={(id) => removeMut.mutate(id)}
-              removing={removeMut.isPending}
-            />
-          </>
-        )}
-      </CardContent>
-
-      <AddClusterAdminDialog
-        clusterId={clusterId}
-        role={adding}
-        onClose={() => setAdding(null)}
+      {/* Category admins */}
+      <AdminSectionCard
+        icon={<ShieldCheck className="h-4 w-4 text-blue-600" />}
+        title="Category admins"
+        description="Each is bound to this cluster and one category — they approve that category’s products & orders."
+        count={category.length}
+        canAppoint={canAppoint}
+        addLabel="Add category admin"
+        onAdd={() => setAssigning('CATEGORY_ADMIN')}
+        loading={admins.isLoading}
+        error={admins.isError ? 'Failed to load admins' : null}
+        rows={category}
+        onRemove={(id) => removeMut.mutate(id)}
+        removing={removeMut.isPending}
       />
-    </Card>
+
+      {/* Support admins */}
+      <AdminSectionCard
+        icon={<Headset className="h-4 w-4 text-emerald-600" />}
+        title="Support admins"
+        description="Handle this cluster’s support tickets, returns and refunds."
+        count={support.length}
+        canAppoint={canAppoint}
+        addLabel="Add support admin"
+        onAdd={() => setAssigning('SUPPORT_ADMIN')}
+        loading={admins.isLoading}
+        error={admins.isError ? 'Failed to load admins' : null}
+        rows={support}
+        onRemove={(id) => removeMut.mutate(id)}
+        removing={removeMut.isPending}
+      />
+
+      <AssignAdminDialog
+        cluster={cluster}
+        role={assigning}
+        onClose={() => setAssigning(null)}
+      />
+    </>
   );
 };
 
-const AdminGroup = ({
+const AdminSectionCard = ({
   icon,
   title,
+  description,
+  count,
+  canAppoint,
+  addLabel,
+  onAdd,
+  loading,
+  error,
   rows,
   onRemove,
   removing,
 }: {
   icon: React.ReactNode;
   title: string;
+  description: string;
+  count: number;
+  canAppoint: boolean;
+  addLabel: string;
+  onAdd: () => void;
+  loading: boolean;
+  error: string | null;
   rows: Array<{ id: string; name: string; email?: string; mobile?: string }>;
   onRemove: (id: string) => void;
   removing: boolean;
 }) => (
-  <div>
-    <div className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-      {icon}
-      {title} ({rows.length})
-    </div>
-    {rows.length === 0 ? (
-      <p className="text-sm text-muted-foreground">None assigned yet.</p>
-    ) : (
-      <ul className="divide-y divide-border rounded-md border border-border">
-        {rows.map((u) => (
-          <li key={u.id} className="flex items-center justify-between gap-3 px-3 py-2.5">
-            <div className="min-w-0">
-              <div className="text-sm font-medium">{u.name}</div>
-              <div className="truncate text-xs text-muted-foreground">
-                {u.email ?? u.mobile ?? '—'}
+  <Card>
+    <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
+      <div>
+        <CardTitle className="flex items-center gap-2 text-base">
+          {icon}
+          {title}
+          <Badge variant="muted">{count}</Badge>
+        </CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </div>
+      {canAppoint && (
+        <Button size="sm" variant="outline" onClick={onAdd}>
+          <Plus className="h-4 w-4" />
+          {addLabel}
+        </Button>
+      )}
+    </CardHeader>
+    <CardContent>
+      {loading && <Skeleton className="h-16 w-full" />}
+      {error && <p className="text-sm text-destructive">{error}</p>}
+      {!loading && !error && rows.length === 0 && (
+        <EmptyRow text="None assigned yet." />
+      )}
+      {rows.length > 0 && (
+        <ul className="divide-y divide-border overflow-hidden rounded-md border border-border">
+          {rows.map((u) => (
+            <li key={u.id} className="flex items-center justify-between gap-3 px-3 py-2.5">
+              <div className="min-w-0">
+                <div className="text-sm font-medium">{u.name}</div>
+                <div className="truncate text-xs text-muted-foreground">
+                  {u.email ?? u.mobile ?? '—'}
+                </div>
               </div>
-            </div>
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={removing}
-              onClick={() => onRemove(u.id)}
-              title="Remove from cluster"
-            >
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
-          </li>
-        ))}
-      </ul>
-    )}
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={removing}
+                onClick={() => onRemove(u.id)}
+                title="Remove from cluster"
+              >
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </CardContent>
+  </Card>
+);
+
+const AdminRow = ({ name, subtitle }: { name: string; subtitle: string }) => (
+  <div className="flex items-center gap-3 rounded-md border border-border px-3 py-2.5">
+    <div className="min-w-0">
+      <div className="text-sm font-medium">{name}</div>
+      <div className="truncate text-xs text-muted-foreground">{subtitle}</div>
+    </div>
   </div>
 );
 
-const AddClusterAdminDialog = ({
-  clusterId,
+const EmptyRow = ({ text }: { text: string }) => (
+  <p className="rounded-md border border-dashed border-border px-3 py-4 text-center text-sm text-muted-foreground">
+    {text}
+  </p>
+);
+
+// Assign dialog — pick an EXISTING admin or CREATE a new one, for any of the
+// three roles. Defaults to "create" when no existing admin of that role exists.
+const AssignAdminDialog = ({
+  cluster,
   role,
   onClose,
 }: {
-  clusterId: string;
-  role: NewAdminRole | null;
+  cluster: SafeCluster;
+  role: AssignRole | null;
   onClose: () => void;
 }) => {
+  const clusterId = cluster.id;
+  const meta = role ? ROLE_META[role] : null;
+
   const create = useAdminCreateUser();
+  const attach = useAttachClusterAdmin(clusterId);
+  const updateCluster = useUpdateCluster();
   const qc = useQueryClient();
+
+  const [mode, setMode] = useState<'existing' | 'create'>('existing');
+
+  // Existing-select state
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  // Create-new state
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [mobile, setMobile] = useState('');
@@ -437,8 +531,17 @@ const AddClusterAdminDialog = ({
   const [categoryId, setCategoryId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const isCategory = role === 'CATEGORY_ADMIN';
+  // Are there existing admins of this role to choose from?
+  const existing = useUsersList({
+    role: meta?.pickRole,
+    status: 'active',
+    page: 1,
+    limit: 100,
+  });
+  const hasExisting = (existing.data?.items.length ?? 0) > 0;
+
   const reset = () => {
+    setSelectedUserId(null);
     setName('');
     setEmail('');
     setMobile('');
@@ -447,100 +550,171 @@ const AddClusterAdminDialog = ({
     setError(null);
   };
 
-  const submit = async () => {
-    setError(null);
-    if (name.trim().length < 2) return setError('Name is required.');
-    if (!email.trim() && !mobile.trim()) return setError('Email or mobile is required.');
-    if (password.length < 8) return setError('Password must be at least 8 characters.');
-    if (isCategory && !categoryId) return setError('Pick the category for this admin.');
-    try {
-      await create.mutateAsync({
-        name: name.trim(),
-        email: email.trim() || undefined,
-        mobile: mobile.trim() || undefined,
-        password,
-        role: role as unknown as UserRole,
-        clusterId,
-        category: isCategory ? categoryId ?? undefined : undefined,
-      });
-      qc.invalidateQueries({ queryKey: ['clusters', 'admins', clusterId] });
+  // Reset fields when the dialog opens for a role.
+  useEffect(() => {
+    if (role) {
       reset();
-      onClose();
+      setMode('existing');
+    }
+  }, [role]);
+
+  // Fall back to "create" when there is nobody to select.
+  useEffect(() => {
+    if (role && !existing.isLoading && !hasExisting) setMode('create');
+  }, [role, existing.isLoading, hasExisting]);
+
+  const busy = create.isPending || attach.isPending || updateCluster.isPending;
+
+  const close = () => {
+    reset();
+    onClose();
+  };
+
+  const submit = async () => {
+    if (!role || !meta) return;
+    setError(null);
+    try {
+      if (mode === 'existing') {
+        if (!selectedUserId) return setError('Select an admin to assign.');
+        if (meta.needsCategory && !categoryId) return setError('Pick the category for this admin.');
+        if (role === 'CLUSTER_ADMIN') {
+          await updateCluster.mutateAsync({ id: clusterId, patch: { adminId: selectedUserId } });
+        } else {
+          await attach.mutateAsync({
+            userId: selectedUserId,
+            category: meta.needsCategory ? categoryId ?? undefined : undefined,
+          });
+        }
+      } else {
+        if (name.trim().length < 2) return setError('Name is required.');
+        if (!email.trim() && !mobile.trim()) return setError('Email or mobile is required.');
+        if (password.length < 8) return setError('Password must be at least 8 characters.');
+        if (meta.needsCategory && !categoryId) return setError('Pick the category for this admin.');
+        const created = await create.mutateAsync({
+          name: name.trim(),
+          email: email.trim() || undefined,
+          mobile: mobile.trim() || undefined,
+          password,
+          role: role as unknown as UserRole,
+          clusterId,
+          category: meta.needsCategory ? categoryId ?? undefined : undefined,
+        });
+        if (role === 'CLUSTER_ADMIN') {
+          await updateCluster.mutateAsync({ id: clusterId, patch: { adminId: created.id } });
+        }
+      }
+      qc.invalidateQueries({ queryKey: ['clusters', 'admins', clusterId] });
+      qc.invalidateQueries({ queryKey: ['clusters', 'detail', clusterId] });
+      close();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : 'Could not create admin.');
+      setError(e instanceof ApiError ? e.message : 'Could not assign admin.');
     }
   };
 
   return (
     <Dialog
       open={role !== null}
-      onClose={() => {
-        reset();
-        onClose();
-      }}
-      title={isCategory ? 'Add Category Admin' : 'Add Support Admin'}
+      onClose={close}
+      title={meta ? `Assign ${meta.title}` : 'Assign admin'}
       description={
-        isCategory
-          ? 'Appoints a Category Admin bound to this cluster and their assigned category.'
-          : 'Appoints a Support Admin who handles this cluster’s tickets and returns.'
+        role === 'CLUSTER_ADMIN'
+          ? 'Choose the admin who will run this cluster.'
+          : `Add ${meta?.title} for this cluster — pick an existing one or create a new account.`
       }
       footer={
         <>
-          <Button variant="outline" onClick={onClose} disabled={create.isPending}>
+          <Button variant="outline" onClick={close} disabled={busy}>
             Cancel
           </Button>
-          <Button onClick={submit} disabled={create.isPending}>
-            {create.isPending ? 'Creating…' : 'Create admin'}
+          <Button onClick={submit} disabled={busy}>
+            {busy ? 'Saving…' : mode === 'existing' ? 'Assign' : 'Create & assign'}
           </Button>
         </>
       }
     >
-      <Stack spacing={2}>
-        <TextField
+      <Stack spacing={2.5}>
+        <ToggleButtonGroup
+          exclusive
           fullWidth
-          label="Name"
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          InputLabelProps={{ shrink: true }}
-        />
-        <Box
-          sx={{
-            display: 'grid',
-            gap: 2,
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
-          }}
+          size="small"
+          color="primary"
+          value={mode}
+          onChange={(_e, v) => v && setMode(v)}
         >
-          <TextField
-            fullWidth
-            label="Email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-          />
-          <PhoneInput
-            fullWidth
-            label="Mobile"
-            value={mobile}
-            onChange={setMobile}
-            country="IN"
-          />
-        </Box>
-        <TextField
-          fullWidth
-          label="Temporary password"
-          required
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          InputLabelProps={{ shrink: true }}
-        />
-        {isCategory && (
-          <Stack spacing={1}>
-            <Typography variant="subtitle2">Category *</Typography>
-            <CategoryPicker value={categoryId} onChange={setCategoryId} />
+          <ToggleButton value="existing" disabled={!hasExisting}>
+            Select existing
+          </ToggleButton>
+          <ToggleButton value="create">Create new</ToggleButton>
+        </ToggleButtonGroup>
+
+        {mode === 'existing' ? (
+          <Stack spacing={2}>
+            {!hasExisting && !existing.isLoading ? (
+              <Alert severity="info">
+                No {meta?.title.toLowerCase()} accounts exist yet — create one instead.
+              </Alert>
+            ) : (
+              <Stack spacing={1}>
+                <Typography variant="subtitle2">{meta?.title} *</Typography>
+                <UserPicker
+                  role={meta?.pickRole}
+                  value={selectedUserId}
+                  onChange={setSelectedUserId}
+                  placeholder={`Pick a ${meta?.title.toLowerCase()}…`}
+                />
+              </Stack>
+            )}
+            {meta?.needsCategory && hasExisting && (
+              <Stack spacing={1}>
+                <Typography variant="subtitle2">Category *</Typography>
+                <CategoryPicker value={categoryId} onChange={setCategoryId} />
+              </Stack>
+            )}
+          </Stack>
+        ) : (
+          <Stack spacing={2}>
+            <TextField
+              fullWidth
+              label="Name"
+              required
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 2,
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+              }}
+            >
+              <TextField
+                fullWidth
+                label="Email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                InputLabelProps={{ shrink: true }}
+              />
+              <PhoneInput fullWidth label="Mobile" value={mobile} onChange={setMobile} country="IN" />
+            </Box>
+            <TextField
+              fullWidth
+              label="Temporary password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            />
+            {meta?.needsCategory && (
+              <Stack spacing={1}>
+                <Typography variant="subtitle2">Category *</Typography>
+                <CategoryPicker value={categoryId} onChange={setCategoryId} />
+              </Stack>
+            )}
           </Stack>
         )}
+
         {error && <Alert severity="error">{error}</Alert>}
       </Stack>
     </Dialog>

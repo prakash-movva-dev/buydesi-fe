@@ -114,3 +114,16 @@ export const useRemoveClusterAdmin = (id: string) => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['clusters', 'admins', id] }),
   });
 };
+
+/** Attaches an existing Category/Support admin to this cluster. */
+export const useAttachClusterAdmin = (id: string) => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { userId: string; category?: string }) =>
+      api.post<SafeUser>(`/clusters/${id}/admins`, input),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['clusters', 'admins', id] });
+      qc.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+};
