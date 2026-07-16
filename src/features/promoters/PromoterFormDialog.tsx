@@ -9,6 +9,7 @@ import { PhoneInput } from '@/components/phone-input';
 import { ClusterPicker } from '@/components/pickers/ClusterPicker';
 import { UserPicker } from '@/components/pickers/UserPicker';
 import { Button } from '@/components/ui/Button';
+import { DateTimeField } from '@/components/ui/DateTimeField';
 import { Dialog } from '@/components/ui/Dialog';
 import { useAuth } from '@/lib/auth';
 import { ApiError, UserRole } from '@/types/api';
@@ -303,14 +304,10 @@ export const PromoterFormDialog = ({ open, editing, onClose, onCreated }: Props)
               />
             </Box>
 
-            <TextField
-              id="prom-expiry"
-              fullWidth
-              type="datetime-local"
+            <DateTimeField
               label="Expires at (optional)"
               value={expiresAt}
-              onChange={(e) => setExpiresAt(e.target.value)}
-              InputLabelProps={{ shrink: true }}
+              onChange={setExpiresAt}
             />
           </>
         )}

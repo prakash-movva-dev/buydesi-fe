@@ -14,6 +14,7 @@ import TextField from '@mui/material/TextField';
 import { UserPicker } from '@/components/pickers/UserPicker';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { DateTimeField } from '@/components/ui/DateTimeField';
 import {
   Card as UiCard,
   CardContent,
@@ -379,13 +380,10 @@ const RunBatchDialog = ({ open, onClose }: { open: boolean; onClose: () => void 
           <MenuItem value="daily">Daily</MenuItem>
           <MenuItem value="weekly">Weekly</MenuItem>
         </TextField>
-        <TextField
-          fullWidth
+        <DateTimeField
           label="As-of (optional)"
-          type="datetime-local"
           value={asOf}
-          onChange={(e) => setAsOf(e.target.value)}
-          InputLabelProps={{ shrink: true }}
+          onChange={setAsOf}
           helperText='Defaults to "now". Setting a past timestamp re-runs that window — useful for catching up after downtime.'
         />
         {error && <Alert severity="error">{error}</Alert>}

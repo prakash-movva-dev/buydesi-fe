@@ -11,6 +11,7 @@ import { ClusterPicker } from '@/components/pickers/ClusterPicker';
 import { ProductPicker } from '@/components/pickers/ProductPicker';
 import { UserPicker } from '@/components/pickers/UserPicker';
 import { Button } from '@/components/ui/Button';
+import { DateTimeField } from '@/components/ui/DateTimeField';
 import { Dialog } from '@/components/ui/Dialog';
 import { ApiError, UserRole } from '@/types/api';
 import { useCreatePromotion } from './api';
@@ -266,26 +267,8 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
             gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
           }}
         >
-          <TextField
-            id="p-start"
-            fullWidth
-            type="datetime-local"
-            label="Starts at"
-            required
-            value={startsAt}
-            onChange={(e) => setStartsAt(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-          />
-          <TextField
-            id="p-end"
-            fullWidth
-            type="datetime-local"
-            label="Ends at"
-            required
-            value={endsAt}
-            onChange={(e) => setEndsAt(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-          />
+          <DateTimeField label="Starts at" required value={startsAt} onChange={setStartsAt} />
+          <DateTimeField label="Ends at" required value={endsAt} onChange={setEndsAt} />
         </Box>
 
         <hr className="border-border" />
