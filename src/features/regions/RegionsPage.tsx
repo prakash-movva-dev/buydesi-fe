@@ -22,6 +22,7 @@ import {
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { StatCard } from '@/components/ui/StatCard';
+import { DateField } from '@/components/ui/DateField';
 import { Scrollbar } from '@/components/scrollbar';
 import { TableHeadCustom, TableNoData } from '@/components/table';
 import { useAuth } from '@/lib/auth';
@@ -212,22 +213,16 @@ export const RegionsPage = () => {
                 </MenuItem>
               ))}
             </TextField>
-            <TextField
-              id="perf-from"
+            <DateField
               label="From"
-              type="date"
               value={from}
-              onChange={(e) => setFrom(e.target.value)}
-              InputLabelProps={{ shrink: true }}
+              onChange={setFrom}
               sx={{ width: 160 }}
             />
-            <TextField
-              id="perf-to"
+            <DateField
               label="To"
-              type="date"
               value={to}
-              onChange={(e) => setTo(e.target.value)}
-              InputLabelProps={{ shrink: true }}
+              onChange={setTo}
               sx={{ width: 160 }}
             />
             <Button

@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Check, Pencil, X } from 'lucide-react';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
 import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
 import MenuItem from '@mui/material/MenuItem';
@@ -8,7 +10,6 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
-import { cn } from '@/lib/cn';
 import { formatDateTime } from '@/lib/format';
 import { ApiError } from '@/types/api';
 import { usePlatformSettings, useUpdatePlatformSetting } from './api';
@@ -70,23 +71,17 @@ export const PlatformSettingsPage = () => {
 
       {!settings.isLoading && !settings.isError && (
         <>
-          <div className="flex flex-wrap gap-2">
+          <Tabs
+            value={activeGroup ?? false}
+            onChange={(_e, v) => setGroup(v)}
+            variant="scrollable"
+            scrollButtons="auto"
+            sx={{ borderBottom: 1, borderColor: 'divider' }}
+          >
             {groups.map((g) => (
-              <button
-                key={g}
-                type="button"
-                onClick={() => setGroup(g)}
-                className={cn(
-                  'rounded-md border px-3 py-1.5 text-sm font-medium transition-colors',
-                  g === activeGroup
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-border bg-secondary/30 text-muted-foreground hover:bg-secondary/60',
-                )}
-              >
-                {GROUP_LABEL[g] ?? titleCase(g)}
-              </button>
+              <Tab key={g} value={g} label={GROUP_LABEL[g] ?? titleCase(g)} />
             ))}
-          </div>
+          </Tabs>
 
           <div className="space-y-3">
             {rows.map((s) => (

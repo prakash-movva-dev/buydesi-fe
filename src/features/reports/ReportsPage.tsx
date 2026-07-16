@@ -3,10 +3,10 @@ import { ArrowUpDown, Calendar, Download, Play } from 'lucide-react';
 import Alert from '@mui/material/Alert';
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
-import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { ClusterPicker } from '@/components/pickers/ClusterPicker';
 import { Button } from '@/components/ui/Button';
+import { DateField } from '@/components/ui/DateField';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { StatCard } from '@/components/ui/StatCard';
 import {
@@ -145,21 +145,19 @@ export const ReportsPage = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={submit} className="flex flex-wrap items-end gap-3">
-            <TextField
+            <DateField
               label="From"
-              type="date"
               value={from}
-              onChange={(e) => setFrom(e.target.value)}
+              onChange={setFrom}
               required
-              InputLabelProps={{ shrink: true }}
+              fullWidth={false}
             />
-            <TextField
+            <DateField
               label="To"
-              type="date"
               value={to}
-              onChange={(e) => setTo(e.target.value)}
+              onChange={setTo}
               required
-              InputLabelProps={{ shrink: true }}
+              fullWidth={false}
             />
             {isSuper && (
               <Stack spacing={0.5}>

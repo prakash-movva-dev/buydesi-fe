@@ -12,6 +12,7 @@ import Typography from '@mui/material/Typography';
 import { Calendar, Download } from 'lucide-react';
 import { ClusterPicker } from '@/components/pickers/ClusterPicker';
 import { Button } from '@/components/ui/Button';
+import { DateField } from '@/components/ui/DateField';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Scrollbar } from '@/components/scrollbar';
@@ -108,22 +109,16 @@ export const SellerPerformancePage = () => {
           Defaults to the last 30 days.
         </Typography>
         <Stack direction="row" spacing={2} flexWrap="wrap" alignItems="flex-end">
-          <TextField
-            id="sp-from"
+          <DateField
             label="From"
-            type="date"
             value={from}
-            onChange={(e) => setFrom(e.target.value)}
-            InputLabelProps={{ shrink: true }}
+            onChange={setFrom}
             sx={{ width: 180 }}
           />
-          <TextField
-            id="sp-to"
+          <DateField
             label="To"
-            type="date"
             value={to}
-            onChange={(e) => setTo(e.target.value)}
-            InputLabelProps={{ shrink: true }}
+            onChange={setTo}
             sx={{ width: 180 }}
           />
           <TextField

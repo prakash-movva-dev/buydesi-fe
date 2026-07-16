@@ -1,18 +1,21 @@
 import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
-import { Check, MapPin, X } from 'lucide-react';
+import { MapPin, X } from 'lucide-react';
 import Box from '@mui/material/Box';
 import Alert from '@mui/material/Alert';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import MenuItem from '@mui/material/MenuItem';
+import Stepper from '@mui/material/Stepper';
+import Step from '@mui/material/Step';
+import StepButton from '@mui/material/StepButton';
 import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { PhoneInput } from '@/components/phone-input';
 import { Button } from '@/components/ui/Button';
+import { DateField } from '@/components/ui/DateField';
 import { Dialog } from '@/components/ui/Dialog';
 import { Label } from '@/components/ui/Label';
-import { cn } from '@/lib/cn';
 import { useRegionsList } from '@/features/regions/api';
 import { INDIA_STATES, districtsForState } from '@/utils/india-geo';
 import { ApiError } from '@/types/api';
@@ -205,45 +208,13 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
       className="max-w-2xl"
     >
       {/* Stepper header */}
-      <div className="mb-4 flex items-center gap-1">
-        {STEPS.map((s, i) => {
-          const done = i < step && (i > 0 || locationValid);
-          const current = i === step;
-          const reachable = i === 0 || locationValid;
-          return (
-            <div key={s.key} className="flex flex-1 items-center gap-1">
-              <button
-                type="button"
-                onClick={() => goTo(i)}
-                disabled={!reachable}
-                className={cn(
-                  'flex items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors',
-                  current
-                    ? 'bg-primary/10 text-foreground'
-                    : reachable
-                      ? 'text-muted-foreground hover:bg-accent'
-                      : 'cursor-not-allowed text-muted-foreground/50',
-                )}
-              >
-                <span
-                  className={cn(
-                    'flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold',
-                    current
-                      ? 'bg-primary text-primary-foreground'
-                      : done
-                        ? 'bg-primary/20 text-primary'
-                        : 'bg-secondary text-muted-foreground',
-                  )}
-                >
-                  {done ? <Check className="h-3.5 w-3.5" /> : i + 1}
-                </span>
-                <span className="hidden font-medium sm:inline">{s.label}</span>
-              </button>
-              {i < STEPS.length - 1 && <div className="h-px flex-1 bg-border" />}
-            </div>
-          );
-        })}
-      </div>
+      <Stepper activeStep={step} alternativeLabel nonLinear sx={{ mb: 3 }}>
+        {STEPS.map((s, i) => (
+          <Step key={s.key} disabled={i > 0 && !locationValid}>
+            <StepButton onClick={() => goTo(i)}>{s.label}</StepButton>
+          </Step>
+        ))}
+      </Stepper>
 
       {/* Step body — bounded height so the modal never runs off-screen. */}
       <div className="max-h-[55vh] min-h-[280px] space-y-4 overflow-y-auto pr-1">
@@ -384,13 +355,11 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
                 InputLabelProps={{ shrink: true }}
                 inputProps={{ maxLength: 40 }}
               />
-              <TextField
+              <DateField
                 fullWidth
-                type="date"
                 label="Launch date"
                 value={launchDate}
-                onChange={(e) => setLaunchDate(e.target.value)}
-                InputLabelProps={{ shrink: true }}
+                onChange={setLaunchDate}
               />
             </Box>
 

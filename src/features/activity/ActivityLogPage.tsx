@@ -15,6 +15,7 @@ import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { DateField } from '@/components/ui/DateField';
 import { Scrollbar } from '@/components/scrollbar';
 import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
 import { formatDateTime } from '@/lib/format';
@@ -160,19 +161,15 @@ export const ActivityLogPage = () => {
           label="Entity id"
           InputLabelProps={{ shrink: true }}
         />
-        <TextField
-          type="date"
-          value={from}
-          onChange={(e) => setParam({ from: e.target.value })}
+        <DateField
           label="From date"
-          InputLabelProps={{ shrink: true }}
+          value={from}
+          onChange={(v) => setParam({ from: v })}
         />
-        <TextField
-          type="date"
-          value={to}
-          onChange={(e) => setParam({ to: e.target.value })}
+        <DateField
           label="To date"
-          InputLabelProps={{ shrink: true }}
+          value={to}
+          onChange={(v) => setParam({ to: v })}
         />
         <Button variant="outline" onClick={() => setSearchParams(new URLSearchParams())}>
           Clear filters

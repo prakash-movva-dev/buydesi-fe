@@ -9,15 +9,10 @@ import {
 import { useNavigate, useParams } from 'react-router-dom';
 import {
   ArrowLeft,
-  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   FileUp,
-  Package,
-  Sprout,
   Trash2,
-  Truck,
-  Wallet,
   X,
 } from 'lucide-react';
 import Stack from '@mui/material/Stack';
@@ -26,11 +21,15 @@ import Alert from '@mui/material/Alert';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import MenuItem from '@mui/material/MenuItem';
+import Stepper from '@mui/material/Stepper';
+import Step from '@mui/material/Step';
+import StepButton from '@mui/material/StepButton';
 import TextField from '@mui/material/TextField';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import { Card, CardContent } from '@/components/ui/Card';
+import { DateField } from '@/components/ui/DateField';
 import { Label } from '@/components/ui/Label';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useAuth } from '@/lib/auth';
@@ -45,11 +44,11 @@ import {
 } from './api';
 
 const STEPS = [
-  { label: 'Basic information', icon: Sprout },
-  { label: 'Pricing & availability', icon: Wallet },
-  { label: 'Produce & logistics', icon: Truck },
-  { label: 'Images & media', icon: Package },
-  { label: 'Review', icon: CheckCircle2 },
+  { label: 'Basic information' },
+  { label: 'Pricing & availability' },
+  { label: 'Produce & logistics' },
+  { label: 'Images & media' },
+  { label: 'Review' },
 ] as const;
 
 const UNIT_OPTIONS = ['kg', 'gram', 'litre', 'ml', 'piece', 'dozen', 'pack', 'bundle', 'box'];
@@ -340,40 +339,13 @@ export const SellerProductFormPage = () => {
       </div>
 
       {/* Stepper */}
-      <ol className="flex flex-wrap items-center gap-2 text-sm">
-        {STEPS.map((s, i) => {
-          const Icon = s.icon;
-          return (
-            <li key={s.label} className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setStep(i)}
-                className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 ${
-                  i < step
-                    ? 'bg-emerald-100 text-emerald-700'
-                    : i === step
-                      ? 'bg-primary/10 text-primary'
-                      : 'bg-secondary text-muted-foreground'
-                }`}
-              >
-                <span
-                  className={`flex h-5 w-5 items-center justify-center rounded-full text-xs ${
-                    i < step
-                      ? 'bg-emerald-600 text-white'
-                      : i === step
-                        ? 'bg-primary text-primary-foreground'
-                        : 'bg-muted'
-                  }`}
-                >
-                  {i < step ? '✓' : <Icon className="h-3 w-3" />}
-                </span>
-                {s.label}
-              </button>
-              {i < STEPS.length - 1 && <span className="hidden h-px w-4 bg-border sm:block" />}
-            </li>
-          );
-        })}
-      </ol>
+      <Stepper activeStep={step} alternativeLabel nonLinear sx={{ mb: 1 }}>
+        {STEPS.map((s, i) => (
+          <Step key={s.label}>
+            <StepButton onClick={() => setStep(i)}>{s.label}</StepButton>
+          </Step>
+        ))}
+      </Stepper>
 
       <Card>
         <CardContent className="space-y-4 pt-6">
@@ -617,13 +589,11 @@ export const SellerProductFormPage = () => {
                 Optional details that help buyers and shipping. Useful for fresh / perishable goods.
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
-                <TextField
+                <DateField
                   fullWidth
-                  type="date"
                   label="Harvest / packed date"
                   value={form.harvestDate}
-                  onChange={(e) => set('harvestDate', e.target.value)}
-                  InputLabelProps={{ shrink: true }}
+                  onChange={(v) => set('harvestDate', v)}
                 />
                 <TextField
                   fullWidth

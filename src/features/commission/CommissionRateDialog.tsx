@@ -9,6 +9,7 @@ import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { ProductPicker } from '@/components/pickers/ProductPicker';
 import { UserPicker } from '@/components/pickers/UserPicker';
 import { Button } from '@/components/ui/Button';
+import { DateField } from '@/components/ui/DateField';
 import { Dialog } from '@/components/ui/Dialog';
 import { ApiError, UserRole } from '@/types/api';
 import { useCreateCommissionRate, useUpdateCommissionRate } from './api';
@@ -199,24 +200,18 @@ export const CommissionRateDialog = ({ open, editing, onClose }: Props) => {
 
         <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: 'repeat(2, 1fr)' }}>
           {!isEdit && (
-            <TextField
-              id="rate-from"
-              fullWidth
-              type="date"
+            <DateField
               label="Effective from"
               value={effectiveFrom}
-              onChange={(e) => setEffectiveFrom(e.target.value)}
-              InputLabelProps={{ shrink: true }}
+              onChange={setEffectiveFrom}
+              fullWidth
             />
           )}
-          <TextField
-            id="rate-to"
-            fullWidth
-            type="date"
+          <DateField
             label="Effective to (optional)"
             value={effectiveTo}
-            onChange={(e) => setEffectiveTo(e.target.value)}
-            InputLabelProps={{ shrink: true }}
+            onChange={setEffectiveTo}
+            fullWidth
           />
         </Box>
 

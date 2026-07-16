@@ -18,6 +18,9 @@ import Alert from '@mui/material/Alert';
 import Checkbox from '@mui/material/Checkbox';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import MenuItem from '@mui/material/MenuItem';
+import Stepper from '@mui/material/Stepper';
+import Step from '@mui/material/Step';
+import StepLabel from '@mui/material/StepLabel';
 import TextField from '@mui/material/TextField';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { Badge } from '@/components/ui/Badge';
@@ -423,35 +426,13 @@ export const SellerOnboardingPage = () => {
       </div>
 
       {/* Stepper */}
-      <ol className="flex flex-wrap items-center gap-2 text-sm">
-        {STEPS.map((label, i) => (
-          <li key={label} className="flex items-center gap-2">
-            <span
-              className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 ${
-                submitted || i < step
-                  ? 'bg-emerald-100 text-emerald-700'
-                  : i === step
-                    ? 'bg-primary/10 text-primary'
-                    : 'bg-secondary text-muted-foreground'
-              }`}
-            >
-              <span
-                className={`flex h-5 w-5 items-center justify-center rounded-full text-xs ${
-                  submitted || i < step
-                    ? 'bg-emerald-600 text-white'
-                    : i === step
-                      ? 'bg-primary text-primary-foreground'
-                      : 'bg-muted'
-                }`}
-              >
-                {submitted || i < step ? '✓' : i + 1}
-              </span>
-              {label}
-            </span>
-            {i < STEPS.length - 1 && <span className="hidden h-px w-4 bg-border sm:block" />}
-          </li>
+      <Stepper activeStep={submitted ? STEPS.length : step} alternativeLabel sx={{ mb: 1 }}>
+        {STEPS.map((label) => (
+          <Step key={label}>
+            <StepLabel>{label}</StepLabel>
+          </Step>
         ))}
-      </ol>
+      </Stepper>
 
       {submitted ? (
         <Card>

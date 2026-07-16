@@ -19,6 +19,7 @@ import {
 } from '@/components/ui/Card';
 import { PageHeader } from '@/components/ui/PageHeader';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { DateField } from '@/components/ui/DateField';
 import { Scrollbar } from '@/components/scrollbar';
 import { TableHeadCustom, TableNoData } from '@/components/table';
 import { formatDate, formatInr } from '@/lib/format';
@@ -66,20 +67,18 @@ export const MyAnalyticsPage = () => {
         </CardHeader>
         <CardContent>
           <Stack direction="row" spacing={2} flexWrap="wrap" alignItems="center">
-            <TextField
+            <DateField
               label="From"
-              type="date"
               value={from}
-              onChange={(e) => setFrom(e.target.value)}
-              InputLabelProps={{ shrink: true }}
+              onChange={setFrom}
+              fullWidth={false}
               sx={{ width: 180 }}
             />
-            <TextField
+            <DateField
               label="To"
-              type="date"
               value={to}
-              onChange={(e) => setTo(e.target.value)}
-              InputLabelProps={{ shrink: true }}
+              onChange={setTo}
+              fullWidth={false}
               sx={{ width: 180 }}
             />
             <TextField
