@@ -27,6 +27,7 @@ interface FormState {
   slug: string;
   defaultCommissionRate: string;
   iconUrl: string;
+  imageUrl: string;
   displayOrder: string;
   status: CategoryStatus;
   adminId: string;
@@ -37,6 +38,7 @@ const emptyForm: FormState = {
   slug: '',
   defaultCommissionRate: '0',
   iconUrl: '',
+  imageUrl: '',
   displayOrder: '0',
   status: 'active',
   adminId: '',
@@ -61,6 +63,7 @@ export const CategoryFormDialog = ({ open, onClose, editing }: CategoryFormDialo
         slug: editing.slug,
         defaultCommissionRate: String(editing.defaultCommissionRate),
         iconUrl: editing.iconUrl ?? '',
+        imageUrl: editing.imageUrl ?? '',
         displayOrder: String(editing.displayOrder),
         status: editing.status,
         adminId: editing.adminId ?? '',
@@ -96,6 +99,7 @@ export const CategoryFormDialog = ({ open, onClose, editing }: CategoryFormDialo
             slug: form.slug.trim() || undefined,
             defaultCommissionRate: rate,
             iconUrl: form.iconUrl.trim() || undefined,
+            imageUrl: form.imageUrl.trim() || undefined,
             displayOrder: order,
             status: form.status,
             ...(isSuper ? { adminId: form.adminId.trim() || null } : {}),
@@ -107,6 +111,7 @@ export const CategoryFormDialog = ({ open, onClose, editing }: CategoryFormDialo
           slug: form.slug.trim() || undefined,
           defaultCommissionRate: rate,
           iconUrl: form.iconUrl.trim() || undefined,
+          imageUrl: form.imageUrl.trim() || undefined,
           displayOrder: order,
           status: form.status,
         });
@@ -219,6 +224,19 @@ export const CategoryFormDialog = ({ open, onClose, editing }: CategoryFormDialo
               <MenuItem value="inactive">Inactive</MenuItem>
             </TextField>
           </Box>
+
+          <Stack spacing={1}>
+            <Typography variant="subtitle2">Image (optional)</Typography>
+            <ImageUploadField
+              value={form.imageUrl}
+              onChange={(url) => setForm({ ...form, imageUrl: url })}
+              kind="category"
+              variant="wide"
+            />
+            <Typography variant="caption" color="text.secondary">
+              A wide cover image for the category (banner / hero). Optional — leave empty to skip.
+            </Typography>
+          </Stack>
 
           <Box
             sx={{

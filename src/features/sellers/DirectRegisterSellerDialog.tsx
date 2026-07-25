@@ -185,7 +185,7 @@ export const DirectRegisterSellerDialog = ({ open, onClose }: Props) => {
             label="Full name"
             required
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => setName(e.target.value.replace(/[^A-Za-z\s.'-]/g, ''))}
             InputLabelProps={{ shrink: true }}
             error={showErrors && Boolean(nameError)}
             helperText={showErrors ? nameError ?? undefined : undefined}
@@ -299,7 +299,7 @@ export const DirectRegisterSellerDialog = ({ open, onClose }: Props) => {
             label="PIN code"
             required
             value={pincode}
-            onChange={(e) => setPincode(e.target.value)}
+            onChange={(e) => setPincode(e.target.value.replace(/\D/g, '').slice(0, 6))}
             placeholder="6 digits"
             InputLabelProps={{ shrink: true }}
             inputProps={{ inputMode: 'numeric', maxLength: 6 }}

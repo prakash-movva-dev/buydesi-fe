@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/Button';
 import { DateTimeField } from '@/components/ui/DateTimeField';
 import { Dialog } from '@/components/ui/Dialog';
 import { ApiError, UserRole } from '@/types/api';
+import { useAuth } from '@/lib/auth';
 import { useCreatePromotion } from './api';
 import type { PromotionScope, PromotionType } from './types';
 
@@ -28,10 +29,15 @@ const toIso = (local: string) => (local ? new Date(local).toISOString() : '');
 
 export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
   const createMut = useCreatePromotion();
+  const { user } = useAuth();
+  // Platform-wide promotions are a Super/Sub-Super privilege. Cluster admins are
+  // locked to their own cluster (no platform-wide option).
+  const canPlatform =
+    user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.SUB_SUPER_ADMIN;
   const [type, setType] = useState<PromotionType>(defaultType ?? 'banner');
   const [name, setName] = useState('');
-  const [scope, setScope] = useState<PromotionScope>('platform');
-  const [clusterId, setClusterId] = useState('');
+  const [scope, setScope] = useState<PromotionScope>(canPlatform ? 'platform' : 'cluster');
+  const [clusterId, setClusterId] = useState(canPlatform ? '' : user?.clusterId ?? '');
   const [categoryId, setCategoryId] = useState('');
   const [startsAt, setStartsAt] = useState('');
   const [endsAt, setEndsAt] = useState('');
@@ -64,8 +70,8 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
     setError(null);
     setType(defaultType ?? 'banner');
     setName('');
-    setScope('platform');
-    setClusterId('');
+    setScope(canPlatform ? 'platform' : 'cluster');
+    setClusterId(canPlatform ? '' : user?.clusterId ?? '');
     setCategoryId('');
     setStartsAt('');
     setEndsAt('');
@@ -239,7 +245,7 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
             onChange={(e) => setScope(e.target.value as PromotionScope)}
             InputLabelProps={{ shrink: true }}
           >
-            <MenuItem value="platform">Platform-wide</MenuItem>
+            {canPlatform && <MenuItem value="platform">Platform-wide</MenuItem>}
             <MenuItem value="cluster">Cluster</MenuItem>
             <MenuItem value="category">Category</MenuItem>
           </TextField>

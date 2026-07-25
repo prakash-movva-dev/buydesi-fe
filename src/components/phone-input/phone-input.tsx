@@ -42,7 +42,19 @@ export const PhoneInput = forwardRef<HTMLDivElement, PhoneInputProps>(
 
     const hasLabel = !!label;
 
-    const cleanValue = value.replace(/[\s-]+/g, '');
+    // Guard against a null/undefined value — react-phone-number-input emits
+    // `undefined` when the field is cleared or an invalid character is typed,
+    // and a bare `value.replace(...)` on that would crash the whole screen.
+    const cleanValue = (value ?? '').replace(/[\s-]+/g, '');
+
+    // Always hand the parent a string, never `undefined`, so its state stays a
+    // string and never trips the crash above on the next render.
+    const handleChange = useCallback(
+      (next?: Value) => {
+        onChange((next ?? '') as Value);
+      },
+      [onChange]
+    );
 
     const handleClear = useCallback(() => {
       onChange('' as Value);
@@ -90,7 +102,7 @@ export const PhoneInput = forwardRef<HTMLDivElement, PhoneInputProps>(
           label={label}
           value={cleanValue}
           variant={variant}
-          onChange={onChange}
+          onChange={handleChange}
           hiddenLabel={!label}
           country={selectedCountry}
           inputComponent={CustomInput}

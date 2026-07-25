@@ -35,24 +35,29 @@ const ROLE_OPTIONS: Array<{ value: UserRole; label: string; description: string 
   { value: UserRole.BUYER, label: 'Buyer', description: 'End consumer (rare for admin-create).' },
 ];
 
+// Sellers self-register through the seller onboarding module, so they are NOT
+// admin-createable here. Only the Super Admin may mint another Sub-Super Admin.
 const ADMIN_ROLES_FOR_SUPER: ReadonlyArray<UserRole> = [
   UserRole.SUB_SUPER_ADMIN,
   UserRole.REGIONAL_ADMIN,
   UserRole.CLUSTER_ADMIN,
   UserRole.CATEGORY_ADMIN,
   UserRole.SUPPORT_ADMIN,
-  UserRole.SELLER,
   UserRole.PROMOTER,
   UserRole.BUYER,
 ];
 
+// A Sub-Super Admin has near-super powers but cannot create another Sub-Super.
+const ADMIN_ROLES_FOR_SUB_SUPER: ReadonlyArray<UserRole> = ADMIN_ROLES_FOR_SUPER.filter(
+  (r) => r !== UserRole.SUB_SUPER_ADMIN,
+);
+
 // A Regional Admin runs their whole region: appoint Cluster / Category / Support
-// admins (to clusters in their region) plus sellers/promoters/buyers.
+// admins (to clusters in their region) plus promoters/buyers.
 const ROLES_FOR_REGIONAL_ADMIN: ReadonlyArray<UserRole> = [
   UserRole.CLUSTER_ADMIN,
   UserRole.CATEGORY_ADMIN,
   UserRole.SUPPORT_ADMIN,
-  UserRole.SELLER,
   UserRole.PROMOTER,
   UserRole.BUYER,
 ];
@@ -61,7 +66,6 @@ const ROLES_FOR_REGIONAL_ADMIN: ReadonlyArray<UserRole> = [
 const ROLES_FOR_CLUSTER_ADMIN: ReadonlyArray<UserRole> = [
   UserRole.CATEGORY_ADMIN,
   UserRole.SUPPORT_ADMIN,
-  UserRole.SELLER,
   UserRole.PROMOTER,
   UserRole.BUYER,
 ];
@@ -71,11 +75,14 @@ export const CreateUserDialog = ({ open, onClose }: Props) => {
   const isSuperTier =
     user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.SUB_SUPER_ADMIN;
 
-  const allowedRoles = isSuperTier
-    ? ADMIN_ROLES_FOR_SUPER
-    : user?.role === UserRole.REGIONAL_ADMIN
-      ? ROLES_FOR_REGIONAL_ADMIN
-      : ROLES_FOR_CLUSTER_ADMIN;
+  const allowedRoles =
+    user?.role === UserRole.SUPER_ADMIN
+      ? ADMIN_ROLES_FOR_SUPER
+      : user?.role === UserRole.SUB_SUPER_ADMIN
+        ? ADMIN_ROLES_FOR_SUB_SUPER
+        : user?.role === UserRole.REGIONAL_ADMIN
+          ? ROLES_FOR_REGIONAL_ADMIN
+          : ROLES_FOR_CLUSTER_ADMIN;
   const roleChoices = ROLE_OPTIONS.filter((r) => allowedRoles.includes(r.value));
 
   const create = useAdminCreateUser();
@@ -216,7 +223,7 @@ export const CreateUserDialog = ({ open, onClose }: Props) => {
             label="Name"
             required
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => setName(e.target.value.replace(/[^A-Za-z\s.'-]/g, ''))}
             InputLabelProps={{ shrink: true }}
             error={showErrors && Boolean(nameError)}
             helperText={showErrors ? nameError ?? undefined : undefined}

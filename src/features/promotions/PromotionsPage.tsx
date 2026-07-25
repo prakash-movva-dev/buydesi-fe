@@ -17,6 +17,8 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { Scrollbar } from '@/components/scrollbar';
 import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
 import { formatDate } from '@/lib/format';
+import { useClustersList } from '@/features/clusters/api';
+import { useCategoriesList } from '@/features/categories/api';
 import { usePromotionsList, useUpdatePromotion } from './api';
 import { PromotionFormDialog } from './PromotionFormDialog';
 import type {
@@ -99,6 +101,20 @@ export const PromotionsPage = () => {
   );
 
   const { data, isLoading, isError, error } = usePromotionsList(query);
+
+  // Resolve cluster / category ids to names for the Scope column.
+  const { data: clustersData } = useClustersList({ page: 1, limit: 100 });
+  const clusterName = useMemo(() => {
+    const m = new Map<string, string>();
+    (clustersData?.items ?? []).forEach((c) => m.set(c.id, c.name));
+    return m;
+  }, [clustersData]);
+  const { data: categoriesData } = useCategoriesList();
+  const categoryName = useMemo(() => {
+    const m = new Map<string, string>();
+    (categoriesData ?? []).forEach((c) => m.set(c.id, c.name));
+    return m;
+  }, [categoriesData]);
   const updateMut = useUpdatePromotion();
   const total = data?.meta.total ?? 0;
 
@@ -212,13 +228,13 @@ export const PromotionsPage = () => {
                       <TableCell sx={{ typography: 'caption' }}>
                         <Badge variant="muted">{p.scope}</Badge>
                         {p.scope === 'cluster' && p.clusterId && (
-                          <Box sx={{ mt: 0.25, fontFamily: 'monospace' }}>
-                            {p.clusterId.slice(-8)}
+                          <Box sx={{ mt: 0.25, fontWeight: 600 }}>
+                            {clusterName.get(p.clusterId) ?? '—'}
                           </Box>
                         )}
                         {p.scope === 'category' && p.categoryId && (
-                          <Box sx={{ mt: 0.25, fontFamily: 'monospace' }}>
-                            {p.categoryId.slice(-8)}
+                          <Box sx={{ mt: 0.25, fontWeight: 600 }}>
+                            {categoryName.get(p.categoryId) ?? '—'}
                           </Box>
                         )}
                       </TableCell>

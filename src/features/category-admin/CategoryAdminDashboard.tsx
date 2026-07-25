@@ -143,15 +143,6 @@ export const CategoryAdminDashboard = () => {
                 </Badge>
               ))}
             </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mt-3"
-              onClick={() => navigate('/admin/categories')}
-            >
-              Manage taxonomy
-              <ArrowRight className="h-4 w-4" />
-            </Button>
           </CardContent>
         </Card>
       )}

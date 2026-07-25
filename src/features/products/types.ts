@@ -16,6 +16,7 @@ export interface ProductStock {
 export interface SafeProduct {
   id: string;
   sellerId: string;
+  sellerName?: string | null;
   categoryId: string;
   name: string;
   description: string;

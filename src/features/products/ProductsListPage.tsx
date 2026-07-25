@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle2, Upload, XCircle } from 'lucide-react';
 import Box from '@mui/material/Box';
@@ -81,6 +81,24 @@ export const ProductsListPage = () => {
     setSearchParams(params);
   };
 
+  // Keep the search box on local state so typing stays responsive and the input
+  // never loses focus; only sync to the query (which refetches) after a pause.
+  const [searchInput, setSearchInput] = useState(q);
+  useEffect(() => {
+    const t = setTimeout(() => {
+      setSearchParams((prev) => {
+        const params = new URLSearchParams(prev);
+        const current = params.get('q') ?? '';
+        if (searchInput === current) return prev;
+        if (searchInput) params.set('q', searchInput);
+        else params.delete('q');
+        params.set('page', '1');
+        return params;
+      });
+    }, 350);
+    return () => clearTimeout(t);
+  }, [searchInput, setSearchParams]);
+
   // ─── Bulk select state ─────────────────────────────────────────────────
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkAction, setBulkAction] = useState<StatusAction | null>(null);
@@ -145,7 +163,7 @@ export const ProductsListPage = () => {
     { id: 'product', label: 'Product' },
     { id: 'category', label: 'Category' },
     { id: 'status', label: 'Status' },
-    { id: 'from', label: 'From' },
+    { id: 'from', label: 'Seller' },
     { id: 'stock', label: 'Stock' },
     { id: 'submitted', label: 'Submitted' },
     { id: 'actions', label: '' },
@@ -246,8 +264,8 @@ export const ProductsListPage = () => {
             </TextField>
             <TextField
               label="Search"
-              value={q}
-              onChange={(e) => setParam({ q: e.target.value })}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               placeholder="Search by name / description"
               InputLabelProps={{ shrink: true }}
               sx={{ width: 320 }}
@@ -282,7 +300,7 @@ export const ProductsListPage = () => {
                       <ProductStatusBadge status={product.status} />
                     </TableCell>
                     <TableCell onClick={() => navigate(`/admin/products/${product.id}`)} className="cursor-pointer">
-                      <span className="text-xs text-muted-foreground">{product.sellerId.slice(-6)}</span>
+                      <span className="text-sm">{product.sellerName ?? product.sellerId.slice(-6)}</span>
                     </TableCell>
                     <TableCell onClick={() => navigate(`/admin/products/${product.id}`)} className="cursor-pointer">
                       {product.stock.quantity}

@@ -11,6 +11,7 @@ export interface SafeCategory {
   status: CategoryStatus;
   adminId: string | null;
   iconUrl?: string;
+  imageUrl?: string;
   displayOrder: number;
   createdAt: string;
   updatedAt: string;
@@ -22,6 +23,7 @@ export interface CreateCategoryInput {
   parentId?: string | null;
   defaultCommissionRate: number;
   iconUrl?: string;
+  imageUrl?: string;
   displayOrder?: number;
   status?: CategoryStatus;
 }
@@ -32,6 +34,7 @@ export interface UpdateCategoryInput {
   parentId?: string | null;
   defaultCommissionRate?: number;
   iconUrl?: string;
+  imageUrl?: string;
   displayOrder?: number;
   status?: CategoryStatus;
   adminId?: string | null;

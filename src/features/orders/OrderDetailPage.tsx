@@ -105,13 +105,12 @@ export const OrderDetailPage = () => {
 
   const canRefund =
     user && REFUND_ROLES.has(user.role) && order.payment?.status === 'CAPTURED';
+  // Admins do not cancel orders as routine operations — cancellation flows from
+  // the buyer/seller or a support resolution. Only the Super Admin keeps an
+  // emergency override.
   const canCancel =
     user &&
-    [
-      UserRole.SUPER_ADMIN,
-      UserRole.SUB_SUPER_ADMIN,
-      UserRole.CLUSTER_ADMIN,
-    ].includes(user.role as never) &&
+    user.role === UserRole.SUPER_ADMIN &&
     order.status !== 'CANCELLED' &&
     order.status !== 'DELIVERED' &&
     order.status !== 'RETURNED';

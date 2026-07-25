@@ -200,7 +200,7 @@ export const OrdersListPage = () => {
                     <TableCell sx={{ fontWeight: 500 }}>
                       <Box>{o.orderNumber}</Box>
                       <Box sx={{ color: 'text.secondary', typography: 'caption' }}>
-                        buyer {o.buyerId.slice(-6)} · {o.kind}
+                        buyer {o.buyerName ?? o.buyerId.slice(-6)} · {o.kind}
                       </Box>
                     </TableCell>
                     <TableCell>

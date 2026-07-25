@@ -63,6 +63,7 @@ export interface SafeOrder {
   id: string;
   orderNumber: string;
   buyerId: string;
+  buyerName?: string | null;
   kind: OrderKind;
   items: OrderItemView[];
   subtotalInr: number;

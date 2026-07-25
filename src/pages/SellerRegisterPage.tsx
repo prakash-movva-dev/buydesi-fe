@@ -13,6 +13,7 @@ import MenuItem from '@mui/material/MenuItem';
 import StepLabel from '@mui/material/StepLabel';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
+import { PhoneInput } from '@/components/phone-input';
 import IconButton from '@mui/material/IconButton';
 import InputAdornment from '@mui/material/InputAdornment';
 import LoadingButton from '@mui/lab/LoadingButton';
@@ -209,22 +210,19 @@ export const SellerRegisterPage = () => {
               fullWidth
               label="Full name"
               value={name}
-              onChange={(e) => setName(e.target.value)}
+              onChange={(e) => setName(e.target.value.replace(/[^A-Za-z\s.'-]/g, ''))}
               autoComplete="name"
               required
               InputLabelProps={{ shrink: true }}
             />
-            <TextField
+            <PhoneInput
               fullWidth
               label="Mobile"
+              country="IN"
               value={mobile}
-              onChange={(e) => setMobile(e.target.value)}
-              placeholder="+91XXXXXXXXXX"
+              onChange={(v) => setMobile(v ?? '')}
               helperText="We'll send a 6-digit OTP to this number."
-              inputProps={{ inputMode: 'tel' }}
-              autoComplete="tel"
               required
-              InputLabelProps={{ shrink: true }}
             />
             <TextField
               fullWidth
