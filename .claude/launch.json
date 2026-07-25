@@ -1,6 +1,32 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "admin", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev"], "port": 3000 }
+    {
+      "name": "backend",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "/Users/prakash/Documents/buydesi-backend",
+        "run",
+        "dev"
+      ],
+      "port": 4000
+    },
+    { "name": "admin", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev"], "port": 3000 },
+    {
+      "name": "storefront",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "/Users/prakash/Documents/buydesi-storefront",
+        "run",
+        "dev",
+        "--",
+        "--webpack",
+        "-p",
+        "3210"
+      ],
+      "port": 3210
+    }
   ]
 }

@@ -1,8 +1,19 @@
-import { useState, type ChangeEvent } from 'react';
-import { ImageIcon, Trash2, Upload } from 'lucide-react';
+import { useState, type ChangeEvent, type SyntheticEvent } from 'react';
+
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Typography from '@mui/material/Typography';
+import IconButton from '@mui/material/IconButton';
+import FormHelperText from '@mui/material/FormHelperText';
+import CircularProgress from '@mui/material/CircularProgress';
+import { alpha } from '@mui/material/styles';
+
+import { Iconify } from './iconify';
 import { uploadToPresignedUrl } from '@/lib/s3-upload';
 import { ApiError } from '@/types/api';
 import { useAdminImageUpload } from '@/features/uploads/api';
+
+// ----------------------------------------------------------------------
 
 interface ImageUploadFieldProps {
   /** Current stored image URL (empty string when none). */
@@ -17,9 +28,9 @@ interface ImageUploadFieldProps {
 }
 
 /**
- * Upload an image to S3 and store its public URL. Replaces the old "paste an
- * image URL" text inputs — the admin picks a file, it uploads via a presigned
- * URL, and the resolved public URL is stored + previewed immediately.
+ * Upload an image to S3 and store its public URL — the admin picks a file, it
+ * uploads via a presigned URL, and the resolved public URL is stored and
+ * previewed immediately. The whole box is the drop target / file picker.
  */
 export const ImageUploadField = ({
   value,
@@ -58,64 +69,89 @@ export const ImageUploadField = ({
   };
 
   const preview = localPreview ?? (value || null);
-  const boxCls =
-    variant === 'wide'
-      ? 'aspect-[3/1] w-full'
-      : 'h-20 w-20 shrink-0';
+  const isWide = variant === 'wide';
+  const isDisabled = disabled || uploading;
 
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center gap-3">
-        <div
-          className={`${boxCls} overflow-hidden rounded-md border border-border bg-secondary`}
+    <Stack spacing={1} sx={{ width: isWide ? 1 : 'auto' }}>
+      <Box sx={{ position: 'relative', width: isWide ? 1 : 'fit-content' }}>
+        <Box
+          component="label"
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            position: 'relative',
+            overflow: 'hidden',
+            borderRadius: 1.5,
+            cursor: isDisabled ? 'default' : 'pointer',
+            transition: (theme) => theme.transitions.create(['opacity', 'border-color']),
+            border: (theme) => `1px dashed ${alpha(theme.palette.grey[500], 0.24)}`,
+            bgcolor: (theme) => alpha(theme.palette.grey[500], 0.08),
+            ...(isWide ? { width: 1, aspectRatio: '3 / 1' } : { width: 96, height: 96 }),
+            ...(isDisabled
+              ? { opacity: 0.64 }
+              : { '&:hover': { opacity: 0.72, borderColor: 'primary.main' } }),
+          }}
         >
           {preview ? (
-            <img
+            <Box
+              component="img"
               src={preview}
               alt=""
-              className="h-full w-full object-cover"
-              onError={(ev) => {
-                (ev.currentTarget as HTMLImageElement).style.display = 'none';
+              sx={{ width: 1, height: 1, objectFit: 'cover' }}
+              onError={(ev: SyntheticEvent<HTMLImageElement>) => {
+                ev.currentTarget.style.display = 'none';
               }}
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-muted-foreground">
-              <ImageIcon className="h-5 w-5" />
-            </div>
+            <Stack spacing={0.5} alignItems="center" sx={{ px: 1, color: 'text.disabled' }}>
+              <Iconify icon="eva:cloud-upload-fill" width={isWide ? 32 : 24} />
+              <Typography variant="caption" sx={{ textAlign: 'center' }}>
+                Upload image
+              </Typography>
+            </Stack>
           )}
-        </div>
 
-        <div className="flex flex-col gap-1.5">
-          <label
-            className={`inline-flex h-9 w-fit cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent ${
-              disabled || uploading ? 'pointer-events-none opacity-60' : ''
-            }`}
-          >
-            <Upload className="h-4 w-4" />
-            {uploading ? 'Uploading…' : value ? 'Replace image' : 'Upload image'}
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              disabled={disabled || uploading}
-              onChange={onFile}
-            />
-          </label>
-          {value && !uploading && (
-            <button
-              type="button"
-              onClick={() => {
-                setLocalPreview(null);
-                onChange('');
+          <input type="file" accept="image/*" hidden disabled={isDisabled} onChange={onFile} />
+
+          {uploading && (
+            <Stack
+              alignItems="center"
+              justifyContent="center"
+              sx={{
+                inset: 0,
+                position: 'absolute',
+                bgcolor: (theme) => alpha(theme.palette.grey[900], 0.48),
               }}
-              className="inline-flex w-fit items-center gap-1 text-xs text-destructive hover:underline"
             >
-              <Trash2 className="h-3 w-3" /> Remove
-            </button>
+              <CircularProgress size={isWide ? 32 : 24} sx={{ color: 'common.white' }} />
+            </Stack>
           )}
-        </div>
-      </div>
-      {error && <p className="text-xs text-destructive">{error}</p>}
-    </div>
+        </Box>
+
+        {value && !uploading && (
+          <IconButton
+            size="small"
+            onClick={() => {
+              setLocalPreview(null);
+              onChange('');
+            }}
+            sx={{
+              top: 4,
+              right: 4,
+              position: 'absolute',
+              color: 'common.white',
+              bgcolor: (theme) => alpha(theme.palette.grey[900], 0.48),
+              '&:hover': { bgcolor: (theme) => alpha(theme.palette.grey[900], 0.72) },
+            }}
+          >
+            <Iconify icon="mingcute:close-line" width={16} />
+          </IconButton>
+        )}
+      </Box>
+
+      {error && <FormHelperText error>{error}</FormHelperText>}
+    </Stack>
   );
 };

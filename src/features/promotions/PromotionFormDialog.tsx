@@ -46,6 +46,11 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
   // Banner
   const [imageUrl, setImageUrl] = useState('');
   const [targetUrl, setTargetUrl] = useState('');
+  const [placement, setPlacement] = useState<'hero' | 'promo'>('hero');
+  const [headline, setHeadline] = useState('');
+  const [subheadline, setSubheadline] = useState('');
+  const [ctaLabel, setCtaLabel] = useState('');
+  const [bannerOrder, setBannerOrder] = useState('0');
 
   // Coupon
   const [code, setCode] = useState('');
@@ -77,6 +82,11 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
     setEndsAt('');
     setImageUrl('');
     setTargetUrl('');
+    setPlacement('hero');
+    setHeadline('');
+    setSubheadline('');
+    setCtaLabel('');
+    setBannerOrder('0');
     setCode('');
     setDiscountType('percent');
     setDiscountValue('10');
@@ -120,7 +130,18 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
       switch (type) {
         case 'banner':
           if (!imageUrl || !targetUrl) throw new Error('Banner needs imageUrl and targetUrl');
-          payload = { ...base, banner: { imageUrl, targetUrl } };
+          payload = {
+            ...base,
+            banner: {
+              imageUrl,
+              targetUrl,
+              placement,
+              ...(headline.trim() ? { headline: headline.trim() } : {}),
+              ...(subheadline.trim() ? { subheadline: subheadline.trim() } : {}),
+              ...(ctaLabel.trim() ? { ctaLabel: ctaLabel.trim() } : {}),
+              displayOrder: Number(bannerOrder) || 0,
+            },
+          };
           break;
         case 'coupon': {
           const dv = Number(discountValue);
@@ -290,6 +311,40 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
                 variant="wide"
               />
             </Stack>
+
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 2.5,
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+              }}
+            >
+              <TextField
+                id="p-placement"
+                select
+                fullWidth
+                label="Placement"
+                value={placement}
+                onChange={(e) => setPlacement(e.target.value as 'hero' | 'promo')}
+                helperText="Where it shows on the storefront home page"
+                InputLabelProps={{ shrink: true }}
+              >
+                <MenuItem value="hero">Hero carousel (large, main slider)</MenuItem>
+                <MenuItem value="promo">Promo card (small, beside the hero)</MenuItem>
+              </TextField>
+              <TextField
+                id="p-border"
+                fullWidth
+                type="number"
+                label="Display order"
+                value={bannerOrder}
+                onChange={(e) => setBannerOrder(e.target.value)}
+                helperText="Lower shows first"
+                inputProps={{ min: 0 }}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Box>
+
             <TextField
               id="p-target"
               fullWidth
@@ -297,6 +352,47 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
               value={targetUrl}
               onChange={(e) => setTargetUrl(e.target.value)}
               placeholder="https://… (where the banner click goes)"
+              InputLabelProps={{ shrink: true }}
+            />
+
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 2.5,
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
+              }}
+            >
+              <TextField
+                id="p-headline"
+                fullWidth
+                label="Headline (optional)"
+                value={headline}
+                onChange={(e) => setHeadline(e.target.value)}
+                placeholder="From Our Farms To Your Family"
+                helperText="Overlaid on the banner. Leave empty for image-only."
+                inputProps={{ maxLength: 120 }}
+                InputLabelProps={{ shrink: true }}
+              />
+              <TextField
+                id="p-subheadline"
+                fullWidth
+                label="Subheadline (optional)"
+                value={subheadline}
+                onChange={(e) => setSubheadline(e.target.value)}
+                placeholder="Pure. Natural. Chemical-Free."
+                inputProps={{ maxLength: 160 }}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Box>
+
+            <TextField
+              id="p-cta"
+              fullWidth
+              label="Button label (optional)"
+              value={ctaLabel}
+              onChange={(e) => setCtaLabel(e.target.value)}
+              placeholder="Shop Now"
+              inputProps={{ maxLength: 40 }}
               InputLabelProps={{ shrink: true }}
             />
           </Stack>
