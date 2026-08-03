@@ -34,6 +34,13 @@ import { Label } from '@/components/ui/Label';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useAuth } from '@/lib/auth';
 import { useProduct } from '@/features/products/api';
+import {
+  VariantEditor,
+  rowsToPayload,
+  validateVariantRows,
+  type VariantRow,
+} from './VariantEditor';
+import { useReplaceVariants, useVariants } from './variants.api';
 import { uploadToPresignedUrl } from '@/lib/s3-upload';
 import { ApiError } from '@/types/api';
 import {
@@ -154,6 +161,35 @@ export const SellerProductFormPage = () => {
   // Instant local previews (objectURL) keyed by the stored image URL, so the
   // grid renders immediately without waiting on S3 read propagation.
   const [previews, setPreviews] = useState<Record<string, string>>({});
+  // Buyable options. Empty = product sold as a single item.
+  const [variantRows, setVariantRows] = useState<VariantRow[]>([]);
+  const { data: existingVariants } = useVariants(id);
+  const replaceVariants = useReplaceVariants();
+
+  // Prefill the option table on edit.
+  useEffect(() => {
+    if (!existingVariants) return;
+    setVariantRows(
+      existingVariants.map((v) => ({
+        id: v.id,
+        label: v.label,
+        sku: v.sku ?? '',
+        size: v.size ?? '',
+        colour: v.colour ?? '',
+        standard: v.pricing.standard !== undefined ? String(v.pricing.standard) : '',
+        organic: v.pricing.organic !== undefined ? String(v.pricing.organic) : '',
+        mrp: v.mrp !== null ? String(v.mrp) : '',
+        costPrice: v.costPrice !== null && v.costPrice !== undefined ? String(v.costPrice) : '',
+        quantity: String(v.stock.quantity),
+        threshold: String(v.stock.threshold),
+        weightGrams: v.weightGrams !== null ? String(v.weightGrams) : '',
+        dimensions: v.dimensions ?? '',
+        image: v.images[0] ?? '',
+        isDefault: v.isDefault,
+        active: v.active,
+      })),
+    );
+  }, [existingVariants]);
 
   // Prefill from server on edit.
   useEffect(() => {
@@ -294,7 +330,16 @@ export const SellerProductFormPage = () => {
   const submit = async () => {
     setError(null);
     const payload = buildPayload();
+    const variantProblem = validateVariantRows(variantRows);
+    if (variantProblem) {
+      setError(variantProblem);
+      setStep(1);
+      return;
+    }
+    // Options carry their own prices, so the product-level tiers are only
+    // required when the product is sold as a single item.
     if (
+      variantRows.length === 0 &&
       payload.pricing.standard === undefined &&
       payload.pricing.organic === undefined &&
       payload.pricing.premium === undefined
@@ -304,11 +349,20 @@ export const SellerProductFormPage = () => {
       return;
     }
     try {
+      let productId = id;
       if (isEdit && id) {
         await update.mutateAsync({ id, patch: payload });
       } else {
-        await create.mutateAsync(payload);
+        const created = await create.mutateAsync(payload);
+        productId = created.id;
         localStorage.removeItem(storageKey);
+      }
+      // Save the option table against the product (create or edit alike).
+      if (productId && (variantRows.length > 0 || (existingVariants?.length ?? 0) > 0)) {
+        await replaceVariants.mutateAsync({
+          productId,
+          variants: rowsToPayload(variantRows),
+        });
       }
       navigate('/seller/products');
     } catch (err) {
@@ -578,6 +632,16 @@ export const SellerProductFormPage = () => {
                 InputLabelProps={{ shrink: true }}
                 inputProps={{ maxLength: 20 }}
               />
+
+              <hr className="border-border" />
+
+              <VariantEditor rows={variantRows} onChange={setVariantRows} />
+              {variantRows.length > 0 && (
+                <Alert severity="info">
+                  Buyers pick an option before adding to the cart. The prices and stock above are
+                  ignored while options exist — each option carries its own.
+                </Alert>
+              )}
             </>
           )}
 

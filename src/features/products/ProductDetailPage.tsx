@@ -324,6 +324,58 @@ export const ProductDetailPage = () => {
                 <span>{product.weightGrams} g</span>
               </div>
             )}
+
+            {/* Options — when present these are what buyers actually purchase,
+                so they replace the product-level price/stock above. */}
+            {product.variants && product.variants.length > 0 && (
+              <>
+                <hr className="my-2 border-border" />
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Options</span>
+                  <span className="font-medium">
+                    {product.variantSummary?.variantCount ?? product.variants.length} · total stock{' '}
+                    {product.variantSummary?.totalStock ?? 0}
+                  </span>
+                </div>
+                <div className="space-y-1.5 pt-1">
+                  {product.variants.map((v) => (
+                    <div
+                      key={v.id}
+                      className="rounded-md border border-border px-2.5 py-2 text-xs"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-medium">
+                          {v.label}
+                          {v.isDefault && (
+                            <span className="ml-1 text-[10px] text-primary">· default</span>
+                          )}
+                          {!v.active && (
+                            <span className="ml-1 text-[10px] text-destructive">· disabled</span>
+                          )}
+                        </span>
+                        <span>
+                          {typeof v.pricing.standard === 'number'
+                            ? formatInr(v.pricing.standard)
+                            : '—'}
+                          {v.mrp !== null && (
+                            <span className="ml-1 text-muted-foreground line-through">
+                              {formatInr(v.mrp)}
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                      <div className="mt-0.5 flex items-center justify-between gap-2 text-muted-foreground">
+                        <span>{v.sku ?? 'no SKU'}</span>
+                        <span>
+                          stock {v.stock.quantity}
+                          {typeof v.costPrice === 'number' && ` · cost ${formatInr(v.costPrice)}`}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
             <hr className="my-2 border-border" />
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Category</span>

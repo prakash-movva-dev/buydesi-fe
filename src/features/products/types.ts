@@ -13,7 +13,46 @@ export interface ProductStock {
   threshold: number;
 }
 
+/** A buyable option of a product — pack size, dimension, colour. */
+export interface ProductVariant {
+  id: string;
+  productId: string;
+  label: string;
+  sku: string | null;
+  size: string | null;
+  colour: string | null;
+  pricing: ProductPricing;
+  mrp: number | null;
+  /** Internal margin data — present only on seller/admin reads. */
+  costPrice?: number | null;
+  stock: ProductStock;
+  weightGrams: number | null;
+  dimensions: string | null;
+  images: string[];
+  minOrderQty: number | null;
+  maxOrderQty: number | null;
+  hsnCode: string | null;
+  isDefault: boolean;
+  active: boolean;
+  displayOrder: number;
+}
+
+/** Rollup the backend denormalises onto the product for list views. */
+export interface ProductVariantSummary {
+  hasVariants: boolean;
+  variantCount: number;
+  priceFrom: number | null;
+  priceTo: number | null;
+  mrpFrom: number | null;
+  totalStock: number;
+  inStock: boolean;
+}
+
 export interface SafeProduct {
+  /** Always present — mirrors product price/stock when there are no variants. */
+  variantSummary?: ProductVariantSummary;
+  /** Full list, only on detail reads. */
+  variants?: ProductVariant[];
   id: string;
   sellerId: string;
   sellerName?: string | null;
