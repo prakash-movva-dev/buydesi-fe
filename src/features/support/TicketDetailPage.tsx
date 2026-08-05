@@ -3,12 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import {
   AlertCircle,
   ArrowLeft,
-  ArrowUpFromLine,
   CheckCircle2,
   CircleDollarSign,
   ExternalLink,
   FileText,
-  Hand,
   Lock,
   Mail,
   MessageSquare,
@@ -142,22 +140,10 @@ export const TicketDetailPage = () => {
           title={ticket.ticketNumber}
           action={
             <>
-              {isActive && !ticket.assignedTo && (
-                <Button onClick={() => setClaimOpen(true)}>
-                  <Hand className="h-4 w-4" />
-                  Claim
-                </Button>
-              )}
               {isActive && ticket.assignedTo && (
                 <Button onClick={() => setResolveOpen(true)}>
                   <CheckCircle2 className="h-4 w-4" />
                   Resolve
-                </Button>
-              )}
-              {isActive && ticket.escalationLevel !== 'super' && (
-                <Button variant="outline" onClick={() => setEscalateOpen(true)}>
-                  <ArrowUpFromLine className="h-4 w-4" />
-                  Escalate
                 </Button>
               )}
               {canRefund && ticket.orderId && (

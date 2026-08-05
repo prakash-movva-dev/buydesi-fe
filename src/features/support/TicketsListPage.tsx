@@ -164,7 +164,7 @@ export const TicketsListPage = () => {
     <Stack spacing={3}>
       <PageHeader
         title="Support tickets"
-        description="Customer and seller issues. Claim a ticket to take ownership; escalate if it needs a higher tier."
+        description="Customer and seller issues raised by buyers and sellers."
       />
 
       <ScopedAdminBanner />
