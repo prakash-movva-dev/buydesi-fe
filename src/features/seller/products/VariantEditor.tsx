@@ -341,6 +341,7 @@ export const VariantEditor = ({ rows, onChange, disabled }: Props) => {
                   kind="product"
                   variant="square"
                   disabled={disabled}
+                  uploadVia="product"
                 />
               </Stack>
               <Stack sx={{ pt: 2 }}>

@@ -164,6 +164,7 @@ export const SellerProductFormPage = () => {
   // Buyable options. Empty = product sold as a single item.
   const [variantRows, setVariantRows] = useState<VariantRow[]>([]);
   const { data: existingVariants } = useVariants(id);
+  const [variantsSavedAt, setVariantsSavedAt] = useState<number | null>(null);
   const replaceVariants = useReplaceVariants();
 
   // Prefill the option table on edit.
@@ -636,6 +637,44 @@ export const SellerProductFormPage = () => {
               <hr className="border-border" />
 
               <VariantEditor rows={variantRows} onChange={setVariantRows} />
+              {isEdit && id && variantRows.length > 0 && (
+                <Stack direction="row" spacing={1.5} alignItems="center">
+                  <Button
+                    variant="outline"
+                    type="button"
+                    disabled={replaceVariants.isPending}
+                    onClick={async () => {
+                      const problem = validateVariantRows(variantRows);
+                      if (problem) {
+                        setError(problem);
+                        return;
+                      }
+                      setError(null);
+                      try {
+                        const saved = await replaceVariants.mutateAsync({
+                          productId: id,
+                          variants: rowsToPayload(variantRows),
+                        });
+                        // Adopt the server's ids so a second save updates the
+                        // same rows instead of creating duplicates.
+                        setVariantRows((rows) =>
+                          rows.map((r, i) => ({ ...r, id: saved[i]?.id ?? r.id })),
+                        );
+                        setVariantsSavedAt(Date.now());
+                      } catch (err) {
+                        setError(err instanceof ApiError ? err.message : 'Could not save options');
+                      }
+                    }}
+                  >
+                    {replaceVariants.isPending ? 'Saving options…' : 'Save options'}
+                  </Button>
+                  {variantsSavedAt !== null && !replaceVariants.isPending && (
+                    <Typography variant="caption" sx={{ color: 'success.main' }}>
+                      Options saved
+                    </Typography>
+                  )}
+                </Stack>
+              )}
               {variantRows.length > 0 && (
                 <Alert severity="info">
                   Buyers pick an option before adding to the cart. The prices and stock above are

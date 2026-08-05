@@ -915,8 +915,13 @@ export const SellerOnboardingPage = () => {
                     label="Full legal name (e-signature)"
                     required
                     value={form.legalName}
-                    onChange={(e) => set('legalName', e.target.value)}
+                    onChange={(e) =>
+                      // An e-signature is a person's name — letters, spaces and
+                      // the punctuation real names use. No digits or symbols.
+                      set('legalName', e.target.value.replace(/[^A-Za-z\s.'-]/g, ''))
+                    }
                     placeholder="Sign by typing your legal name"
+                    helperText="Letters only — this is your signature"
                     InputLabelProps={{ shrink: true }}
                   />
                   <TextField

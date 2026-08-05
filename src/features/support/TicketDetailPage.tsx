@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   AlertCircle,
   ArrowLeft,
@@ -85,6 +85,7 @@ const slaPill = (dueAt: string, fulfilledAt: string | null) => {
 export const TicketDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { user } = useAuth();
   const { data, isLoading, isError, error } = useTicket(id);
   const reversePickup = useScheduleReversePickup();
@@ -126,10 +127,19 @@ export const TicketDetailPage = () => {
   const canRefund = user && REFUND_ROLES.has(user.role);
   const canSchedulePickup = isActive && Boolean(ticket.orderId);
 
+  // This page is mounted under /admin, /seller and /promoter. Going "back" has
+  // to stay inside the caller's own section — sending a seller to /admin/support
+  // lands them on a 403.
+  const ticketsPath = location.pathname.startsWith('/seller')
+    ? '/seller/support'
+    : location.pathname.startsWith('/promoter')
+      ? '/promoter/support'
+      : '/admin/support';
+
   return (
     <Stack spacing={3}>
       <Box>
-        <Button variant="ghost" size="sm" onClick={() => navigate('/admin/support')}>
+        <Button variant="ghost" size="sm" onClick={() => navigate(ticketsPath)}>
           <ArrowLeft className="h-4 w-4" />
           Back to tickets
         </Button>

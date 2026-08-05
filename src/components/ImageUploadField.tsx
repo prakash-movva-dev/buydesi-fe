@@ -12,6 +12,7 @@ import { Iconify } from './iconify';
 import { uploadToPresignedUrl } from '@/lib/s3-upload';
 import { ApiError } from '@/types/api';
 import { useAdminImageUpload } from '@/features/uploads/api';
+import { useProductImageUploadUrl } from '@/features/seller/products/api';
 
 // ----------------------------------------------------------------------
 
@@ -25,6 +26,13 @@ interface ImageUploadFieldProps {
   /** Preview aspect: square icon vs wide banner. */
   variant?: 'square' | 'wide';
   disabled?: boolean;
+  /**
+   * Which presign endpoint to use. `admin` (default) is for back-office assets
+   * — category icons, banners — and is closed to sellers. `product` uses the
+   * seller-owned product endpoint, so a seller uploading their own product or
+   * variant photo is not rejected with a 403.
+   */
+  uploadVia?: 'admin' | 'product';
 }
 
 /**
@@ -38,8 +46,11 @@ export const ImageUploadField = ({
   kind = 'asset',
   variant = 'square',
   disabled,
+  uploadVia = 'admin',
 }: ImageUploadFieldProps) => {
-  const presign = useAdminImageUpload();
+  const adminPresign = useAdminImageUpload();
+  const productPresign = useProductImageUploadUrl();
+  const presign = uploadVia === 'product' ? productPresign : adminPresign;
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Instant local preview for the just-uploaded file (S3 read may lag / CORS).
@@ -52,11 +63,12 @@ export const ImageUploadField = ({
     setError(null);
     setUploading(true);
     try {
-      const p = await presign.mutateAsync({
-        contentType: f.type || 'image/jpeg',
-        ext: f.name.split('.').pop(),
-        kind,
-      });
+      // The product endpoint namespaces by seller and takes no `kind`.
+      const p = await presign.mutateAsync(
+        uploadVia === 'product'
+          ? { contentType: f.type || 'image/jpeg', ext: f.name.split('.').pop() }
+          : { contentType: f.type || 'image/jpeg', ext: f.name.split('.').pop(), kind },
+      );
       const key = await uploadToPresignedUrl(p, f);
       const stored = p.publicUrl ?? p.s3Key ?? key;
       setLocalPreview(URL.createObjectURL(f));
