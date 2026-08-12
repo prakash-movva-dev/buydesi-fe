@@ -8,7 +8,6 @@ import {
 } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
-  ArrowLeft,
   ChevronLeft,
   ChevronRight,
   FileUp,
@@ -28,7 +27,11 @@ import TextField from '@mui/material/TextField';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
-import { Card, CardContent } from '@/components/ui/Card';
+import Box from '@mui/material/Box';
+import MuiCard from '@mui/material/Card';
+import CardHeader from '@mui/material/CardHeader';
+import MuiCardContent from '@mui/material/CardContent';
+import { CustomBreadcrumbs } from '@/components/custom-breadcrumbs';
 import { DateField } from '@/components/ui/DateField';
 import { Label } from '@/components/ui/Label';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -49,6 +52,15 @@ import {
   useUpdateProduct,
   type CreateProductInput,
 } from './api';
+
+/** One-line hint shown under each step's card title. */
+const STEP_HINTS = [
+  'Name, category and how buyers find this product.',
+  'What it sells for, how much stock there is, and any options.',
+  'Harvest, shelf life, weight and packaging.',
+  'Photos buyers see on the listing, plus an optional video.',
+  'Check everything before submitting for approval.',
+];
 
 const STEPS = [
   { label: 'Basic information' },
@@ -376,39 +388,42 @@ export const SellerProductFormPage = () => {
   const saving = create.isPending || update.isPending;
 
   return (
-    <Stack spacing={3} sx={{ width: '100%' }}>
-      <Button variant="ghost" size="sm" onClick={() => navigate('/seller/products')}>
-        <ArrowLeft className="h-4 w-4" />
-        Back to products
-      </Button>
+    // A form reads badly stretched across a wide desktop — cap the measure and
+    // centre it, the way the rest of the Minimal pages do.
+    <Stack spacing={3} sx={{ width: '100%', maxWidth: 920, mx: 'auto' }}>
+      <CustomBreadcrumbs
+        heading={isEdit ? 'Edit product' : 'New product'}
+        links={[
+          { name: 'Dashboard', href: '/seller' },
+          { name: 'Products', href: '/seller/products' },
+          { name: isEdit ? existing?.name ?? 'Edit' : 'New product' },
+        ]}
+        sx={{ mb: 0 }}
+      />
 
-      <div>
-        <Typography variant="h4" component="h1">
-          {isEdit ? `Edit — ${existing?.name}` : 'New product'}
-        </Typography>
-        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-          {isEdit
-            ? 'Editing a LIVE product sends it back to PENDING for re-approval.'
-            : 'Add a rich listing across a few quick steps. Your draft is saved automatically.'}
-        </Typography>
-      </div>
+      <Typography variant="body2" sx={{ color: 'text.secondary', mt: -2 }}>
+        {isEdit
+          ? 'Editing a LIVE product sends it back to PENDING for re-approval.'
+          : 'Add a rich listing across a few quick steps. Your draft is saved automatically.'}
+      </Typography>
 
-      {/* Stepper */}
-      <Stepper activeStep={step} alternativeLabel nonLinear sx={{ mb: 1 }}>
-        {STEPS.map((s, i) => (
-          <Step key={s.label}>
-            <StepButton onClick={() => setStep(i)}>{s.label}</StepButton>
-          </Step>
-        ))}
-      </Stepper>
+      <MuiCard sx={{ p: 3 }}>
+        <Stepper activeStep={step} alternativeLabel nonLinear>
+          {STEPS.map((s, i) => (
+            <Step key={s.label}>
+              <StepButton onClick={() => setStep(i)}>{s.label}</StepButton>
+            </Step>
+          ))}
+        </Stepper>
+      </MuiCard>
 
-      <Card>
-        <CardContent className="space-y-4 pt-6">
+      <MuiCard>
+        <CardHeader title={STEPS[step].label} subheader={STEP_HINTS[step]} />
+        <MuiCardContent className="space-y-4">
           {/* ── Step 1: Basic information ── */}
           {step === 0 && (
             <>
-              <Typography variant="h6">Basic information</Typography>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' } }}>
                 <TextField
                   fullWidth
                   label="Product name"
@@ -424,7 +439,7 @@ export const SellerProductFormPage = () => {
                   </Typography>
                   <CategoryPicker value={form.categoryId} onChange={(v) => set('categoryId', v)} />
                 </div>
-              </div>
+              </Box>
               <TextField
                 fullWidth
                 multiline
@@ -437,7 +452,7 @@ export const SellerProductFormPage = () => {
                 InputLabelProps={{ shrink: true }}
                 inputProps={{ maxLength: 5000 }}
               />
-              <div className="grid gap-3 sm:grid-cols-3">
+              <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' } }}>
                 <div>
                   <TextField
                     fullWidth
@@ -471,7 +486,7 @@ export const SellerProductFormPage = () => {
                   InputLabelProps={{ shrink: true }}
                   inputProps={{ maxLength: 60 }}
                 />
-              </div>
+              </Box>
               <Field label="Key highlights">
                 <ChipInput
                   value={form.highlights}
@@ -490,7 +505,7 @@ export const SellerProductFormPage = () => {
                 />
                 <p className="text-xs text-muted-foreground">Helps buyers find this product in search.</p>
               </Field>
-              <div className="grid gap-3 sm:grid-cols-3">
+              <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' } }}>
                 <CheckboxCard
                   label="Women entrepreneur"
                   hint="Show a badge highlighting a women-led business."
@@ -509,7 +524,7 @@ export const SellerProductFormPage = () => {
                   checked={form.organicCertified}
                   onChange={(v) => set('organicCertified', v)}
                 />
-              </div>
+              </Box>
               {form.organicCertified && (
                 <TextField
                   fullWidth
@@ -527,12 +542,11 @@ export const SellerProductFormPage = () => {
           {/* ── Step 2: Pricing & availability ── */}
           {step === 1 && (
             <>
-              <Typography variant="h6">Pricing & availability</Typography>
               <p className="text-sm text-muted-foreground">
                 Set at least one price tier. Premium is hidden from public buyers; only verified
                 premium accounts see it.
               </p>
-              <div className="grid gap-3 sm:grid-cols-3">
+              <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' } }}>
                 <TextField
                   fullWidth
                   type="number"
@@ -560,9 +574,9 @@ export const SellerProductFormPage = () => {
                   InputLabelProps={{ shrink: true }}
                   inputProps={{ min: 0, step: '0.5' }}
                 />
-              </div>
+              </Box>
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' } }}>
                 <TextField
                   fullWidth
                   type="number"
@@ -601,7 +615,7 @@ export const SellerProductFormPage = () => {
                   InputLabelProps={{ shrink: true }}
                   inputProps={{ min: 1 }}
                 />
-              </div>
+              </Box>
               {form.minOrderQty &&
                 form.maxOrderQty &&
                 Number(form.maxOrderQty) < Number(form.minOrderQty) && (
@@ -610,7 +624,7 @@ export const SellerProductFormPage = () => {
                   </Alert>
                 )}
 
-              <div className="grid gap-3 sm:grid-cols-2">
+              <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' } }}>
                 <CheckboxCard
                   label="Cash on Delivery available"
                   hint="Buyers can pay cash for this item. If off, COD is blocked at checkout when this item is in the cart."
@@ -623,7 +637,7 @@ export const SellerProductFormPage = () => {
                   checked={form.returnEligible}
                   onChange={(v) => set('returnEligible', v)}
                 />
-              </div>
+              </Box>
               <TextField
                 fullWidth
                 label="HSN code (tax)"
@@ -687,11 +701,10 @@ export const SellerProductFormPage = () => {
           {/* ── Step 3: Produce & logistics ── */}
           {step === 2 && (
             <>
-              <Typography variant="h6">Produce & logistics</Typography>
               <p className="text-sm text-muted-foreground">
                 Optional details that help buyers and shipping. Useful for fresh / perishable goods.
               </p>
-              <div className="grid gap-3 sm:grid-cols-2">
+              <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' } }}>
                 <DateField
                   fullWidth
                   label="Harvest / packed date"
@@ -732,14 +745,13 @@ export const SellerProductFormPage = () => {
                     </MenuItem>
                   ))}
                 </TextField>
-              </div>
+              </Box>
             </>
           )}
 
           {/* ── Step 4: Images & media ── */}
           {step === 3 && (
             <>
-              <Typography variant="h6">Images & media</Typography>
               <p className="text-sm text-muted-foreground">
                 First image is the primary thumbnail. Clear photos improve approval and sales.
               </p>
@@ -786,7 +798,6 @@ export const SellerProductFormPage = () => {
           {/* ── Step 5: Review ── */}
           {step === 4 && (
             <>
-              <Typography variant="h6">Review & submit</Typography>
               <p className="text-sm text-muted-foreground">
                 Check the details below. Submitting sends the listing to a Category Admin for
                 approval.
@@ -847,8 +858,8 @@ export const SellerProductFormPage = () => {
               </Button>
             )}
           </div>
-        </CardContent>
-      </Card>
+        </MuiCardContent>
+      </MuiCard>
     </Stack>
   );
 };
