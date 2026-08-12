@@ -12,7 +12,6 @@ import {
   ChevronRight,
   FileUp,
   Trash2,
-  X,
 } from 'lucide-react';
 import Stack from '@mui/material/Stack';
 import Typography from '@mui/material/Typography';
@@ -28,6 +27,9 @@ import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
 import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
+import InputBase from '@mui/material/InputBase';
+import { alpha } from '@mui/material/styles';
 import MuiCard from '@mui/material/Card';
 import CardHeader from '@mui/material/CardHeader';
 import MuiCardContent from '@mui/material/CardContent';
@@ -421,7 +423,7 @@ export const SellerProductFormPage = () => {
           {/* ── Step 1: Basic information ── */}
           {step === 0 && (
             <>
-              <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' } }}>
+              <Box sx={{ display: 'grid', gap: 2.5, alignItems: 'end', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' } }}>
                 <TextField
                   fullWidth
                   label="Product name"
@@ -450,7 +452,7 @@ export const SellerProductFormPage = () => {
                 InputLabelProps={{ shrink: true }}
                 inputProps={{ maxLength: 5000 }}
               />
-              <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' } }}>
+              <Box sx={{ display: 'grid', gap: 2.5, alignItems: 'end', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' } }}>
                 <div>
                   <TextField
                     fullWidth
@@ -503,7 +505,7 @@ export const SellerProductFormPage = () => {
                 />
                 <p className="text-xs text-muted-foreground">Helps buyers find this product in search.</p>
               </Field>
-              <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' } }}>
+              <Box sx={{ display: 'grid', gap: 2.5, alignItems: 'end', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' } }}>
                 <CheckboxCard
                   label="Women entrepreneur"
                   hint="Show a badge highlighting a women-led business."
@@ -544,7 +546,7 @@ export const SellerProductFormPage = () => {
                 Set at least one price tier. Premium is hidden from public buyers; only verified
                 premium accounts see it.
               </p>
-              <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' } }}>
+              <Box sx={{ display: 'grid', gap: 2.5, alignItems: 'end', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' } }}>
                 <TextField
                   fullWidth
                   type="number"
@@ -574,7 +576,7 @@ export const SellerProductFormPage = () => {
                 />
               </Box>
 
-              <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' } }}>
+              <Box sx={{ display: 'grid', gap: 2.5, alignItems: 'end', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' } }}>
                 <TextField
                   fullWidth
                   type="number"
@@ -622,7 +624,7 @@ export const SellerProductFormPage = () => {
                   </Alert>
                 )}
 
-              <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' } }}>
+              <Box sx={{ display: 'grid', gap: 2.5, alignItems: 'end', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' } }}>
                 <CheckboxCard
                   label="Cash on Delivery available"
                   hint="Buyers can pay cash for this item. If off, COD is blocked at checkout when this item is in the cart."
@@ -702,7 +704,7 @@ export const SellerProductFormPage = () => {
               <p className="text-sm text-muted-foreground">
                 Optional details that help buyers and shipping. Useful for fresh / perishable goods.
               </p>
-              <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' } }}>
+              <Box sx={{ display: 'grid', gap: 2.5, alignItems: 'end', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' } }}>
                 <DateField
                   fullWidth
                   label="Harvest / packed date"
@@ -930,23 +932,37 @@ const ChipInput = ({
     }
   };
   return (
-    <div className="flex flex-wrap items-center gap-1.5 rounded-md border border-input bg-background p-1.5">
+    <Box
+      sx={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        gap: 1,
+        p: 1,
+        minHeight: 56,
+        borderRadius: 1,
+        border: (theme) => `1px solid ${alpha(theme.palette.grey[500], 0.24)}`,
+        transition: (theme) => theme.transitions.create('border-color'),
+        '&:focus-within': { borderColor: 'text.primary' },
+      }}
+    >
       {value.map((chip) => (
-        <span key={chip} className="inline-flex items-center gap-1 rounded bg-secondary px-2 py-0.5 text-xs">
-          {chip}
-          <button type="button" onClick={() => onChange(value.filter((c) => c !== chip))} className="text-muted-foreground hover:text-foreground">
-            <X className="h-3 w-3" />
-          </button>
-        </span>
+        <Chip
+          key={chip}
+          size="small"
+          variant="soft"
+          label={chip}
+          onDelete={() => onChange(value.filter((c) => c !== chip))}
+        />
       ))}
-      <input
+      <InputBase
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={onKeyDown}
         onBlur={add}
         placeholder={value.length ? '' : placeholder}
-        className="min-w-[8rem] flex-1 bg-transparent px-1 py-0.5 text-sm outline-none"
+        sx={{ flex: 1, minWidth: 160, px: 0.5, typography: 'body2' }}
       />
-    </div>
+    </Box>
   );
 };
