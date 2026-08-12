@@ -388,9 +388,7 @@ export const SellerProductFormPage = () => {
   const saving = create.isPending || update.isPending;
 
   return (
-    // A form reads badly stretched across a wide desktop — cap the measure and
-    // centre it, the way the rest of the Minimal pages do.
-    <Stack spacing={3} sx={{ width: '100%', maxWidth: 920, mx: 'auto' }}>
+    <Stack spacing={3} sx={{ width: '100%' }}>
       <CustomBreadcrumbs
         heading={isEdit ? 'Edit product' : 'New product'}
         links={[
