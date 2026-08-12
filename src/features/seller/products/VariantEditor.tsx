@@ -27,6 +27,7 @@ export interface VariantRow {
   colour: string;
   standard: string;
   organic: string;
+  premium: string;
   mrp: string;
   costPrice: string;
   quantity: string;
@@ -45,6 +46,7 @@ export const emptyVariantRow = (): VariantRow => ({
   colour: '',
   standard: '',
   organic: '',
+  premium: '',
   mrp: '',
   costPrice: '',
   quantity: '0',
@@ -72,6 +74,7 @@ export const rowsToPayload = (rows: VariantRow[]): VariantInput[] =>
     pricing: {
       ...(num(r.standard) !== undefined ? { standard: num(r.standard) } : {}),
       ...(num(r.organic) !== undefined ? { organic: num(r.organic) } : {}),
+      ...(num(r.premium) !== undefined ? { premium: num(r.premium) } : {}),
     },
     mrp: num(r.mrp) ?? null,
     costPrice: num(r.costPrice) ?? null,
@@ -90,8 +93,12 @@ export const validateVariantRows = (rows: VariantRow[]): string | null => {
   for (const [i, r] of rows.entries()) {
     const where = `Option ${i + 1}${r.label ? ` (${r.label})` : ''}`;
     if (!r.label.trim()) return `${where}: name is required, e.g. "500g"`;
-    if (num(r.standard) === undefined && num(r.organic) === undefined) {
-      return `${where}: needs a sale price`;
+    if (
+      num(r.standard) === undefined &&
+      num(r.organic) === undefined &&
+      num(r.premium) === undefined
+    ) {
+      return `${where}: needs a price on at least one tier`;
     }
     const mrp = num(r.mrp);
     const std = num(r.standard);
@@ -246,14 +253,14 @@ export const VariantEditor = ({ rows, onChange, disabled }: Props) => {
                 display: 'grid',
                 gap: 2,
                 alignItems: 'start',
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(4, 1fr)' },
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)', md: 'repeat(5, 1fr)' },
               }}
             >
               <TextField
                 fullWidth
                 required
                 type="number"
-                label="Sale price ₹"
+                label="Standard price ₹"
                 value={row.standard}
                 onChange={(e) => patch(index, { standard: e.target.value })}
                 disabled={disabled}
@@ -267,6 +274,17 @@ export const VariantEditor = ({ rows, onChange, disabled }: Props) => {
                 value={row.organic}
                 onChange={(e) => patch(index, { organic: e.target.value })}
                 disabled={disabled}
+                inputProps={{ min: 0 }}
+                InputLabelProps={{ shrink: true }}
+              />
+              <TextField
+                fullWidth
+                type="number"
+                label="Premium price ₹"
+                value={row.premium}
+                onChange={(e) => patch(index, { premium: e.target.value })}
+                disabled={disabled}
+                helperText="Verified premium buyers only"
                 inputProps={{ min: 0 }}
                 InputLabelProps={{ shrink: true }}
               />
