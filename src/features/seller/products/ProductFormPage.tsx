@@ -194,8 +194,6 @@ export const SellerProductFormPage = () => {
         standard: v.pricing.standard !== undefined ? String(v.pricing.standard) : '',
         organic: v.pricing.organic !== undefined ? String(v.pricing.organic) : '',
         premium: v.pricing.premium !== undefined ? String(v.pricing.premium) : '',
-        mrp: v.mrp !== null ? String(v.mrp) : '',
-        costPrice: v.costPrice !== null && v.costPrice !== undefined ? String(v.costPrice) : '',
         quantity: String(v.stock.quantity),
         threshold: String(v.stock.threshold),
         weightGrams: v.weightGrams !== null ? String(v.weightGrams) : '',

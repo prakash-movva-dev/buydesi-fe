@@ -28,8 +28,6 @@ export interface VariantRow {
   standard: string;
   organic: string;
   premium: string;
-  mrp: string;
-  costPrice: string;
   quantity: string;
   threshold: string;
   weightGrams: string;
@@ -47,8 +45,6 @@ export const emptyVariantRow = (): VariantRow => ({
   standard: '',
   organic: '',
   premium: '',
-  mrp: '',
-  costPrice: '',
   quantity: '0',
   threshold: '5',
   weightGrams: '',
@@ -76,8 +72,6 @@ export const rowsToPayload = (rows: VariantRow[]): VariantInput[] =>
       ...(num(r.organic) !== undefined ? { organic: num(r.organic) } : {}),
       ...(num(r.premium) !== undefined ? { premium: num(r.premium) } : {}),
     },
-    mrp: num(r.mrp) ?? null,
-    costPrice: num(r.costPrice) ?? null,
     stock: { quantity: num(r.quantity) ?? 0, threshold: num(r.threshold) ?? 5 },
     weightGrams: num(r.weightGrams) ?? null,
     dimensions: r.dimensions.trim() || null,
@@ -100,11 +94,6 @@ export const validateVariantRows = (rows: VariantRow[]): string | null => {
     ) {
       return `${where}: needs a price on at least one tier`;
     }
-    const mrp = num(r.mrp);
-    const std = num(r.standard);
-    if (mrp !== undefined && std !== undefined && mrp < std) {
-      return `${where}: MRP cannot be below the sale price`;
-    }
   }
   const skus = rows.map((r) => r.sku.trim()).filter(Boolean);
   if (new Set(skus).size !== skus.length) return 'Each option needs a unique SKU';
@@ -120,7 +109,7 @@ interface Props {
 /**
  * Repeatable table of buyable options. When empty, the product is sold as a
  * single item using the pricing/stock on the main form; once a row is added,
- * every option carries its own price, MRP, cost, stock and image.
+ * every option carries its own prices, stock and image.
  */
 export const VariantEditor = ({ rows, onChange, disabled }: Props) => {
   const problem = useMemo(() => validateVariantRows(rows), [rows]);
@@ -185,8 +174,7 @@ export const VariantEditor = ({ rows, onChange, disabled }: Props) => {
                 </Typography>
                 {row.standard.trim() && (
                   <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    ₹{row.standard}
-                    {row.mrp.trim() ? ` · MRP ₹${row.mrp}` : ''} · stock {row.quantity || 0}
+                    ₹{row.standard} · stock {row.quantity || 0}
                   </Typography>
                 )}
                 {row.isDefault && (
@@ -253,7 +241,7 @@ export const VariantEditor = ({ rows, onChange, disabled }: Props) => {
                 display: 'grid',
                 gap: 2,
                 alignItems: 'start',
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)', md: 'repeat(5, 1fr)' },
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
               }}
             >
               <TextField
@@ -285,28 +273,6 @@ export const VariantEditor = ({ rows, onChange, disabled }: Props) => {
                 onChange={(e) => patch(index, { premium: e.target.value })}
                 disabled={disabled}
                 helperText="Verified premium buyers only"
-                inputProps={{ min: 0 }}
-                InputLabelProps={{ shrink: true }}
-              />
-              <TextField
-                fullWidth
-                type="number"
-                label="MRP ₹"
-                value={row.mrp}
-                onChange={(e) => patch(index, { mrp: e.target.value })}
-                disabled={disabled}
-                helperText="Struck through"
-                inputProps={{ min: 0 }}
-                InputLabelProps={{ shrink: true }}
-              />
-              <TextField
-                fullWidth
-                type="number"
-                label="Cost price ₹"
-                value={row.costPrice}
-                onChange={(e) => patch(index, { costPrice: e.target.value })}
-                disabled={disabled}
-                helperText="Internal only"
                 inputProps={{ min: 0 }}
                 InputLabelProps={{ shrink: true }}
               />
