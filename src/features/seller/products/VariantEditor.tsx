@@ -5,6 +5,7 @@ import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
+import Chip from '@mui/material/Chip';
 import IconButton from '@mui/material/IconButton';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
@@ -136,10 +137,13 @@ export const VariantEditor = ({ rows, onChange, disabled }: Props) => {
     <Stack spacing={2}>
       <Stack direction="row" alignItems="center" justifyContent="space-between">
         <Box>
-          <Typography variant="subtitle2">Options (sizes, colours…)</Typography>
-          <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-            Leave empty if this product is sold as a single item. Add options and each one gets
-            its own price, stock and image.
+          <Typography variant="subtitle1">Options (sizes, colours…)</Typography>
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            {rows.length === 0
+              ? 'Leave empty if this product is sold as a single item.'
+              : `${rows.filter((r) => r.active).length} option${
+                  rows.filter((r) => r.active).length === 1 ? '' : 's'
+                } · buyers pick one before adding to the cart`}
           </Typography>
         </Box>
         <Button
@@ -168,14 +172,21 @@ export const VariantEditor = ({ rows, onChange, disabled }: Props) => {
         >
           <Stack spacing={2}>
             <Stack direction="row" alignItems="center" justifyContent="space-between">
-              <Typography variant="subtitle2">
-                Option {index + 1}
-                {row.isDefault && (
-                  <Typography component="span" variant="caption" sx={{ ml: 1, color: 'primary.main' }}>
-                    · shown first
+              <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">
+                <Typography variant="subtitle2">
+                  {row.label.trim() || `Option ${index + 1}`}
+                </Typography>
+                {row.standard.trim() && (
+                  <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                    ₹{row.standard}
+                    {row.mrp.trim() ? ` · MRP ₹${row.mrp}` : ''} · stock {row.quantity || 0}
                   </Typography>
                 )}
-              </Typography>
+                {row.isDefault && (
+                  <Chip size="small" variant="soft" color="primary" label="Shown first" />
+                )}
+                {!row.active && <Chip size="small" variant="soft" label="Not for sale" />}
+              </Stack>
               <IconButton
                 size="small"
                 color="error"
@@ -190,6 +201,7 @@ export const VariantEditor = ({ rows, onChange, disabled }: Props) => {
               sx={{
                 display: 'grid',
                 gap: 2,
+                alignItems: 'start',
                 gridTemplateColumns: { xs: '1fr', sm: 'repeat(4, 1fr)' },
               }}
             >
@@ -233,6 +245,7 @@ export const VariantEditor = ({ rows, onChange, disabled }: Props) => {
               sx={{
                 display: 'grid',
                 gap: 2,
+                alignItems: 'start',
                 gridTemplateColumns: { xs: '1fr', sm: 'repeat(4, 1fr)' },
               }}
             >
@@ -285,6 +298,7 @@ export const VariantEditor = ({ rows, onChange, disabled }: Props) => {
               sx={{
                 display: 'grid',
                 gap: 2,
+                alignItems: 'start',
                 gridTemplateColumns: { xs: '1fr', sm: 'repeat(4, 1fr)' },
               }}
             >

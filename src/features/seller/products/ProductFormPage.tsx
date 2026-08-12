@@ -388,6 +388,9 @@ export const SellerProductFormPage = () => {
   if (isEdit && isLoading) return <Skeleton className="h-96 w-full" />;
 
   const saving = create.isPending || update.isPending;
+  // Once a product has options, every price and stock figure lives on the
+  // option, so the product-level fields would be dead inputs.
+  const hasOptions = variantRows.length > 0;
 
   return (
     <Stack spacing={3} sx={{ width: '100%' }}>
@@ -452,7 +455,7 @@ export const SellerProductFormPage = () => {
                 InputLabelProps={{ shrink: true }}
                 inputProps={{ maxLength: 5000 }}
               />
-              <Box sx={{ display: 'grid', gap: 2.5, alignItems: 'end', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' } }}>
+              <Box sx={{ display: 'grid', gap: 2.5, alignItems: 'start', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' } }}>
                 <div>
                   <TextField
                     fullWidth
@@ -505,7 +508,7 @@ export const SellerProductFormPage = () => {
                 />
                 <p className="text-xs text-muted-foreground">Helps buyers find this product in search.</p>
               </Field>
-              <Box sx={{ display: 'grid', gap: 2.5, alignItems: 'end', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' } }}>
+              <Box sx={{ display: 'grid', gap: 2.5, alignItems: 'start', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' } }}>
                 <CheckboxCard
                   label="Women entrepreneur"
                   hint="Show a badge highlighting a women-led business."
@@ -542,111 +545,122 @@ export const SellerProductFormPage = () => {
           {/* ── Step 2: Pricing & availability ── */}
           {step === 1 && (
             <>
-              <p className="text-sm text-muted-foreground">
-                Set at least one price tier. Premium is hidden from public buyers; only verified
-                premium accounts see it.
-              </p>
-              <Box sx={{ display: 'grid', gap: 2.5, alignItems: 'end', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' } }}>
-                <TextField
-                  fullWidth
-                  type="number"
-                  label={`Standard ₹ / ${form.unit || 'unit'}`}
-                  value={form.standard}
-                  onChange={(e) => set('standard', e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                  inputProps={{ min: 0, step: '0.5' }}
-                />
-                <TextField
-                  fullWidth
-                  type="number"
-                  label={`Organic ₹ / ${form.unit || 'unit'}`}
-                  value={form.organic}
-                  onChange={(e) => set('organic', e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                  inputProps={{ min: 0, step: '0.5' }}
-                />
-                <TextField
-                  fullWidth
-                  type="number"
-                  label={`Premium ₹ / ${form.unit || 'unit'}`}
-                  value={form.premium}
-                  onChange={(e) => set('premium', e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                  inputProps={{ min: 0, step: '0.5' }}
-                />
-              </Box>
+              {hasOptions ? (
+                <Alert severity="info">
+                  This product is sold in options, so pricing and stock are set per option below.
+                  The product-level fields are not used.
+                </Alert>
+              ) : (
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                  Set at least one price tier. Premium is hidden from public buyers; only verified
+                  premium accounts see it.
+                </Typography>
+              )}
+              {!hasOptions && (
+                <>
+                <Box sx={{ display: 'grid', gap: 2.5, alignItems: 'start', gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' } }}>
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label={`Standard ₹ / ${form.unit || 'unit'}`}
+                    value={form.standard}
+                    onChange={(e) => set('standard', e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ min: 0, step: '0.5' }}
+                  />
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label={`Organic ₹ / ${form.unit || 'unit'}`}
+                    value={form.organic}
+                    onChange={(e) => set('organic', e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ min: 0, step: '0.5' }}
+                  />
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label={`Premium ₹ / ${form.unit || 'unit'}`}
+                    value={form.premium}
+                    onChange={(e) => set('premium', e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ min: 0, step: '0.5' }}
+                  />
+                </Box>
 
-              <Box sx={{ display: 'grid', gap: 2.5, alignItems: 'end', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' } }}>
-                <TextField
-                  fullWidth
-                  type="number"
-                  label="On-hand quantity"
-                  value={form.quantity}
-                  onChange={(e) => set('quantity', e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                  inputProps={{ min: 0 }}
-                />
-                <TextField
-                  fullWidth
-                  type="number"
-                  label="Low-stock threshold"
-                  value={form.threshold}
-                  onChange={(e) => set('threshold', e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                  inputProps={{ min: 0 }}
-                  helperText="You and your Category Admin get an alert when stock drops here."
-                />
-                <TextField
-                  fullWidth
-                  type="number"
-                  label="Minimum order quantity"
-                  value={form.minOrderQty}
-                  onChange={(e) => set('minOrderQty', e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                  inputProps={{ min: 1 }}
-                />
-                <TextField
-                  fullWidth
-                  type="number"
-                  label="Maximum order quantity (per order)"
-                  value={form.maxOrderQty}
-                  onChange={(e) => set('maxOrderQty', e.target.value)}
-                  placeholder="Leave blank for no cap"
-                  InputLabelProps={{ shrink: true }}
-                  inputProps={{ min: 1 }}
-                />
-              </Box>
-              {form.minOrderQty &&
-                form.maxOrderQty &&
-                Number(form.maxOrderQty) < Number(form.minOrderQty) && (
-                  <Alert severity="error">
-                    Maximum order quantity must be greater than or equal to the minimum.
-                  </Alert>
-                )}
+                <Box sx={{ display: 'grid', gap: 2.5, alignItems: 'start', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' } }}>
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="On-hand quantity"
+                    value={form.quantity}
+                    onChange={(e) => set('quantity', e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ min: 0 }}
+                  />
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Low-stock threshold"
+                    value={form.threshold}
+                    onChange={(e) => set('threshold', e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ min: 0 }}
+                    helperText="You and your Category Admin get an alert when stock drops here."
+                  />
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Minimum order quantity"
+                    value={form.minOrderQty}
+                    onChange={(e) => set('minOrderQty', e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ min: 1 }}
+                  />
+                  <TextField
+                    fullWidth
+                    type="number"
+                    label="Maximum order quantity (per order)"
+                    value={form.maxOrderQty}
+                    onChange={(e) => set('maxOrderQty', e.target.value)}
+                    placeholder="Leave blank for no cap"
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ min: 1 }}
+                  />
+                </Box>
+                {form.minOrderQty &&
+                  form.maxOrderQty &&
+                  Number(form.maxOrderQty) < Number(form.minOrderQty) && (
+                    <Alert severity="error">
+                      Maximum order quantity must be greater than or equal to the minimum.
+                    </Alert>
+                  )}
 
-              <Box sx={{ display: 'grid', gap: 2.5, alignItems: 'end', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' } }}>
-                <CheckboxCard
-                  label="Cash on Delivery available"
-                  hint="Buyers can pay cash for this item. If off, COD is blocked at checkout when this item is in the cart."
-                  checked={form.codAvailable}
-                  onChange={(v) => set('codAvailable', v)}
+                <Box sx={{ display: 'grid', gap: 2.5, alignItems: 'start', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' } }}>
+                  <CheckboxCard
+                    label="Cash on Delivery available"
+                    hint="Buyers can pay cash for this item. If off, COD is blocked at checkout when this item is in the cart."
+                    checked={form.codAvailable}
+                    onChange={(v) => set('codAvailable', v)}
+                  />
+                  <CheckboxCard
+                    label="Returns eligible"
+                    hint="This product can be returned within the platform return window."
+                    checked={form.returnEligible}
+                    onChange={(v) => set('returnEligible', v)}
+                  />
+                </Box>
+                <TextField
+                  fullWidth
+                  label="HSN code (tax)"
+                  value={form.hsnCode}
+                  onChange={(e) => set('hsnCode', e.target.value)}
+                  placeholder="Optional — for GST invoicing"
+                  InputLabelProps={{ shrink: true }}
+                  inputProps={{ maxLength: 20 }}
                 />
-                <CheckboxCard
-                  label="Returns eligible"
-                  hint="This product can be returned within the platform return window."
-                  checked={form.returnEligible}
-                  onChange={(v) => set('returnEligible', v)}
-                />
-              </Box>
-              <TextField
-                fullWidth
-                label="HSN code (tax)"
-                value={form.hsnCode}
-                onChange={(e) => set('hsnCode', e.target.value)}
-                placeholder="Optional — for GST invoicing"
-                InputLabelProps={{ shrink: true }}
-                inputProps={{ maxLength: 20 }}
-              />
+                </>
+              )}
 
               <hr className="border-border" />
 
@@ -704,7 +718,7 @@ export const SellerProductFormPage = () => {
               <p className="text-sm text-muted-foreground">
                 Optional details that help buyers and shipping. Useful for fresh / perishable goods.
               </p>
-              <Box sx={{ display: 'grid', gap: 2.5, alignItems: 'end', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' } }}>
+              <Box sx={{ display: 'grid', gap: 2.5, alignItems: 'start', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' } }}>
                 <DateField
                   fullWidth
                   label="Harvest / packed date"
