@@ -26,6 +26,10 @@ export interface AttentionItem {
 type Props = {
   items: AttentionItem[];
   loading?: boolean;
+  title?: string;
+  subheader?: string;
+  /** Tiles per row on a wide screen. */
+  columns?: 2 | 3 | 4;
 };
 
 /**
@@ -33,20 +37,27 @@ type Props = {
  * something waiting wears a warning label, so a full column of zeroes reads
  * as "nothing to do" at a glance.
  */
-export function NeedsAttentionCard({ items, loading }: Props) {
+export function NeedsAttentionCard({
+  items,
+  loading,
+  title = 'Needs attention',
+  subheader = 'Direct links into filtered work queues — the number is the live count.',
+  columns = 3,
+}: Props) {
   return (
     <Card>
-      <CardHeader
-        title="Needs attention"
-        subheader="Direct links into filtered work queues — the number is the live count."
-      />
+      <CardHeader title={title} subheader={subheader} />
 
       <Box
         sx={{
           p: 3,
           gap: 2,
           display: 'grid',
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' },
+          gridTemplateColumns: {
+            xs: '1fr',
+            sm: 'repeat(2, 1fr)',
+            lg: `repeat(${columns}, 1fr)`,
+          },
         }}
       >
         {items.map((item) => (

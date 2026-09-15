@@ -1,35 +1,29 @@
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  AlertCircle,
-  ArrowRight,
-  Box as BoxIcon,
-  FolderTree,
-  ImageOff,
-  MessageSquareText,
-  Package,
-  RefreshCw,
-  Star,
-  TrendingDown,
-} from 'lucide-react';
+
+import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
+import Chip from '@mui/material/Chip';
+import Grid from '@mui/material/Unstable_Grid2';
 import Stack from '@mui/material/Stack';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/Card';
+import Button from '@mui/material/Button';
+import CardHeader from '@mui/material/CardHeader';
+import CardContent from '@mui/material/CardContent';
+
+import { useAuth } from '@/lib/auth';
+import { Iconify } from '@/components/iconify';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Skeleton } from '@/components/ui/Skeleton';
+
 import { useCategoriesList } from '@/features/categories/api';
 import { useProductsList } from '@/features/products/api';
 import { useReviewsList } from '@/features/reviews/api';
 import { ScopedAdminBanner } from '@/features/scoped-admin/ScopedAdminBanner';
-import { useAuth } from '@/lib/auth';
+import { AnalyticsWidget } from '@/features/dashboard/AnalyticsWidget';
+import { NeedsAttentionCard, type AttentionItem } from '@/features/dashboard/NeedsAttentionCard';
+
 import type { SafeCategory } from '@/features/categories/types';
+
+// ----------------------------------------------------------------------
 
 const PAGE_SIZE = 200;
 
@@ -62,9 +56,8 @@ export const CategoryAdminDashboard = () => {
   }, [cats.data, myCategoryId]);
   const myCategory = myBranch[0];
 
-  // Pull a wide slice of products in my (single) primary category — backend
-  // returns my-branch only thanks to the P2 category-admin scoping, plus the
-  // explicit `category=` filter pins it tighter.
+  // A wide slice of products in my category — the backend already scopes a
+  // category admin to their own branch; `category=` pins it tighter.
   const pendingProducts = useProductsList({
     status: 'PENDING',
     category: myCategoryId,
@@ -96,293 +89,231 @@ export const CategoryAdminDashboard = () => {
   const lowStockCount = liveItems.filter((p) => p.stock.quantity <= p.stock.threshold).length;
   const outOfStockCount = liveItems.filter((p) => p.stock.quantity === 0).length;
   const noImagesCount = liveItems.filter((p) => p.images.length === 0).length;
-  const shortDescriptionCount = liveItems.filter((p) => (p.description ?? '').trim().length < 20)
-    .length;
+  const shortDescriptionCount = liveItems.filter(
+    (p) => (p.description ?? '').trim().length < 20,
+  ).length;
+
+  const loading = liveProducts.isLoading;
+  const reviewsPath = `/admin/reviews?status=pending${
+    myCategoryId ? `&categoryId=${myCategoryId}` : ''
+  }`;
+
+  const queue: AttentionItem[] = [
+    {
+      key: 'pending',
+      icon: 'solar:box-bold',
+      label: 'Pending approval',
+      count: pendingProducts.data?.meta.total,
+      onClick: () => navigate('/admin/products?status=PENDING'),
+    },
+    {
+      key: 'rejected',
+      icon: 'solar:danger-triangle-bold',
+      label: 'Rejected recently',
+      count: rejectedProducts.data?.meta.total,
+      hint: 'Follow up with the seller',
+      onClick: () => navigate('/admin/products?status=REJECTED'),
+    },
+    {
+      key: 'reviews',
+      icon: 'solar:star-bold',
+      label: 'Reviews to moderate',
+      count: reviews.data?.meta.total,
+      onClick: () => navigate(reviewsPath),
+    },
+  ];
+
+  const quality: AttentionItem[] = [
+    {
+      key: 'low-stock',
+      icon: 'solar:graph-down-bold',
+      label: 'Low stock',
+      count: loading ? undefined : lowStockCount,
+      hint: 'Stock at or below threshold',
+      onClick: () => navigate('/admin/stock-monitor?stockState=low'),
+    },
+    {
+      key: 'out-of-stock',
+      icon: 'solar:box-minimalistic-bold',
+      label: 'Out of stock',
+      count: loading ? undefined : outOfStockCount,
+      hint: 'Sellers should restock',
+      onClick: () => navigate('/admin/stock-monitor?stockState=out'),
+    },
+    {
+      key: 'no-images',
+      icon: 'solar:gallery-remove-bold',
+      label: 'Without images',
+      count: loading ? undefined : noImagesCount,
+      hint: 'Hurts conversion',
+      onClick: () => navigate('/admin/products?status=LIVE'),
+    },
+    {
+      key: 'short-description',
+      icon: 'solar:document-text-bold',
+      label: 'Thin description',
+      count: loading ? undefined : shortDescriptionCount,
+      hint: 'Under 20 characters',
+      onClick: () => navigate('/admin/products?status=LIVE'),
+    },
+  ];
+
+  const quickLinks: AttentionItem[] = [
+    {
+      key: 'products',
+      icon: 'solar:box-bold',
+      label: 'My products',
+      hint: 'Approval queue',
+      onClick: () => navigate('/admin/products'),
+    },
+    {
+      key: 'categories',
+      icon: 'solar:folder-with-files-bold',
+      label: 'My categories',
+      hint: 'Tree and sub-categories',
+      onClick: () => navigate('/admin/categories'),
+    },
+    {
+      key: 'reviews-all',
+      icon: 'solar:star-bold',
+      label: 'My reviews',
+      hint: 'Moderation queue',
+      onClick: () =>
+        navigate(`/admin/reviews${myCategoryId ? `?categoryId=${myCategoryId}` : ''}`),
+    },
+    {
+      key: 'commission',
+      icon: 'solar:tag-price-bold',
+      label: 'Commission rules',
+      hint: 'Read-only',
+      onClick: () => navigate('/admin/commission'),
+    },
+    {
+      key: 'users',
+      icon: 'solar:users-group-rounded-bold',
+      label: 'Users',
+      hint: 'Team directory',
+      onClick: () => navigate('/admin/users'),
+    },
+  ];
 
   return (
-    <Stack spacing={3}>
+    <>
       <PageHeader
-        title={`Hi, ${user?.name.split(' ')[0] ?? 'Admin'}`}
-        description="Catalog quality cockpit. Approve pending listings, watch for low stock, and keep your category's product info clean."
+        title={`Hi, ${user?.name.split(' ')[0] ?? 'Admin'} 👋`}
+        description="Your catalogue at a glance — approve what is waiting, and keep listings clean."
         action={
           <Button
-            variant="outline"
-            size="sm"
+            variant="outlined"
             onClick={() => {
               pendingProducts.refetch();
               liveProducts.refetch();
               reviews.refetch();
             }}
+            startIcon={<Iconify icon="solar:refresh-bold" />}
           >
-            <RefreshCw className="h-4 w-4" />
             Refresh
           </Button>
         }
       />
 
-      <ScopedAdminBanner />
+      <Box sx={{ mt: 3 }}>
+        <ScopedAdminBanner />
+      </Box>
 
-      {myCategoryId && myCategory && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base">
-              <FolderTree className="h-4 w-4" />
-              Your branch
-            </CardTitle>
-            <CardDescription>
-              {myBranch.length === 1
-                ? 'No sub-categories yet — create them from the Categories page.'
-                : `${myBranch.length - 1} sub-categories under ${myCategory.name}.`}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-1.5">
-              {myBranch.map((c) => (
-                <Badge key={c.id} variant={c.id === myCategoryId ? 'info' : 'muted'}>
-                  {c.name}
-                </Badge>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <Grid container spacing={3} sx={{ mt: 0 }}>
+        <Grid xs={12} sm={6} md={3}>
+          <AnalyticsWidget
+            title="Pending my approval"
+            total={pendingProducts.isLoading ? null : (pendingProducts.data?.meta.total ?? 0)}
+            color="warning"
+            icon={<Iconify width={48} icon="solar:clock-circle-bold-duotone" />}
+          />
+        </Grid>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Metric
-          label="Pending my approval"
-          value={pendingProducts.isLoading ? null : pendingProducts.data?.meta.total ?? 0}
-          icon={Package}
-          tone="warning"
-        />
-        <Metric
-          label="Live products"
-          value={liveProducts.isLoading ? null : liveProducts.data?.meta.total ?? 0}
-          icon={BoxIcon}
-          tone="success"
-        />
-        <Metric
-          label="Low stock"
-          value={liveProducts.isLoading ? null : lowStockCount}
-          icon={TrendingDown}
-          tone={lowStockCount > 0 ? 'warning' : 'muted'}
-        />
-        <Metric
-          label="Pending reviews"
-          value={reviews.isLoading ? null : reviews.data?.meta.total ?? 0}
-          icon={Star}
-          tone="info"
-        />
-      </div>
+        <Grid xs={12} sm={6} md={3}>
+          <AnalyticsWidget
+            title="Live products"
+            total={liveProducts.isLoading ? null : (liveProducts.data?.meta.total ?? 0)}
+            color="success"
+            icon={<Iconify width={48} icon="solar:box-bold-duotone" />}
+          />
+        </Grid>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Approval queue</CardTitle>
-          <CardDescription>
-            Products in your category awaiting decision. Click in to review and act.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <ActionTile
-            icon={Package}
-            label="Pending approval"
-            count={pendingProducts.data?.meta.total}
+        <Grid xs={12} sm={6} md={3}>
+          <AnalyticsWidget
+            title="Low stock"
+            total={loading ? null : lowStockCount}
+            color={lowStockCount > 0 ? 'error' : 'info'}
+            icon={<Iconify width={48} icon="solar:graph-down-bold-duotone" />}
+          />
+        </Grid>
+
+        <Grid xs={12} sm={6} md={3}>
+          <AnalyticsWidget
+            title="Reviews to moderate"
+            total={reviews.isLoading ? null : (reviews.data?.meta.total ?? 0)}
+            color="info"
+            icon={<Iconify width={48} icon="solar:star-bold-duotone" />}
+          />
+        </Grid>
+
+        {myCategoryId && myCategory && (
+          <Grid xs={12}>
+            <Card>
+              <CardHeader
+                title="Your branch"
+                subheader={
+                  myBranch.length === 1
+                    ? 'No sub-categories yet — create them from the Categories page.'
+                    : `${myBranch.length - 1} sub-categories under ${myCategory.name}.`
+                }
+              />
+              <CardContent>
+                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  {myBranch.map((c) => (
+                    <Chip
+                      key={c.id}
+                      size="small"
+                      variant="soft"
+                      color={c.id === myCategoryId ? 'primary' : 'default'}
+                      label={c.name}
+                      onClick={() => navigate(`/admin/products?category=${c.id}`)}
+                    />
+                  ))}
+                </Stack>
+              </CardContent>
+            </Card>
+          </Grid>
+        )}
+
+        <Grid xs={12}>
+          <NeedsAttentionCard
+            title="Approval queue"
+            subheader="Listings in your category waiting on a decision."
+            items={queue}
             loading={pendingProducts.isLoading}
-            onClick={() => navigate('/admin/products?status=PENDING')}
           />
-          <ActionTile
-            icon={AlertCircle}
-            label="Rejected (recent)"
-            count={rejectedProducts.data?.meta.total}
-            loading={rejectedProducts.isLoading}
-            hint="Follow up with sellers"
-            onClick={() => navigate('/admin/products?status=REJECTED')}
-          />
-          <ActionTile
-            icon={Star}
-            label="Reviews to moderate"
-            count={reviews.data?.meta.total}
-            loading={reviews.isLoading}
-            onClick={() => navigate(`/admin/reviews?status=pending${myCategoryId ? `&categoryId=${myCategoryId}` : ''}`)}
-          />
-        </CardContent>
-      </Card>
+        </Grid>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Quality signals</CardTitle>
-          <CardDescription>
-            Lightweight checks across {liveItems.length} live products in your category.
-            Use these to nudge sellers.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <QualityTile
-            icon={TrendingDown}
-            label="Low stock"
-            count={liveProducts.isLoading ? undefined : lowStockCount}
-            description="Stock ≤ threshold"
-            tone={lowStockCount > 0 ? 'warning' : 'muted'}
-            onClick={() => navigate('/admin/products?status=LIVE')}
+        <Grid xs={12}>
+          <NeedsAttentionCard
+            title="Quality signals"
+            subheader={`Lightweight checks across ${liveItems.length} live products — use these to nudge sellers.`}
+            items={quality}
+            loading={loading}
+            columns={4}
           />
-          <QualityTile
-            icon={BoxIcon}
-            label="Out of stock"
-            count={liveProducts.isLoading ? undefined : outOfStockCount}
-            description="Sellers should restock"
-            tone={outOfStockCount > 0 ? 'destructive' : 'muted'}
-            onClick={() => navigate('/admin/products?status=LIVE')}
-          />
-          <QualityTile
-            icon={ImageOff}
-            label="Without images"
-            count={liveProducts.isLoading ? undefined : noImagesCount}
-            description="Visual quality issue"
-            tone={noImagesCount > 0 ? 'warning' : 'muted'}
-            onClick={() => navigate('/admin/products?status=LIVE')}
-          />
-          <QualityTile
-            icon={MessageSquareText}
-            label="Short description"
-            count={liveProducts.isLoading ? undefined : shortDescriptionCount}
-            description="< 20 characters"
-            tone={shortDescriptionCount > 0 ? 'warning' : 'muted'}
-            onClick={() => navigate('/admin/products?status=LIVE')}
-          />
-        </CardContent>
-      </Card>
+        </Grid>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Quick links</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <QuickLink label="My products" hint="Approval queue" onClick={() => navigate('/admin/products')} />
-          <QuickLink label="My categories" hint="Tree + subcategories" onClick={() => navigate('/admin/categories')} />
-          <QuickLink label="My reviews" hint="Moderation queue" onClick={() => navigate(`/admin/reviews${myCategoryId ? `?categoryId=${myCategoryId}` : ''}`)} />
-          <QuickLink label="Commission rules" hint="Read-only" onClick={() => navigate('/admin/commission')} />
-          <QuickLink label="Users" hint="Team directory" onClick={() => navigate('/admin/users')} />
-        </CardContent>
-      </Card>
-    </Stack>
+        <Grid xs={12}>
+          <NeedsAttentionCard
+            title="Quick links"
+            subheader="The pages you open most."
+            items={quickLinks}
+          />
+        </Grid>
+      </Grid>
+    </>
   );
 };
-
-interface MetricProps {
-  label: string;
-  value: number | null;
-  icon: React.ComponentType<{ className?: string }>;
-  tone: 'info' | 'warning' | 'success' | 'muted' | 'destructive';
-}
-
-const toneClasses: Record<MetricProps['tone'], string> = {
-  info: 'text-blue-700',
-  warning: 'text-amber-700',
-  success: 'text-emerald-700',
-  muted: 'text-muted-foreground',
-  destructive: 'text-destructive',
-};
-
-const Metric = ({ label, value, icon: Icon, tone }: MetricProps) => (
-  <Card>
-    <CardHeader className="pb-2">
-      <CardDescription className="flex items-center gap-2">
-        <Icon className="h-3.5 w-3.5" />
-        {label}
-      </CardDescription>
-      {value === null ? (
-        <Skeleton className="h-9 w-20" />
-      ) : (
-        <CardTitle className={`text-3xl ${toneClasses[tone]}`}>{value}</CardTitle>
-      )}
-    </CardHeader>
-  </Card>
-);
-
-const ActionTile = ({
-  icon: Icon,
-  label,
-  count,
-  loading,
-  hint,
-  onClick,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  count: number | undefined;
-  loading: boolean;
-  hint?: string;
-  onClick: () => void;
-}) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className="flex items-center justify-between gap-3 rounded-md border border-border bg-secondary/20 px-3 py-3 text-left transition-colors hover:bg-secondary/40"
-  >
-    <div className="flex min-w-0 items-center gap-3">
-      <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-      <div className="min-w-0">
-        <div className="truncate text-sm font-medium">{label}</div>
-        {hint && <div className="text-xs text-muted-foreground">{hint}</div>}
-      </div>
-    </div>
-    {loading ? (
-      <Skeleton className="h-6 w-8" />
-    ) : count !== undefined ? (
-      <Badge variant={count > 0 ? 'warning' : 'muted'}>{count}</Badge>
-    ) : (
-      <ArrowRight className="h-4 w-4 text-muted-foreground" />
-    )}
-  </button>
-);
-
-const QualityTile = ({
-  icon: Icon,
-  label,
-  count,
-  description,
-  tone,
-  onClick,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  count: number | undefined;
-  description: string;
-  tone: 'info' | 'warning' | 'success' | 'muted' | 'destructive';
-  onClick: () => void;
-}) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className="rounded-md border border-border bg-secondary/20 p-3 text-left transition-colors hover:bg-secondary/40"
-  >
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-2 text-sm">
-        <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-        {label}
-      </div>
-      {count === undefined ? (
-        <Skeleton className="h-5 w-8" />
-      ) : (
-        <Badge variant={count > 0 && tone !== 'muted' ? 'warning' : 'muted'}>{count}</Badge>
-      )}
-    </div>
-    <p className={`mt-2 text-2xl font-semibold ${toneClasses[tone]}`}>
-      {count === undefined ? '—' : count}
-    </p>
-    <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
-  </button>
-);
-
-const QuickLink = ({ label, hint, onClick }: { label: string; hint: string; onClick: () => void }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className="flex items-center justify-between gap-3 rounded-md border border-border bg-secondary/20 px-3 py-3 text-left transition-colors hover:bg-secondary/40"
-  >
-    <div>
-      <div className="text-sm font-medium">{label}</div>
-      <div className="text-xs text-muted-foreground">{hint}</div>
-    </div>
-    <ArrowRight className="h-4 w-4 text-muted-foreground" />
-  </button>
-);
