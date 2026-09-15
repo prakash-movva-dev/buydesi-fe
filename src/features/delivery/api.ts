@@ -1,6 +1,30 @@
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
+
 import { api } from '@/lib/api';
-import type { DeliveryQuote, DeliveryQuoteInput, TrackingResult } from './types';
+
+import type {
+  CreatedShipment,
+  DeliveryProviderStatus,
+  DeliveryQuote,
+  DeliveryQuoteInput,
+  PincodeServiceability,
+  TrackingResult,
+} from './types';
+
+export const deliveryKeys = {
+  provider: ['delivery', 'provider'] as const,
+};
+
+/**
+ * What is wired up right now. Cached for the session — the answer only changes
+ * when someone edits settings or redeploys.
+ */
+export const useProviderStatus = () =>
+  useQuery({
+    queryKey: deliveryKeys.provider,
+    queryFn: () => api.get<DeliveryProviderStatus>('/delivery/provider'),
+    staleTime: 5 * 60 * 1000,
+  });
 
 export const useTrackShipment = () =>
   useMutation({
@@ -17,16 +41,22 @@ export const useQuoteRate = () =>
         weightGrams: String(input.weightGrams),
         paymentMode: input.paymentMode,
         declaredValueInr: String(input.declaredValueInr),
+        serviceMode: input.serviceMode,
       });
       return api.get<DeliveryQuote>(`/delivery/rates?${params.toString()}`);
     },
   });
 
+export const useCheckPincode = () =>
+  useMutation({
+    mutationFn: (pincode: string) =>
+      api.get<PincodeServiceability>(
+        `/delivery/serviceability/${encodeURIComponent(pincode)}`,
+      ),
+  });
+
 export const useCreateShipment = () =>
   useMutation({
     mutationFn: (orderId: string) =>
-      api.post<{ shipmentId: string; trackingUrl: string | null; status: string }>(
-        '/delivery/create-shipment',
-        { orderId },
-      ),
+      api.post<CreatedShipment>('/delivery/create-shipment', { orderId }),
   });
