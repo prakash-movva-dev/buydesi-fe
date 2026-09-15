@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchEnvelope, api } from '@/lib/api';
-import type { Payout, PayoutsListMeta, PayoutsListQuery } from './types';
+import type { Payout, PayoutsListMeta, PayoutsListQuery, RunBatchResult } from './types';
 
 export const payoutKeys = {
   all: ['payouts'] as const,
@@ -17,6 +17,7 @@ const fetchList = async (q: PayoutsListQuery): Promise<ListResult> => {
   if (q.status) params.set('status', q.status);
   if (q.schedule) params.set('schedule', q.schedule);
   if (q.sellerId) params.set('sellerId', q.sellerId);
+  if (q.sort) params.set('sort', q.sort);
   params.set('page', String(q.page));
   params.set('limit', String(q.limit));
   const { data, meta } = await fetchEnvelope<Payout[]>(`/admin/payouts?${params.toString()}`);
@@ -33,13 +34,6 @@ const fetchList = async (q: PayoutsListQuery): Promise<ListResult> => {
 
 export const usePayoutsList = (q: PayoutsListQuery) =>
   useQuery({ queryKey: payoutKeys.list(q), queryFn: () => fetchList(q) });
-
-interface RunBatchResult {
-  schedule: 'daily' | 'weekly';
-  asOf: string;
-  payoutCount: number;
-  totalNetInr: number;
-}
 
 export const useRunPayoutBatch = () => {
   const qc = useQueryClient();

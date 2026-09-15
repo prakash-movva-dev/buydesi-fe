@@ -40,10 +40,13 @@ export interface Payout {
   updatedAt: string;
 }
 
+export type PayoutsSort = 'newest' | 'oldest' | 'net_desc' | 'net_asc';
+
 export interface PayoutsListQuery {
   status?: PayoutStatus;
   schedule?: PayoutSchedule;
   sellerId?: string;
+  sort?: PayoutsSort;
   page: number;
   limit: number;
 }
@@ -52,4 +55,25 @@ export interface PayoutsListMeta {
   total: number;
   page: number;
   limit: number;
+  /**
+   * Payouts per schedule for the current filter, ignoring the schedule filter —
+   * what the tabs show. `all` is the sum.
+   */
+  counts?: Record<string, number>;
+  /**
+   * Payouts per status, ignoring the status filter. Only statuses that actually
+   * occur appear here: batches settle immediately, so the approval states in the
+   * enum are never written and must not be offered as filters that can only
+   * return nothing.
+   */
+  statusCounts?: Record<string, number>;
+}
+
+export interface RunBatchResult {
+  schedule: PayoutSchedule;
+  asOf: string;
+  payoutsCreated: number;
+  totalNetInr: number;
+  skippedSellers: number;
+  payoutIds: string[];
 }

@@ -1,393 +1,320 @@
-import { Fragment, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ChevronDown, ChevronUp, Play } from 'lucide-react';
-import Alert from '@mui/material/Alert';
+
 import Box from '@mui/material/Box';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
 import Card from '@mui/material/Card';
-import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
-import MenuItem from '@mui/material/MenuItem';
+import Alert from '@mui/material/Alert';
+import Button from '@mui/material/Button';
 import TableRow from '@mui/material/TableRow';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
-import TextField from '@mui/material/TextField';
-import { UserPicker } from '@/components/pickers/UserPicker';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { DateTimeField } from '@/components/ui/DateTimeField';
-import {
-  Card as UiCard,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/Card';
-import { Dialog } from '@/components/ui/Dialog';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { Skeleton } from '@/components/ui/Skeleton';
-import { Scrollbar } from '@/components/scrollbar';
-import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
-import { ScopedAdminBanner } from '@/features/scoped-admin/ScopedAdminBanner';
+
+import { varAlpha } from '@/theme/styles';
+
 import { useAuth } from '@/lib/auth';
-import { formatDateTime, formatInr } from '@/lib/format';
-import { ApiError, UserRole } from '@/types/api';
-import { usePayoutsList, useRunPayoutBatch } from './api';
-import type {
-  PayoutSchedule,
-  PayoutStatus,
-  PayoutsListQuery,
-} from './types';
+import { UserRole } from '@/types/api';
+import { Label } from '@/components/label';
+import { Iconify } from '@/components/iconify';
+import { Scrollbar } from '@/components/scrollbar';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { EmptyContent } from '@/components/empty-content';
+import {
+  useTable,
+  emptyRows,
+  TableSkeleton,
+  TableEmptyRows,
+  TableHeadCustom,
+  TablePaginationCustom,
+} from '@/components/table';
 
-const STATUS_OPTIONS: Array<{ value: '' | PayoutStatus; label: string }> = [
-  { value: '', label: 'All statuses' },
-  { value: 'PENDING', label: 'Pending' },
-  { value: 'APPROVED', label: 'Approved' },
-  { value: 'PAID', label: 'Paid' },
-  { value: 'FAILED', label: 'Failed' },
-  { value: 'CANCELLED', label: 'Cancelled' },
+import { useUsersList } from '@/features/users/api';
+import { ScopedAdminBanner } from '@/features/scoped-admin/ScopedAdminBanner';
+
+import { usePayoutsList } from './api';
+import { SCHEDULE_LABEL } from './status-badge';
+import { RunBatchDialog } from './RunBatchDialog';
+import { PayoutTableRow } from './payout-table-row';
+import { PayoutTableToolbar, type PayoutFilters } from './payout-table-toolbar';
+import { PayoutTableFiltersResult } from './payout-table-filters-result';
+import type { PayoutSchedule, PayoutsListQuery, PayoutsSort, PayoutStatus } from './types';
+
+// ----------------------------------------------------------------------
+
+/**
+ * Schedule, not status, is the dimension worth tabbing: a batch settles the
+ * moment it is created, so every payout is PAID and status tabs would all show
+ * the same rows.
+ */
+const SCHEDULE_TABS: Array<{ value: '' | PayoutSchedule; label: string }> = [
+  { value: '', label: 'All' },
+  { value: 'daily', label: SCHEDULE_LABEL.daily },
+  { value: 'weekly', label: SCHEDULE_LABEL.weekly },
+  { value: 'on_demand', label: SCHEDULE_LABEL.on_demand },
 ];
 
-const SCHEDULE_OPTIONS: Array<{ value: '' | PayoutSchedule; label: string }> = [
-  { value: '', label: 'Any schedule' },
-  { value: 'daily', label: 'Daily' },
-  { value: 'weekly', label: 'Weekly' },
-  { value: 'on_demand', label: 'On demand' },
+const TABLE_HEAD = [
+  { id: 'expand', label: '', width: 56 },
+  { id: 'seller', label: 'Seller' },
+  { id: 'schedule', label: 'Schedule', width: 130 },
+  { id: 'gross', label: 'Gross', align: 'right' as const, width: 120 },
+  { id: 'commission', label: 'Commission', align: 'right' as const, width: 130 },
+  { id: 'fees', label: 'Platform fee', align: 'right' as const, width: 130 },
+  { id: 'net', label: 'Net paid', align: 'right' as const, width: 130 },
+  { id: 'orders', label: 'Orders', align: 'right' as const, width: 100 },
+  { id: 'settled', label: 'Settled', width: 150 },
+  { id: 'status', label: 'Status', width: 110 },
 ];
 
-const statusVariant: Record<PayoutStatus, 'warning' | 'info' | 'success' | 'destructive' | 'muted'> = {
-  PENDING: 'warning',
-  APPROVED: 'info',
-  PAID: 'success',
-  FAILED: 'destructive',
-  CANCELLED: 'muted',
+/** Only these columns can be ordered by the API. */
+const SORTABLE = new Set(['net', 'settled']);
+
+const toSortParam = (orderBy: string, order: 'asc' | 'desc'): PayoutsSort => {
+  if (orderBy === 'net') return order === 'asc' ? 'net_asc' : 'net_desc';
+  return order === 'asc' ? 'oldest' : 'newest';
 };
 
-const PAGE_SIZE = 25;
+const fromSortParam = (sort: string | null): { orderBy: string; order: 'asc' | 'desc' } => {
+  if (sort === 'oldest') return { orderBy: 'settled', order: 'asc' };
+  if (sort === 'net_asc') return { orderBy: 'net', order: 'asc' };
+  if (sort === 'net_desc') return { orderBy: 'net', order: 'desc' };
+  return { orderBy: 'settled', order: 'desc' };
+};
 
-const HEAD = [
-  { id: 'expand', label: '' },
-  { id: 'seller', label: 'Seller' },
-  { id: 'schedule', label: 'Schedule' },
-  { id: 'status', label: 'Status' },
-  { id: 'gross', label: 'Gross', align: 'right' as const },
-  { id: 'commission', label: 'Commission', align: 'right' as const },
-  { id: 'net', label: 'Net', align: 'right' as const },
-  { id: 'orders', label: 'Orders', align: 'right' as const },
-  { id: 'created', label: 'Created' },
-  { id: 'paid', label: 'Paid' },
-];
+const DEFAULT_LIMIT = 10;
 
-const LINE_ITEM_HEAD = [
-  { id: 'product', label: 'Product' },
-  { id: 'order', label: 'Order' },
-  { id: 'gross', label: 'Gross', align: 'right' as const },
-  { id: 'rate', label: 'Rate %', align: 'right' as const },
-  { id: 'source', label: 'Source' },
-  { id: 'commission', label: 'Commission', align: 'right' as const },
-  { id: 'net', label: 'Net', align: 'right' as const },
-];
+// ----------------------------------------------------------------------
 
+/**
+ * Seller settlements: what the platform paid out, and how each figure was
+ * reached.
+ *
+ * A payout credits the seller's wallet — the bank transfer happens later, when
+ * they withdraw — so this page answers "what has this seller earned", not "what
+ * has left our account". Filters, sort and page live in the URL and are answered
+ * by the API.
+ */
 export const PayoutsPage = () => {
   const { user } = useAuth();
+
   const [searchParams, setSearchParams] = useSearchParams();
-  const status = (searchParams.get('status') as PayoutStatus | null) ?? '';
+
+  const table = useTable({ defaultRowsPerPage: DEFAULT_LIMIT });
+
+  const [batchOpen, setBatchOpen] = useState(false);
+
   const schedule = (searchParams.get('schedule') as PayoutSchedule | null) ?? '';
-  const sellerId = searchParams.get('sellerId') ?? '';
+  const filters: PayoutFilters = {
+    status: (searchParams.get('status') as PayoutStatus | null) ?? '',
+    sellerId: searchParams.get('sellerId') ?? '',
+  };
   const page = Math.max(1, Number(searchParams.get('page') ?? 1));
+  const limit = Math.max(1, Number(searchParams.get('limit') ?? DEFAULT_LIMIT));
+  const { orderBy, order } = fromSortParam(searchParams.get('sort'));
+
+  const setParams = useCallback(
+    (next: Record<string, string | null>) => {
+      const params = new URLSearchParams(searchParams);
+      for (const [key, value] of Object.entries(next)) {
+        if (value === null || value === '') params.delete(key);
+        else params.set(key, value);
+      }
+      if (!('page' in next)) params.delete('page');
+      setSearchParams(params, { replace: true });
+    },
+    [searchParams, setSearchParams],
+  );
 
   const query = useMemo<PayoutsListQuery>(
     () => ({
-      status: status || undefined,
       schedule: schedule || undefined,
-      sellerId: sellerId || undefined,
+      status: filters.status || undefined,
+      sellerId: filters.sellerId || undefined,
+      sort: toSortParam(orderBy, order),
       page,
-      limit: PAGE_SIZE,
+      limit,
     }),
-    [status, schedule, sellerId, page],
+    [schedule, filters.status, filters.sellerId, orderBy, order, page, limit],
   );
 
   const { data, isLoading, isError, error } = usePayoutsList(query);
+
+  // Names the seller chip, so a filtered view never shows a raw id.
+  const { data: sellers } = useUsersList({ role: UserRole.SELLER, page: 1, limit: 100 });
+  const sellerName = useMemo(
+    () => new Map((sellers?.items ?? []).map((s) => [s.id, s.name])),
+    [sellers],
+  );
+
+  const rows = data?.items ?? [];
   const total = data?.meta.total ?? 0;
+  // Per-schedule totals for the whole filter, so every tab carries its number
+  // rather than only the one being viewed.
+  const counts = data?.meta.counts;
 
-  const setParam = (next: Record<string, string | null>) => {
-    const params = new URLSearchParams(searchParams);
-    for (const [k, v] of Object.entries(next)) {
-      if (v === null || v === '') params.delete(k);
-      else params.set(k, v);
-    }
-    if (!('page' in next)) params.set('page', '1');
-    setSearchParams(params);
-  };
+  const handleFilters = useCallback(
+    (patch: Partial<PayoutFilters>) => {
+      setParams(
+        Object.fromEntries(Object.entries(patch).map(([key, value]) => [key, value ?? null])),
+      );
+    },
+    [setParams],
+  );
 
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const [batchOpen, setBatchOpen] = useState(false);
-  const isSuper = user?.role === UserRole.SUPER_ADMIN;
+  const handleResetFilters = useCallback(() => {
+    setParams({ status: null, sellerId: null });
+  }, [setParams]);
+
+  const handleSort = useCallback(
+    (id: string) => {
+      if (!SORTABLE.has(id)) return;
+      const next = orderBy === id && order === 'desc' ? 'asc' : 'desc';
+      setParams({ sort: toSortParam(id, next) });
+    },
+    [order, orderBy, setParams],
+  );
+
+  const canRunBatch = user?.role === UserRole.SUPER_ADMIN;
+  const canReset = !!filters.status || !!filters.sellerId;
+  const notFound = !isLoading && rows.length === 0;
 
   return (
-    <Stack spacing={3}>
+    <>
       <PageHeader
         title="Payouts"
-        description="Seller payout batches. Daily and weekly batches run automatically (configured via env cron). Trigger an off-cycle batch when needed."
+        description="What each seller has earned on delivered orders, after commission and fees. The nightly and weekly batches settle automatically; the money reaches a bank account when the seller withdraws it."
         action={
-          isSuper ? (
-            <Button onClick={() => setBatchOpen(true)}>
-              <Play className="h-4 w-4" />
+          canRunBatch ? (
+            <Button
+              variant="contained"
+              onClick={() => setBatchOpen(true)}
+              startIcon={<Iconify icon="solar:play-bold" />}
+            >
               Run batch
             </Button>
           ) : undefined
         }
       />
 
-      <ScopedAdminBanner />
+      <Box sx={{ mt: 3 }}>
+        <ScopedAdminBanner />
+      </Box>
 
-      {isLoading && (
-        <div className="space-y-2">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-12 w-full" />
-          ))}
-        </div>
-      )}
       {isError && (
-        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
-          {error instanceof Error ? error.message : 'Failed to load payouts'}
-        </div>
+        <Alert severity="error" sx={{ mt: 3 }}>
+          {error instanceof Error ? error.message : 'Could not load payouts'}
+        </Alert>
       )}
 
-      {!isLoading && !isError && (
-        <Card>
-          <Stack
-            direction="row"
-            spacing={2}
-            flexWrap="wrap"
-            alignItems="center"
-            sx={{ p: 2.5 }}
-          >
-            <TextField
-              select
-              label="Status"
-              value={status}
-              onChange={(e) => setParam({ status: e.target.value })}
-              InputLabelProps={{ shrink: true }}
-              sx={{ width: 200 }}
-            >
-              {STATUS_OPTIONS.map((opt) => (
-                <MenuItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
-              label="Schedule"
-              value={schedule}
-              onChange={(e) => setParam({ schedule: e.target.value })}
-              InputLabelProps={{ shrink: true }}
-              sx={{ width: 200 }}
-            >
-              {SCHEDULE_OPTIONS.map((opt) => (
-                <MenuItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </MenuItem>
-              ))}
-            </TextField>
-            <Box sx={{ width: 288 }}>
-              <UserPicker
-                role={UserRole.SELLER}
-                value={sellerId || null}
-                onChange={(id) => setParam({ sellerId: id ?? '' })}
-                placeholder="Filter by seller…"
-              />
-            </Box>
-          </Stack>
+      <Card sx={{ mt: 3 }}>
+        <Tabs
+          value={schedule}
+          onChange={(_e, value) => setParams({ schedule: value })}
+          sx={{
+            px: 2.5,
+            boxShadow: (theme) =>
+              `inset 0 -2px 0 0 ${varAlpha(theme.vars.palette.grey['500Channel'], 0.08)}`,
+          }}
+        >
+          {SCHEDULE_TABS.map((tab) => (
+            <Tab
+              key={tab.value || 'all'}
+              iconPosition="end"
+              value={tab.value}
+              label={tab.label}
+              icon={
+                <Label
+                  variant={tab.value === schedule ? 'filled' : 'soft'}
+                  color={
+                    (tab.value === 'daily' && 'info') ||
+                    (tab.value === 'weekly' && 'warning') ||
+                    (tab.value === 'on_demand' && 'success') ||
+                    'default'
+                  }
+                >
+                  {counts ? (counts[tab.value || 'all'] ?? 0) : '-'}
+                </Label>
+              }
+            />
+          ))}
+        </Tabs>
 
+        <PayoutTableToolbar
+          filters={filters}
+          statusCounts={data?.meta.statusCounts}
+          onFilters={handleFilters}
+        />
+
+        {canReset && (
+          <PayoutTableFiltersResult
+            filters={filters}
+            sellerName={sellerName.get(filters.sellerId)}
+            totalResults={total}
+            onFilters={handleFilters}
+            onReset={handleResetFilters}
+            sx={{ p: 2.5, pt: 0 }}
+          />
+        )}
+
+        <Box sx={{ position: 'relative' }}>
           <Scrollbar>
-            <Table sx={{ minWidth: 960 }}>
-              <TableHeadCustom headLabel={HEAD} />
+            <Table size={table.dense ? 'small' : 'medium'} sx={{ minWidth: 1200 }}>
+              <TableHeadCustom
+                order={order}
+                orderBy={orderBy}
+                headLabel={TABLE_HEAD}
+                rowCount={rows.length}
+                onSort={handleSort}
+              />
+
               <TableBody>
-                {(data?.items ?? []).map((p) => {
-                  const isExp = expanded[p.id];
-                  return (
-                    <Fragment key={p.id}>
-                      <TableRow
-                        hover
-                        sx={{ cursor: 'pointer' }}
-                        onClick={() => setExpanded((prev) => ({ ...prev, [p.id]: !prev[p.id] }))}
-                      >
-                        <TableCell>
-                          {isExp ? (
-                            <ChevronUp className="h-4 w-4 text-muted-foreground" />
-                          ) : (
-                            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Box sx={{ fontWeight: 600 }}>{p.sellerName ?? '—'}</Box>
-                          {(p.sellerMobile || p.sellerEmail) && (
-                            <Box sx={{ color: 'text.secondary', typography: 'caption' }}>
-                              {p.sellerMobile ?? p.sellerEmail}
-                            </Box>
-                          )}
-                        </TableCell>
-                        <TableCell sx={{ textTransform: 'capitalize' }}>
-                          {p.schedule.replace('_', ' ')}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={statusVariant[p.status]}>{p.status}</Badge>
-                        </TableCell>
-                        <TableCell align="right">{formatInr(p.totalGrossInr)}</TableCell>
-                        <TableCell align="right" sx={{ color: 'text.secondary' }}>
-                          − {formatInr(p.totalCommissionInr)}
-                        </TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 600 }}>
-                          {formatInr(p.netInr)}
-                        </TableCell>
-                        <TableCell align="right">{p.orderCount}</TableCell>
-                        <TableCell sx={{ typography: 'caption' }}>
-                          {formatDateTime(p.createdAt)}
-                        </TableCell>
-                        <TableCell sx={{ typography: 'caption' }}>
-                          {p.paidAt ? formatDateTime(p.paidAt) : '—'}
-                        </TableCell>
-                      </TableRow>
-                      {isExp && (
-                        <TableRow>
-                          <TableCell colSpan={10} sx={{ bgcolor: 'background.neutral' }}>
-                            <PayoutDetail payout={p} />
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </Fragment>
-                  );
-                })}
-                <TableNoData notFound={!isLoading && (data?.items.length ?? 0) === 0} />
+                {isLoading
+                  ? Array.from({ length: Math.min(limit, 5) }).map((_, index) => (
+                      <TableSkeleton key={index} sx={{ height: table.dense ? 56 : 76 }} />
+                    ))
+                  : rows.map((row) => <PayoutTableRow key={row.id} row={row} />)}
+
+                <TableEmptyRows
+                  height={table.dense ? 56 : 76}
+                  emptyRows={emptyRows(page - 1, limit, total)}
+                />
+
+                {notFound && (
+                  <TableRow>
+                    <TableCell colSpan={TABLE_HEAD.length}>
+                      <EmptyContent
+                        filled
+                        sx={{ py: 10 }}
+                        title={canReset || schedule ? 'Nothing matches' : 'No payouts yet'}
+                        description={
+                          canReset || schedule
+                            ? 'Try another schedule tab, or clear the filters.'
+                            : 'Settlements appear once a delivered order passes its return window.'
+                        }
+                      />
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </Scrollbar>
+        </Box>
 
-          <TablePaginationCustom
-            count={total}
-            page={page - 1}
-            rowsPerPage={PAGE_SIZE}
-            rowsPerPageOptions={[10, 25, 50]}
-            onPageChange={(_e, newPage) => setParam({ page: String(newPage + 1) })}
-            onRowsPerPageChange={(e) => setParam({ limit: e.target.value, page: '1' })}
-          />
-        </Card>
-      )}
+        <TablePaginationCustom
+          page={page - 1}
+          dense={table.dense}
+          count={total}
+          rowsPerPage={limit}
+          rowsPerPageOptions={[5, 10, 25, 50]}
+          onPageChange={(_e, next) => setParams({ page: String(next + 1) })}
+          onChangeDense={table.onChangeDense}
+          onRowsPerPageChange={(e) => setParams({ limit: e.target.value, page: '1' })}
+        />
+      </Card>
 
       <RunBatchDialog open={batchOpen} onClose={() => setBatchOpen(false)} />
-    </Stack>
-  );
-};
-
-const PayoutDetail = ({ payout }: { payout: import('./types').Payout }) => (
-  <div className="space-y-4 px-4 py-3">
-    <UiCard>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">Line items</CardTitle>
-        <CardDescription>
-          {payout.lineItems.length} item(s) · platform fee {formatInr(payout.totalPlatformFeesInr)}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="p-0">
-        <Scrollbar>
-          <Table sx={{ minWidth: 800 }}>
-            <TableHeadCustom headLabel={LINE_ITEM_HEAD} />
-            <TableBody>
-              {payout.lineItems.map((li, i) => (
-                <TableRow key={`${li.orderId}-${li.orderItemId}-${i}`} hover>
-                  <TableCell sx={{ fontWeight: 600 }}>{li.productName}</TableCell>
-                  <TableCell sx={{ typography: 'caption' }}>{li.orderNumber ?? '—'}</TableCell>
-                  <TableCell align="right">{formatInr(li.grossInr)}</TableCell>
-                  <TableCell align="right">{li.commissionRatePercent}%</TableCell>
-                  <TableCell>
-                    <Badge variant="muted">{li.commissionSource}</Badge>
-                  </TableCell>
-                  <TableCell align="right" sx={{ color: 'text.secondary' }}>
-                    − {formatInr(li.commissionInr)}
-                  </TableCell>
-                  <TableCell align="right" sx={{ fontWeight: 600 }}>
-                    {formatInr(li.netInr)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Scrollbar>
-      </CardContent>
-    </UiCard>
-    {payout.notes && (
-      <div className="rounded-md bg-secondary p-3 text-sm">
-        <p className="text-xs font-semibold uppercase text-muted-foreground">Notes</p>
-        <p className="mt-1 whitespace-pre-wrap">{payout.notes}</p>
-      </div>
-    )}
-  </div>
-);
-
-const RunBatchDialog = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
-  const [schedule, setSchedule] = useState<'daily' | 'weekly'>('daily');
-  const [asOf, setAsOf] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const mut = useRunPayoutBatch();
-
-  const submit = async () => {
-    setError(null);
-    try {
-      const result = await mut.mutateAsync({
-        schedule,
-        asOf: asOf ? new Date(asOf).toISOString() : undefined,
-      });
-      // Auto-close after success
-      onClose();
-      // Simple alert since we haven't wired toast yet
-      window.alert(
-        `Batch complete: ${result.payoutCount} payouts created, total ${formatInr(
-          result.totalNetInr,
-        )}`,
-      );
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Batch failed');
-    }
-  };
-
-  return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      title="Run payout batch"
-      description="Computes payouts for orders in escrow whose return window has passed. Idempotent — already-paid line items are skipped."
-      footer={
-        <>
-          <Button variant="outline" onClick={onClose} disabled={mut.isPending}>
-            Cancel
-          </Button>
-          <Button onClick={submit} disabled={mut.isPending}>
-            {mut.isPending ? 'Running…' : 'Run batch'}
-          </Button>
-        </>
-      }
-    >
-      <Stack spacing={2}>
-        <TextField
-          select
-          fullWidth
-          label="Schedule"
-          value={schedule}
-          onChange={(e) => setSchedule(e.target.value as 'daily' | 'weekly')}
-          InputLabelProps={{ shrink: true }}
-        >
-          <MenuItem value="daily">Daily</MenuItem>
-          <MenuItem value="weekly">Weekly</MenuItem>
-        </TextField>
-        <DateTimeField
-          label="As-of (optional)"
-          value={asOf}
-          onChange={setAsOf}
-          helperText='Defaults to "now". Setting a past timestamp re-runs that window — useful for catching up after downtime.'
-        />
-        {error && <Alert severity="error">{error}</Alert>}
-      </Stack>
-    </Dialog>
+    </>
   );
 };
