@@ -131,7 +131,17 @@ export interface SellersListQuery {
 
 // ─── CA-1: Seller performance ───────────────────────────────────────────────
 
-export type SellerPerformanceSort = 'revenue' | 'orders' | 'rating';
+export type SellerPerformanceSort =
+  | 'revenue'
+  | 'orders'
+  | 'rating'
+  | 'fulfilment'
+  | 'returns'
+  | 'complaints'
+  | 'name';
+
+/** How a seller is doing, as a single verdict from the server. */
+export type PerformanceBand = 'attention' | 'strong' | 'steady' | 'quiet';
 
 export interface SellerPerformanceRow {
   sellerId: string;
@@ -143,6 +153,27 @@ export interface SellerPerformanceRow {
   avgRating: number | null;
   complaints: number;
   revenueInr: number;
+  sellerCode: string | null;
+  /** 0–100, or null when there were no orders to divide by. */
+  fulfilmentRate: number | null;
+  returnRate: number | null;
+  complaintRate: number | null;
+  avgOrderValueInr: number | null;
+  revenueSharePercent: number;
+  band: PerformanceBand;
+}
+
+/** Cohort totals, so one row can be read against the whole. */
+export interface SellerPerformanceTotals {
+  sellers: number;
+  orders: number;
+  revenueInr: number;
+  fulfilmentRate: number | null;
+  avgRating: number | null;
+  attention: number;
+  strong: number;
+  steady: number;
+  quiet: number;
 }
 
 export interface SellerPerformanceReport {
@@ -150,6 +181,10 @@ export interface SellerPerformanceReport {
   scope: { clusterId: string | null };
   sort: SellerPerformanceSort;
   rows: SellerPerformanceRow[];
+  totals: SellerPerformanceTotals;
+  total: number;
+  page: number | null;
+  limit: number | null;
 }
 
 export interface SellerPerformanceQuery {
@@ -157,4 +192,8 @@ export interface SellerPerformanceQuery {
   to: string;
   clusterId?: string;
   sort: SellerPerformanceSort;
+  q?: string;
+  band?: PerformanceBand;
+  page?: number;
+  limit?: number;
 }

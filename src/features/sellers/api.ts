@@ -84,6 +84,13 @@ const buildPerformanceParams = (
   params.set('to', q.to);
   params.set('sort', q.sort);
   if (q.clusterId) params.set('clusterId', q.clusterId);
+  if (q.q) params.set('q', q.q);
+  if (q.band) params.set('band', q.band);
+  // The CSV export deliberately carries no paging — it is the whole cohort.
+  if (q.format !== 'csv') {
+    if (q.page) params.set('page', String(q.page));
+    if (q.limit) params.set('limit', String(q.limit));
+  }
   if (q.format) params.set('format', q.format);
   return params;
 };
