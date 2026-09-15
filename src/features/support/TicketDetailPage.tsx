@@ -2,6 +2,8 @@ import { useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import Box from '@mui/material/Box';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
 import Card from '@mui/material/Card';
 import Grid from '@mui/material/Unstable_Grid2';
 import Stack from '@mui/material/Stack';
@@ -50,6 +52,7 @@ import {
   usePostTicketMessage,
   useScheduleReversePickup,
   useTicket,
+  useTicketAttachmentUrl,
 } from './api';
 import {
   ClaimDialog,
@@ -100,6 +103,18 @@ const SlaPill = ({ dueAt, fulfilledAt }: { dueAt: string; fulfilledAt: string | 
   );
 };
 
+/**
+ * A user id rendered as their name. Ids are meaningless to whoever is reading
+ * the ticket, so the id itself is never shown — just a dash while it resolves
+ * or if the account is gone.
+ */
+const UserName = ({ id }: { id: string | null | undefined }) => {
+  const { data, isLoading } = useUser(id ?? undefined);
+  if (!id) return <Box component="span" sx={{ color: 'text.disabled' }}>—</Box>;
+  if (isLoading) return <Skeleton width={90} sx={{ display: 'inline-block' }} />;
+  return <>{data?.name ?? '—'}</>;
+};
+
 /** One label/value line. */
 const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
   <Stack
@@ -131,6 +146,9 @@ export const TicketDetailPage = () => {
   const isSuperTier =
     user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.SUB_SUPER_ADMIN;
 
+  const [tab, setTab] = useState<'conversation' | 'details' | 'attachments' | 'history'>(
+    'conversation',
+  );
   const [claimOpen, setClaimOpen] = useState(false);
   const [resolveOpen, setResolveOpen] = useState(false);
   const [escalateOpen, setEscalateOpen] = useState(false);
@@ -269,7 +287,11 @@ export const TicketDetailPage = () => {
               </Stack>
 
               <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                Raised {fDateTime(ticket.createdAt)} by a {ticket.raiserRole.toLowerCase()}
+                Raised {fDateTime(ticket.createdAt)} by{' '}
+                <Box component="span" sx={{ color: 'text.primary' }}>
+                  <UserName id={ticket.raisedBy} />
+                </Box>{' '}
+                ({ticket.raiserRole.toLowerCase()})
               </Typography>
             </Stack>
 
@@ -348,87 +370,70 @@ export const TicketDetailPage = () => {
         </Stack>
       </Card>
 
-      <Grid container spacing={3} sx={{ mt: 0 }}>
-        <Grid xs={12} lg={8}>
-          <Stack spacing={3}>
-            <Card>
-              <CardHeader title="Description" />
-              <CardContent>
-                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                  {ticket.description}
-                </Typography>
-              </CardContent>
-            </Card>
+      {/* Tabs rather than one long scroll — a ticket has four separate things
+          to look at, and only one of them is wanted at a time. */}
+      <Card sx={{ mt: 3 }}>
+        <Tabs
+          value={tab}
+          onChange={(_e, v) => setTab(v)}
+          sx={{
+            px: 3,
+            boxShadow: (theme) =>
+              `inset 0 -2px 0 0 ${varAlpha(theme.vars.palette.grey['500Channel'], 0.08)}`,
+          }}
+        >
+          <Tab
+            value="conversation"
+            label={`Conversation (${ticket.messages?.length ?? 0})`}
+          />
+          <Tab value="details" label="Details" />
+          <Tab value="attachments" label={`Attachments (${ticket.attachments.length})`} />
+          <Tab value="history" label={`History (${ticket.history.length})`} />
+        </Tabs>
 
-            <ConversationCard ticket={ticket} active={isActive} isStaff={isStaff} />
-          </Stack>
-        </Grid>
+        {tab === 'conversation' && (
+          <Grid container spacing={3} sx={{ p: 3 }}>
+            <Grid xs={12} lg={8}>
+              <ConversationCard ticket={ticket} active={isActive} isStaff={isStaff} />
+            </Grid>
 
-        <Grid xs={12} lg={4}>
-          <Stack spacing={3}>
-            <Card>
-              <CardHeader title="SLA" subheader="Windows come from platform settings." />
-              <CardContent>
-                <Stack spacing={2}>
-                  <Stack spacing={0.5}>
+            <Grid xs={12} lg={4}>
+              <Stack spacing={3}>
+                <SlaCard ticket={ticket} />
+                <OrderContextCard
+                  orderId={ticket.orderId}
+                  raisedBy={ticket.raisedBy}
+                  section={section}
+                />
+              </Stack>
+            </Grid>
+          </Grid>
+        )}
+
+        {tab === 'details' && (
+          <Grid container spacing={3} sx={{ p: 3 }}>
+            <Grid xs={12} md={7}>
+              <Stack spacing={3}>
+                <Box>
+                  <CardHeader title="Description" sx={{ p: 0, mb: 2 }} />
+                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                    {ticket.description}
+                  </Typography>
+                </Box>
+
+                <Divider sx={{ borderStyle: 'dashed' }} />
+
+                <Box>
+                  <CardHeader title="Resolution" sx={{ p: 0, mb: 2 }} />
+                  <Stack spacing={1.5}>
+                    <Row label="Action" value={ticket.resolution.action ?? '—'} />
+                    <Row label="By" value={<UserName id={ticket.resolution.by} />} />
                     <Row
-                      label="First response"
-                      value={
-                        <SlaPill
-                          dueAt={ticket.sla.responseDueAt}
-                          fulfilledAt={ticket.sla.firstResponseAt}
-                        />
-                      }
+                      label="At"
+                      value={ticket.resolution.at ? fDateTime(ticket.resolution.at) : '—'}
                     />
-                    <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-                      due {fDateTime(ticket.sla.responseDueAt)}
-                    </Typography>
-                  </Stack>
 
-                  <Stack spacing={0.5}>
-                    <Row
-                      label="Resolution"
-                      value={
-                        <SlaPill
-                          dueAt={ticket.sla.resolutionDueAt}
-                          fulfilledAt={ticket.sla.resolvedAt}
-                        />
-                      }
-                    />
-                    <Typography variant="caption" sx={{ color: 'text.disabled' }}>
-                      due {fDateTime(ticket.sla.resolutionDueAt)}
-                    </Typography>
-                  </Stack>
-
-                  {ticket.sla.firstResponseAt === null && (
-                    <Alert severity="warning" sx={{ typography: 'caption' }}>
-                      No first response yet — posting a customer reply below stamps it.
-                    </Alert>
-                  )}
-                </Stack>
-              </CardContent>
-            </Card>
-
-            <OrderContextCard
-              orderId={ticket.orderId}
-              raisedBy={ticket.raisedBy}
-              section={section}
-            />
-
-            <Card>
-              <CardHeader title="Resolution" />
-              <CardContent>
-                <Stack spacing={1.5}>
-                  <Row label="Action" value={ticket.resolution.action ?? '—'} />
-                  <Row label="By" value={ticket.resolution.by ?? '—'} />
-                  <Row
-                    label="At"
-                    value={ticket.resolution.at ? fDateTime(ticket.resolution.at) : '—'}
-                  />
-
-                  {ticket.resolution.notes && (
-                    <>
-                      <Divider sx={{ borderStyle: 'dashed' }} />
+                    {ticket.resolution.notes && (
                       <Box>
                         <Typography variant="caption" sx={{ color: 'text.disabled' }}>
                           Notes
@@ -437,75 +442,73 @@ export const TicketDetailPage = () => {
                           {ticket.resolution.notes}
                         </Typography>
                       </Box>
-                    </>
-                  )}
+                    )}
 
-                  {ticket.refundIssued && (
-                    <Alert severity="success" sx={{ typography: 'caption' }}>
-                      Refund of {formatInr(ticket.refundIssued.amountInr)} issued{' '}
-                      {fDateTime(ticket.refundIssued.at)}
-                    </Alert>
-                  )}
-                </Stack>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader
-                title="Attachments"
-                subheader={`${ticket.attachments.length} file${
-                  ticket.attachments.length === 1 ? '' : 's'
-                }`}
-              />
-              <CardContent>
-                {ticket.attachments.length === 0 ? (
-                  <Typography variant="body2" sx={{ color: 'text.disabled' }}>
-                    No attachments uploaded.
-                  </Typography>
-                ) : (
-                  <Stack spacing={1}>
-                    {ticket.attachments.map((key, i) => (
-                      <Stack
-                        key={`${key}-${i}`}
-                        direction="row"
-                        spacing={1}
-                        alignItems="center"
-                        sx={{ minWidth: 0 }}
-                      >
-                        <Iconify
-                          icon="solar:document-text-bold"
-                          width={18}
-                          sx={{ color: 'text.disabled', flexShrink: 0 }}
-                        />
-                        <Box
-                          component="span"
-                          sx={{
-                            typography: 'caption',
-                            fontFamily: 'monospace',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {key}
-                        </Box>
-                      </Stack>
-                    ))}
+                    {ticket.refundIssued && (
+                      <Alert severity="success" sx={{ typography: 'caption' }}>
+                        Refund of {formatInr(ticket.refundIssued.amountInr)} issued{' '}
+                        {fDateTime(ticket.refundIssued.at)} by{' '}
+                        <UserName id={ticket.refundIssued.by} />
+                      </Alert>
+                    )}
                   </Stack>
-                )}
-              </CardContent>
-            </Card>
-          </Stack>
-        </Grid>
+                </Box>
+              </Stack>
+            </Grid>
 
-        <Grid xs={12}>
-          <Card>
-            <CardHeader title="History" subheader="Everything that has happened to this ticket." />
+            <Grid xs={12} md={5}>
+              <Stack spacing={3}>
+                <SlaCard ticket={ticket} />
+                <OrderContextCard
+                  orderId={ticket.orderId}
+                  raisedBy={ticket.raisedBy}
+                  section={section}
+                />
+              </Stack>
+            </Grid>
+          </Grid>
+        )}
+
+        {tab === 'attachments' && (
+          <CardContent>
+            {ticket.attachments.length === 0 ? (
+              <EmptyContent
+                filled
+                title="No attachments"
+                description="Nothing has been uploaded against this ticket."
+                sx={{ py: 8 }}
+              />
+            ) : (
+              <Box
+                sx={{
+                  display: 'grid',
+                  gap: 2,
+                  gridTemplateColumns: {
+                    xs: '1fr',
+                    sm: 'repeat(2, 1fr)',
+                    md: 'repeat(3, 1fr)',
+                    lg: 'repeat(4, 1fr)',
+                  },
+                }}
+              >
+                {ticket.attachments.map((key, i) => (
+                  <AttachmentCard key={`${key}-${i}`} ticketId={ticket.id} s3Key={key} />
+                ))}
+              </Box>
+            )}
+          </CardContent>
+        )}
+
+        {tab === 'history' && (
+          <>
             {ticket.history.length === 0 ? (
               <CardContent>
-                <Typography variant="body2" sx={{ color: 'text.disabled' }}>
-                  Nothing recorded yet.
-                </Typography>
+                <EmptyContent
+                  filled
+                  title="Nothing recorded yet"
+                  description="Actions on this ticket will appear here."
+                  sx={{ py: 8 }}
+                />
               </CardContent>
             ) : (
               <Timeline
@@ -555,6 +558,12 @@ export const TicketDetailPage = () => {
 
                       <Typography variant="caption" sx={{ color: 'text.disabled' }}>
                         {fDateTime(event.at)}
+                        {event.byUserId && (
+                          <>
+                            {' · '}
+                            <UserName id={event.byUserId} />
+                          </>
+                        )}
                       </Typography>
 
                       {event.notes && (
@@ -567,9 +576,9 @@ export const TicketDetailPage = () => {
                 ))}
               </Timeline>
             )}
-          </Card>
-        </Grid>
-      </Grid>
+          </>
+        )}
+      </Card>
 
       {/* Override — super tier only, and always with a reason on record. */}
       <Dialog open={overrideOpen} onClose={() => setOverrideOpen(false)} fullWidth maxWidth="sm">
@@ -645,6 +654,49 @@ export const TicketDetailPage = () => {
 };
 
 // ----------------------------------------------------------------------
+
+/** Both SLA windows, each with how it is doing and when it is due. */
+const SlaCard = ({ ticket }: { ticket: SupportTicket }) => (
+  <Card>
+    <CardHeader title="SLA" subheader="Windows come from platform settings." />
+    <CardContent>
+      <Stack spacing={2}>
+        <Stack spacing={0.5}>
+          <Row
+            label="First response"
+            value={
+              <SlaPill
+                dueAt={ticket.sla.responseDueAt}
+                fulfilledAt={ticket.sla.firstResponseAt}
+              />
+            }
+          />
+          <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+            due {fDateTime(ticket.sla.responseDueAt)}
+          </Typography>
+        </Stack>
+
+        <Stack spacing={0.5}>
+          <Row
+            label="Resolution"
+            value={
+              <SlaPill dueAt={ticket.sla.resolutionDueAt} fulfilledAt={ticket.sla.resolvedAt} />
+            }
+          />
+          <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+            due {fDateTime(ticket.sla.resolutionDueAt)}
+          </Typography>
+        </Stack>
+
+        {ticket.sla.firstResponseAt === null && (
+          <Alert severity="warning" sx={{ typography: 'caption' }}>
+            No first response yet — posting a customer reply stamps it.
+          </Alert>
+        )}
+      </Stack>
+    </CardContent>
+  </Card>
+);
 
 const ConversationCard = ({
   ticket,
@@ -896,6 +948,81 @@ const MessageBubble = ({ message }: { message: SupportTicketMessage }) => {
 
 // ----------------------------------------------------------------------
 
+/**
+ * One attachment, fetched through a signed URL. The stored value is an S3 key
+ * in a private bucket, so it is never shown — the file name is what a person
+ * recognises, and images preview inline.
+ */
+const AttachmentCard = ({ ticketId, s3Key }: { ticketId: string; s3Key: string }) => {
+  const { data, isLoading, isError } = useTicketAttachmentUrl(ticketId, s3Key);
+
+  const url = data?.url;
+  const fileName = s3Key.split('/').pop() ?? s3Key;
+  const isImage = /\.(jpe?g|png|webp|gif)$/i.test(s3Key);
+
+  return (
+    <Card variant="outlined" sx={{ overflow: 'hidden' }}>
+      <Box
+        component="a"
+        href={url}
+        target="_blank"
+        rel="noreferrer"
+        onClick={(e: React.MouseEvent) => {
+          if (!url) e.preventDefault();
+        }}
+        sx={{
+          height: 132,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          bgcolor: 'background.neutral',
+          color: 'text.disabled',
+          textDecoration: 'none',
+        }}
+      >
+        {isLoading ? (
+          <Skeleton variant="rectangular" width="100%" height="100%" />
+        ) : isError ? (
+          <Typography variant="caption">Preview unavailable</Typography>
+        ) : isImage && url ? (
+          <Box
+            component="img"
+            src={url}
+            alt={fileName}
+            sx={{ width: 1, height: 1, objectFit: 'cover' }}
+          />
+        ) : (
+          <Iconify icon="solar:document-text-bold" width={36} />
+        )}
+      </Box>
+
+      <Stack
+        direction="row"
+        spacing={1}
+        alignItems="center"
+        justifyContent="space-between"
+        sx={{ px: 2, py: 1.5 }}
+      >
+        <Typography variant="caption" noWrap sx={{ minWidth: 0 }}>
+          {fileName}
+        </Typography>
+        {url && (
+          <Button
+            size="small"
+            color="inherit"
+            href={url}
+            target="_blank"
+            rel="noreferrer"
+            endIcon={<Iconify icon="eva:external-link-fill" width={14} sx={{ ml: -0.5 }} />}
+          >
+            Open
+          </Button>
+        )}
+      </Stack>
+    </Card>
+  );
+};
+
 const OrderContextCard = ({
   orderId,
   raisedBy,
@@ -915,14 +1042,7 @@ const OrderContextCard = ({
         <CardHeader title="Context" />
         <CardContent>
           <Stack spacing={1.5}>
-            <Row
-              label="Raiser"
-              value={
-                <Box component="span" sx={{ fontFamily: 'monospace', typography: 'caption' }}>
-                  {raisedBy.slice(-8)}
-                </Box>
-              }
-            />
+            <Row label="Raiser" value={<UserName id={raisedBy} />} />
             <Typography variant="body2" sx={{ color: 'text.disabled' }}>
               No order linked to this ticket.
             </Typography>

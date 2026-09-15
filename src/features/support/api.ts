@@ -170,3 +170,19 @@ export const usePostTicketMessage = () => {
     onSuccess: (_, v) => invalidate(qc, v.id),
   });
 };
+
+/**
+ * Short-lived signed URL to view one attachment. The uploads bucket is not
+ * publicly readable, so the stored key alone cannot be rendered.
+ */
+export const useTicketAttachmentUrl = (ticketId: string, s3Key: string) =>
+  useQuery({
+    queryKey: ['tickets', 'attachment-url', ticketId, s3Key],
+    queryFn: () =>
+      api.get<{ url: string }>(
+        `/support/tickets/${ticketId}/attachment-url?s3Key=${encodeURIComponent(s3Key)}`,
+      ),
+    // Signed URLs are short-lived; refetch well before they lapse.
+    staleTime: 4 * 60 * 1000,
+    enabled: Boolean(ticketId && s3Key),
+  });
