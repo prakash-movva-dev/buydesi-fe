@@ -66,6 +66,8 @@ export interface SellerBusinessProfile {
 
 export interface SafeSellerProfile {
   id: string;
+  /** Human-facing identifier, e.g. `BD-S-MP6NN7-1A2B`. Never show the Mongo id. */
+  sellerCode: string | null;
   userId: string;
   farmName: string;
   businessType?: BusinessType;
@@ -103,9 +105,21 @@ export interface SellersListMeta {
   clusterId?: string | null;
 }
 
+export type SellersSort =
+  | 'newest'
+  | 'oldest'
+  | 'name_asc'
+  | 'name_desc'
+  | 'status_asc'
+  | 'status_desc';
+
 export interface SellersListQuery {
   status?: SellerStatus;
   clusterId?: string;
+  /** Matches the farm name, seller code or pincode. */
+  q?: string;
+  verified?: boolean;
+  sort?: SellersSort;
   page: number;
   limit: number;
 }

@@ -1,36 +1,36 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+
 import Box from '@mui/material/Box';
-import Stack from '@mui/material/Stack';
 import Tab from '@mui/material/Tab';
+import Card from '@mui/material/Card';
 import Tabs from '@mui/material/Tabs';
+import Chip from '@mui/material/Chip';
+import Grid from '@mui/material/Unstable_Grid2';
+import Link from '@mui/material/Link';
+import Stack from '@mui/material/Stack';
+import Avatar from '@mui/material/Avatar';
+import Button from '@mui/material/Button';
+import Divider from '@mui/material/Divider';
 import Typography from '@mui/material/Typography';
-import {
-  AlertTriangle,
-  ArrowLeft,
-  BadgeCheck,
-  Ban,
-  CheckCircle2,
-  FileText,
-  MessageSquare,
-  RotateCcw,
-  XCircle,
-} from 'lucide-react';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/Card';
-import { Skeleton } from '@/components/ui/Skeleton';
+import CardHeader from '@mui/material/CardHeader';
+import CardContent from '@mui/material/CardContent';
+
+import { useAuth } from '@/lib/auth';
+import { UserRole } from '@/types/api';
+import { varAlpha } from '@/theme/styles';
+import { formatInr } from '@/lib/format';
+import { fDate, fDateTime } from '@/utils/format-time';
+
+import { Label } from '@/components/label';
+import { Iconify } from '@/components/iconify';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { EmptyContent } from '@/components/empty-content';
+import { LoadingScreen } from '@/components/loading-screen';
+
 import { useCategoriesList } from '@/features/categories/api';
 import { useClustersList } from '@/features/clusters/api';
-import { useAuth } from '@/lib/auth';
-import { formatDate, formatDateTime, formatInr } from '@/lib/format';
-import { UserRole } from '@/types/api';
+
 import {
   useApproveSeller,
   useKycViewUrl,
@@ -42,21 +42,11 @@ import {
   useToggleVerifiedBadge,
   useWarnSeller,
 } from './api';
-import type { KycDocument } from './types';
-import { DisciplinaryDialog, type DisciplinaryAction } from './DisciplinaryDialog';
 import { ReviewDialog, type ReviewAction } from './ReviewDialog';
-import { SellerStatusBadge } from './status-badge';
-import type { DisciplinaryActionType } from './types';
+import { DisciplinaryDialog, type DisciplinaryAction } from './DisciplinaryDialog';
+import type { DisciplinaryActionType, KycDocument, SellerStatus } from './types';
 
-const docLabel: Record<string, string> = {
-  pan: 'PAN',
-  aadhaar: 'Aadhaar',
-  passport: 'Passport',
-  fssai: 'FSSAI',
-  gst: 'GST',
-  bank_proof: 'Bank proof',
-  other: 'Other',
-};
+// ----------------------------------------------------------------------
 
 const businessTypeLabel: Record<string, string> = {
   individual: 'Individual / Farmer',
@@ -73,22 +63,93 @@ const fulfilmentLabel: Record<string, string> = {
   self_drop: 'Self-drop at centre',
 };
 
-const docStatusVariant = {
-  pending: 'warning',
-  approved: 'success',
-  rejected: 'destructive',
-} as const;
-
 const payoutLabel: Record<string, string> = {
   daily: 'Daily',
   weekly: 'Weekly',
   on_demand: 'On demand',
 };
 
+const STATUS_COLOR: Record<SellerStatus, 'success' | 'warning' | 'error' | 'info'> = {
+  APPROVED: 'success',
+  PENDING: 'warning',
+  REJECTED: 'error',
+  INFO_REQUESTED: 'info',
+};
+
+const STATUS_LABEL: Record<SellerStatus, string> = {
+  APPROVED: 'Approved',
+  PENDING: 'Pending review',
+  REJECTED: 'Rejected',
+  INFO_REQUESTED: 'Info requested',
+};
+
+const docLabel: Record<string, string> = {
+  pan: 'PAN',
+  aadhaar: 'Aadhaar',
+  gst: 'GST certificate',
+  bank_proof: 'Bank proof',
+  fssai: 'FSSAI licence',
+  other: 'Other',
+};
+
+const docStatusColor: Record<string, 'warning' | 'success' | 'error'> = {
+  pending: 'warning',
+  approved: 'success',
+  rejected: 'error',
+};
+
+const disciplinaryLabel: Record<DisciplinaryActionType, string> = {
+  warning: 'Warning',
+  suspension: 'Suspension',
+  reactivation: 'Reactivation',
+};
+
+const disciplinaryColor: Record<DisciplinaryActionType, 'warning' | 'error' | 'success'> = {
+  warning: 'warning',
+  suspension: 'error',
+  reactivation: 'success',
+};
+
+// ----------------------------------------------------------------------
+
+/** One label/value line. Renders nothing when there is no value to show. */
+const Field = ({ label, value }: { label: string; value?: React.ReactNode }) => (
+  <Box>
+    <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+      {label}
+    </Typography>
+    <Box sx={{ mt: 0.25, typography: 'body2' }}>
+      {value === null || value === undefined || value === '' ? (
+        <Box component="span" sx={{ color: 'text.disabled' }}>
+          —
+        </Box>
+      ) : (
+        value
+      )}
+    </Box>
+  </Box>
+);
+
+const ChipList = ({ values, empty }: { values: string[]; empty: string }) =>
+  values.length ? (
+    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+      {values.map((v) => (
+        <Chip key={v} size="small" variant="soft" label={v} />
+      ))}
+    </Stack>
+  ) : (
+    <Box component="span" sx={{ color: 'text.disabled' }}>
+      {empty}
+    </Box>
+  );
+
+// ----------------------------------------------------------------------
+
 export const SellerDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
+
   const { data: seller, isLoading, isError, error } = useSeller(id);
 
   const approve = useApproveSeller();
@@ -109,21 +170,29 @@ export const SellerDetailPage = () => {
   const categoryName = new Map((categories ?? []).map((c) => [c.id, c.name]));
   const clusterName = new Map((clustersData?.items ?? []).map((c) => [c.id, c.name]));
 
-  if (isLoading) {
-    return (
-      <Stack spacing={2}>
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-40 w-full" />
-        <Skeleton className="h-40 w-full" />
-      </Stack>
-    );
-  }
+  if (isLoading) return <LoadingScreen sx={{ py: 20 }} />;
 
   if (isError || !seller) {
     return (
-      <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
-        {error instanceof Error ? error.message : 'Seller not found'}
-      </div>
+      <>
+        <PageHeader title="Seller" />
+        <EmptyContent
+          filled
+          title="Seller not found"
+          description={error instanceof Error ? error.message : 'It may have been removed.'}
+          action={
+            <Button
+              variant="contained"
+              onClick={() => navigate('/admin/sellers')}
+              startIcon={<Iconify icon="eva:arrow-ios-back-fill" />}
+              sx={{ mt: 3 }}
+            >
+              Back to sellers
+            </Button>
+          }
+          sx={{ py: 10, mt: 3 }}
+        />
+      </>
     );
   }
 
@@ -133,7 +202,9 @@ export const SellerDetailPage = () => {
     user?.role === UserRole.SUB_SUPER_ADMIN ||
     user?.role === UserRole.CLUSTER_ADMIN;
   const reviewable =
-    seller.status === 'PENDING' || seller.status === 'INFO_REQUESTED' || seller.status === 'REJECTED';
+    seller.status === 'PENDING' ||
+    seller.status === 'INFO_REQUESTED' ||
+    seller.status === 'REJECTED';
 
   const submitReview = async (notes: string | undefined) => {
     if (!dialogAction || !id) return;
@@ -150,278 +221,336 @@ export const SellerDetailPage = () => {
   };
 
   return (
-    <Stack spacing={3}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-        <Button variant="ghost" size="sm" onClick={() => navigate('/admin/sellers')}>
-          <ArrowLeft className="h-4 w-4" />
-          Back to sellers
-        </Button>
-      </Box>
+    <>
+      <PageHeader
+        title={seller.farmName}
+        links={[
+          { name: 'Dashboard', href: '/admin' },
+          { name: 'Sellers', href: '/admin/sellers' },
+          { name: seller.farmName },
+        ]}
+        action={
+          <Button
+            variant="outlined"
+            onClick={() => navigate('/admin/sellers')}
+            startIcon={<Iconify icon="eva:arrow-ios-back-fill" />}
+          >
+            Back to sellers
+          </Button>
+        }
+      />
 
-      <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', justifyContent: 'space-between', gap: 2 }}>
-        <div>
-          <Typography variant="h4" component="h1">{seller.farmName}</Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            ID {seller.id} · submitted {formatDate(seller.createdAt)}
-          </Typography>
-          <div className="mt-2 flex flex-wrap items-center gap-2">
-            <SellerStatusBadge status={seller.status} />
-            {seller.verifiedBadge && (
-              <Badge variant="info">
-                <BadgeCheck className="mr-1 inline h-3 w-3" />
-                Verified by Buy Desi
-              </Badge>
-            )}
-            {seller.isLive && <Badge variant="success">Live</Badge>}
-          </div>
-        </div>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-          {reviewable && (
-            <>
-              <Button onClick={() => setDialogAction('approve')}>
-                <CheckCircle2 className="h-4 w-4" />
-                Approve
-              </Button>
-              <Button variant="outline" onClick={() => setDialogAction('request-info')}>
-                <MessageSquare className="h-4 w-4" />
-                Request info
-              </Button>
-              <Button variant="destructive" onClick={() => setDialogAction('reject')}>
-                <XCircle className="h-4 w-4" />
-                Reject
-              </Button>
-            </>
-          )}
-          {isSuper && (
-            <Button
-              variant={seller.verifiedBadge ? 'outline' : 'secondary'}
-              onClick={() =>
-                toggleBadge.mutate({ id: seller.id, verifiedBadge: !seller.verifiedBadge })
-              }
-              disabled={toggleBadge.isPending}
+      {/* Hero — who this is, at a glance, with every action that applies. */}
+      <Card
+        sx={{
+          mt: 3,
+          p: 3,
+          backgroundImage: (theme) =>
+            `linear-gradient(135deg, ${varAlpha(
+              theme.vars.palette.primary.lighterChannel,
+              0.48,
+            )}, ${varAlpha(theme.vars.palette.primary.lightChannel, 0.32)})`,
+        }}
+      >
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          spacing={3}
+          alignItems={{ xs: 'flex-start', md: 'center' }}
+        >
+          <Avatar
+            alt={seller.farmName}
+            src={seller.storefront?.profilePhoto}
+            variant="rounded"
+            sx={{ width: 80, height: 80, flexShrink: 0 }}
+          >
+            <Iconify icon="solar:shop-bold" width={36} />
+          </Avatar>
+
+          <Stack spacing={1} sx={{ flexGrow: 1, minWidth: 0 }}>
+            <Typography variant="h4">{seller.farmName}</Typography>
+
+            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+              <Label variant="soft" color={STATUS_COLOR[seller.status]}>
+                {STATUS_LABEL[seller.status]}
+              </Label>
+              {seller.verifiedBadge && (
+                <Label
+                  variant="soft"
+                  color="primary"
+                  startIcon={<Iconify icon="solar:verified-check-bold" />}
+                >
+                  Verified
+                </Label>
+              )}
+              {seller.isLive && (
+                <Label variant="soft" color="success">
+                  Live
+                </Label>
+              )}
+            </Stack>
+
+            <Stack
+              direction="row"
+              spacing={2}
+              flexWrap="wrap"
+              useFlexGap
+              sx={{ typography: 'body2', color: 'text.secondary' }}
             >
-              <BadgeCheck className="h-4 w-4" />
-              {seller.verifiedBadge ? 'Revoke verified' : 'Grant verified'}
-            </Button>
-          )}
-          {canDiscipline && (
-            <>
-              <Button variant="outline" onClick={() => setDisciplinaryAction('warn')}>
-                <AlertTriangle className="h-4 w-4" />
+              {/* The readable code — the Mongo id is never shown. */}
+              <Box component="span" sx={{ fontFamily: 'monospace' }}>
+                {seller.sellerCode ?? '—'}
+              </Box>
+              <Box component="span">
+                {seller.clusterId ? (clusterName.get(seller.clusterId) ?? 'Cluster') : 'Unassigned'}
+              </Box>
+              <Box component="span">Registered {fDate(seller.createdAt)}</Box>
+            </Stack>
+          </Stack>
+
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ flexShrink: 0 }}>
+            {reviewable && (
+              <>
+                <Button
+                  variant="contained"
+                  color="success"
+                  onClick={() => setDialogAction('approve')}
+                  startIcon={<Iconify icon="solar:check-circle-bold" />}
+                >
+                  Approve
+                </Button>
+                <Button
+                  variant="outlined"
+                  onClick={() => setDialogAction('request-info')}
+                  startIcon={<Iconify icon="solar:chat-round-dots-bold" />}
+                >
+                  Request info
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  onClick={() => setDialogAction('reject')}
+                  startIcon={<Iconify icon="solar:close-circle-bold" />}
+                >
+                  Reject
+                </Button>
+              </>
+            )}
+
+            {isSuper && (
+              <Button
+                variant={seller.verifiedBadge ? 'outlined' : 'contained'}
+                onClick={() =>
+                  toggleBadge.mutate({ id: seller.id, verifiedBadge: !seller.verifiedBadge })
+                }
+                disabled={toggleBadge.isPending}
+                startIcon={<Iconify icon="solar:verified-check-bold" />}
+              >
+                {seller.verifiedBadge ? 'Revoke verified' : 'Grant verified'}
+              </Button>
+            )}
+          </Stack>
+        </Stack>
+
+        {canDiscipline && (
+          <>
+            <Divider sx={{ my: 3, borderStyle: 'dashed' }} />
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <Button
+                size="small"
+                variant="outlined"
+                color="warning"
+                onClick={() => setDisciplinaryAction('warn')}
+                startIcon={<Iconify icon="solar:danger-triangle-bold" />}
+              >
                 Issue warning
               </Button>
-              <Button variant="destructive" onClick={() => setDisciplinaryAction('suspend')}>
-                <Ban className="h-4 w-4" />
+              <Button
+                size="small"
+                variant="outlined"
+                color="error"
+                onClick={() => setDisciplinaryAction('suspend')}
+                startIcon={<Iconify icon="solar:forbidden-circle-bold" />}
+              >
                 Suspend
               </Button>
-              <Button variant="outline" onClick={() => setDisciplinaryAction('reactivate')}>
-                <RotateCcw className="h-4 w-4" />
+              <Button
+                size="small"
+                variant="outlined"
+                onClick={() => setDisciplinaryAction('reactivate')}
+                startIcon={<Iconify icon="solar:restart-bold" />}
+              >
                 Reactivate
               </Button>
-            </>
-          )}
-        </Box>
-      </Box>
-
-      <Tabs
-        value={tab}
-        onChange={(_e, v) => setTab(v)}
-        sx={{ borderBottom: 1, borderColor: 'divider' }}
-      >
-        <Tab value="profile" label="Profile" />
-        <Tab value="kyc" label="KYC" />
-        <Tab value="reviews" label="Reviews" />
-        <Tab value="disciplinary" label="Disciplinary" />
-      </Tabs>
-
-      {tab === 'profile' && (
-      <Stack spacing={3}>
-        <Card>
-          <CardHeader>
-            <CardTitle>Farm & business</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm">
-            <div className="grid grid-cols-2 gap-4">
-              <Field
-                label="Business type"
-                value={
-                  seller.businessType ? (
-                    businessTypeLabel[seller.businessType] ?? seller.businessType
-                  ) : (
-                    <span className="text-muted-foreground">—</span>
-                  )
-                }
-              />
-              <Field
-                label="GST number"
-                value={seller.gstNumber ?? <span className="text-muted-foreground">Not provided</span>}
-              />
-              <Field label="Pincode" value={seller.pincode} />
-              <Field
-                label="Cluster"
-                value={
-                  seller.clusterId ? (
-                    clusterName.get(seller.clusterId) ?? seller.clusterId
-                  ) : (
-                    <span className="text-muted-foreground">Unassigned</span>
-                  )
-                }
-              />
-              <Field label="Payout preference" value={payoutLabel[seller.payoutPreference]} />
-              <Field
-                label="Bank details"
-                value={
-                  seller.hasBankDetails
-                    ? `•••• ${seller.bankAccountLast4 ?? '----'}`
-                    : <span className="text-muted-foreground">Not provided</span>
-                }
-              />
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Address
-              </p>
-              <p className="mt-1">
-                {seller.address.line1}
-                {seller.address.line2 ? `, ${seller.address.line2}` : ''}
-                <br />
-                {seller.address.city}, {seller.address.state} — {seller.address.pincode}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Categories
-              </p>
-              <div className="mt-1 flex flex-wrap gap-1.5">
-                {seller.categoryIds.length === 0 && (
-                  <span className="text-muted-foreground">No categories selected</span>
-                )}
-                {seller.categoryIds.map((cid) => (
-                  <Badge key={cid} variant="muted">
-                    {categoryName.get(cid) ?? cid}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-            {seller.businessProfile && (
-              <div className="grid grid-cols-2 gap-4 border-t border-border pt-3">
-                <Field
-                  label="Owns a brand"
-                  value={
-                    seller.businessProfile.ownsBrand === undefined
-                      ? '—'
-                      : seller.businessProfile.ownsBrand
-                        ? 'Yes'
-                        : 'No'
-                  }
-                />
-                <Field
-                  label="Expected listings / mo"
-                  value={seller.businessProfile.expectedMonthlyListings ?? '—'}
-                />
-                <Field
-                  label="Avg product price"
-                  value={
-                    seller.businessProfile.averagePriceInr != null
-                      ? formatInr(seller.businessProfile.averagePriceInr)
-                      : '—'
-                  }
-                />
-                <Field
-                  label="Fulfilment"
-                  value={
-                    seller.businessProfile.fulfillmentPreference
-                      ? fulfilmentLabel[seller.businessProfile.fulfillmentPreference]
-                      : '—'
-                  }
-                />
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Storefront</CardTitle>
-          </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <div className="grid grid-cols-2 gap-4">
-            <Field
-              label="Display name"
-              value={seller.storefront.displayName ?? <span className="text-muted-foreground">—</span>}
-            />
-            <Field
-              label="Store language"
-              value={seller.storefront.language ?? <span className="text-muted-foreground">—</span>}
-            />
-            <Field
-              label="Support email"
-              value={seller.storefront.supportEmail ?? <span className="text-muted-foreground">—</span>}
-            />
-            <Field
-              label="Returns address"
-              value={
-                seller.storefront.returnsAddress
-                  ? `${seller.storefront.returnsAddress.line} — ${seller.storefront.returnsAddress.pincode}`
-                  : <span className="text-muted-foreground">—</span>
-              }
-            />
-          </div>
-          <Field
-            label="Description"
-            value={
-              seller.storefront.description ?? (
-                <span className="text-muted-foreground">Not provided</span>
-              )
-            }
-          />
-          <Field
-            label="Practices"
-            value={
-              seller.storefront.practices.length ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {seller.storefront.practices.map((p) => (
-                    <Badge key={p} variant="muted">
-                      {p}
-                    </Badge>
-                  ))}
-                </div>
-              ) : (
-                <span className="text-muted-foreground">None listed</span>
-              )
-            }
-          />
-          <Field
-            label="Certifications"
-            value={
-              seller.storefront.certifications.length ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {seller.storefront.certifications.map((c) => (
-                    <Badge key={c} variant="muted">
-                      {c}
-                    </Badge>
-                  ))}
-                </div>
-              ) : (
-                <span className="text-muted-foreground">None listed</span>
-              )
-            }
-          />
-        </CardContent>
+            </Stack>
+          </>
+        )}
       </Card>
-      </Stack>
-      )}
 
-      {tab === 'kyc' && (
-      <Stack spacing={3}>
-        <Card>
-          <CardHeader>
-            <CardTitle>KYC documents</CardTitle>
-            <CardDescription>{seller.kycDocuments.length} document(s) uploaded.</CardDescription>
-          </CardHeader>
+      <Card sx={{ mt: 3 }}>
+        <Tabs
+          value={tab}
+          onChange={(_e, v) => setTab(v)}
+          sx={{
+            px: 3,
+            boxShadow: (theme) =>
+              `inset 0 -2px 0 0 ${varAlpha(theme.vars.palette.grey['500Channel'], 0.08)}`,
+          }}
+        >
+          <Tab value="profile" label="Profile" />
+          <Tab value="kyc" label={`KYC (${seller.kycDocuments.length})`} />
+          <Tab value="reviews" label="Review history" />
+          {canDiscipline && (
+            <Tab
+              value="disciplinary"
+              label={`Disciplinary (${seller.disciplinaryActions?.length ?? 0})`}
+            />
+          )}
+        </Tabs>
+
+        {tab === 'profile' && (
+          <Grid container spacing={3} sx={{ p: 3 }}>
+            <Grid xs={12} md={6}>
+              <CardHeader title="Farm & business" sx={{ p: 0, mb: 2 }} />
+              <Stack spacing={2}>
+                <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                  <Field
+                    label="Business type"
+                    value={
+                      seller.businessType
+                        ? (businessTypeLabel[seller.businessType] ?? seller.businessType)
+                        : undefined
+                    }
+                  />
+                  <Field label="GST number" value={seller.gstNumber} />
+                  <Field label="Pincode" value={seller.pincode} />
+                  <Field
+                    label="Cluster"
+                    value={
+                      seller.clusterId ? (clusterName.get(seller.clusterId) ?? 'Unknown') : undefined
+                    }
+                  />
+                  <Field
+                    label="Payout preference"
+                    value={payoutLabel[seller.payoutPreference] ?? seller.payoutPreference}
+                  />
+                  <Field
+                    label="Bank details"
+                    value={
+                      seller.hasBankDetails
+                        ? `•••• ${seller.bankAccountLast4 ?? '----'}`
+                        : undefined
+                    }
+                  />
+                </Box>
+
+                <Field
+                  label="Address"
+                  value={
+                    <>
+                      {seller.address.line1}
+                      {seller.address.line2 ? `, ${seller.address.line2}` : ''}
+                      <br />
+                      {seller.address.city}, {seller.address.state} — {seller.address.pincode}
+                    </>
+                  }
+                />
+
+                <Field
+                  label="Categories"
+                  value={
+                    <ChipList
+                      values={seller.categoryIds.map((cid) => categoryName.get(cid) ?? cid)}
+                      empty="No categories selected"
+                    />
+                  }
+                />
+
+                {seller.businessProfile && (
+                  <>
+                    <Divider sx={{ borderStyle: 'dashed' }} />
+                    <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                      <Field
+                        label="Owns a brand"
+                        value={
+                          seller.businessProfile.ownsBrand === undefined
+                            ? undefined
+                            : seller.businessProfile.ownsBrand
+                              ? 'Yes'
+                              : 'No'
+                        }
+                      />
+                      <Field
+                        label="Expected listings / mo"
+                        value={seller.businessProfile.expectedMonthlyListings}
+                      />
+                      <Field
+                        label="Avg product price"
+                        value={
+                          seller.businessProfile.averagePriceInr != null
+                            ? formatInr(seller.businessProfile.averagePriceInr)
+                            : undefined
+                        }
+                      />
+                      <Field
+                        label="Fulfilment"
+                        value={
+                          seller.businessProfile.fulfillmentPreference
+                            ? fulfilmentLabel[seller.businessProfile.fulfillmentPreference]
+                            : undefined
+                        }
+                      />
+                    </Box>
+                  </>
+                )}
+              </Stack>
+            </Grid>
+
+            <Grid xs={12} md={6}>
+              <CardHeader title="Storefront" sx={{ p: 0, mb: 2 }} />
+              <Stack spacing={2}>
+                <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: 'repeat(2, 1fr)' }}>
+                  <Field label="Display name" value={seller.storefront.displayName} />
+                  <Field label="Store language" value={seller.storefront.language} />
+                  <Field label="Support email" value={seller.storefront.supportEmail} />
+                  <Field
+                    label="Returns address"
+                    value={
+                      seller.storefront.returnsAddress
+                        ? `${seller.storefront.returnsAddress.line} — ${seller.storefront.returnsAddress.pincode}`
+                        : undefined
+                    }
+                  />
+                </Box>
+
+                <Field label="Description" value={seller.storefront.description} />
+
+                <Field
+                  label="Practices"
+                  value={
+                    <ChipList values={seller.storefront.practices} empty="None listed" />
+                  }
+                />
+
+                <Field
+                  label="Certifications"
+                  value={
+                    <ChipList values={seller.storefront.certifications} empty="None listed" />
+                  }
+                />
+              </Stack>
+            </Grid>
+          </Grid>
+        )}
+
+        {tab === 'kyc' && (
           <CardContent>
             {seller.kycDocuments.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No documents uploaded.</p>
+              <EmptyContent
+                filled
+                title="No documents uploaded"
+                description="The seller has not submitted KYC yet."
+                sx={{ py: 8 }}
+              />
             ) : (
               <Box
                 sx={{
@@ -436,75 +565,69 @@ export const SellerDetailPage = () => {
               </Box>
             )}
           </CardContent>
-        </Card>
-      </Stack>
-      )}
+        )}
 
-      {tab === 'reviews' && (
-      <Stack spacing={3}>
-        <Card>
-          <CardHeader>
-            <CardTitle>Review history</CardTitle>
-            <CardDescription>Latest admin action on this profile.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <Field label="Last reviewed" value={formatDateTime(seller.reviewedAt)} />
-            <Field label="Live since" value={formatDateTime(seller.liveAt)} />
-            <Field
-              label="Notes"
-              value={
-                seller.reviewNotes ? (
-                  <span className="whitespace-pre-wrap">{seller.reviewNotes}</span>
-                ) : (
-                  <span className="text-muted-foreground">No notes recorded</span>
-                )
-              }
-            />
+        {tab === 'reviews' && (
+          <CardContent>
+            <Stack spacing={2} sx={{ maxWidth: 600 }}>
+              <Field label="Last reviewed" value={fDateTime(seller.reviewedAt)} />
+              <Field label="Live since" value={fDateTime(seller.liveAt)} />
+              <Field
+                label="Notes"
+                value={
+                  seller.reviewNotes ? (
+                    <Box sx={{ whiteSpace: 'pre-wrap' }}>{seller.reviewNotes}</Box>
+                  ) : undefined
+                }
+              />
+            </Stack>
           </CardContent>
-        </Card>
-      </Stack>
-      )}
+        )}
 
-      {tab === 'disciplinary' && (
-      <Stack spacing={3}>
-      {canDiscipline && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Disciplinary history</CardTitle>
-            <CardDescription>
-              Warnings, suspensions and reactivations recorded against this seller.
-            </CardDescription>
-          </CardHeader>
+        {tab === 'disciplinary' && canDiscipline && (
           <CardContent>
             {!seller.disciplinaryActions || seller.disciplinaryActions.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No disciplinary actions recorded.</p>
+              <EmptyContent
+                filled
+                title="Nothing on record"
+                description="No warnings, suspensions or reactivations against this seller."
+                sx={{ py: 8 }}
+              />
             ) : (
-              <ul className="divide-y divide-border">
+              <Stack divider={<Divider sx={{ borderStyle: 'dashed' }} />} spacing={2}>
                 {[...seller.disciplinaryActions]
                   .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
                   .map((action, i) => (
-                    <li
+                    <Stack
                       key={`${action.type}-${action.at}-${i}`}
-                      className="flex items-start justify-between gap-4 py-3"
+                      direction="row"
+                      spacing={2}
+                      justifyContent="space-between"
+                      alignItems="flex-start"
                     >
-                      <div className="space-y-1">
-                        <Badge variant={disciplinaryVariant[action.type]}>
-                          {disciplinaryLabel[action.type]}
-                        </Badge>
-                        <p className="whitespace-pre-wrap text-sm">{action.reason}</p>
-                      </div>
-                      <span className="shrink-0 text-xs text-muted-foreground">
-                        {formatDateTime(action.at)}
-                      </span>
-                    </li>
+                      <Stack spacing={1}>
+                        <Box>
+                          <Label variant="soft" color={disciplinaryColor[action.type]}>
+                            {disciplinaryLabel[action.type]}
+                          </Label>
+                        </Box>
+                        <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                          {action.reason}
+                        </Typography>
+                      </Stack>
+                      <Typography
+                        variant="caption"
+                        sx={{ color: 'text.disabled', flexShrink: 0, whiteSpace: 'nowrap' }}
+                      >
+                        {fDateTime(action.at)}
+                      </Typography>
+                    </Stack>
                   ))}
-              </ul>
+              </Stack>
             )}
           </CardContent>
-        </Card>
-      )}
-      </Stack>
-      )}
+        )}
+      </Card>
 
       <ReviewDialog
         open={dialogAction !== null}
@@ -519,65 +642,83 @@ export const SellerDetailPage = () => {
         onClose={() => setDisciplinaryAction(null)}
         onSubmit={submitDisciplinary}
       />
-    </Stack>
+    </>
   );
 };
+
+// ----------------------------------------------------------------------
 
 const KycDocCard = ({ sellerId, doc }: { sellerId: string; doc: KycDocument }) => {
   const { data, isLoading, isError } = useKycViewUrl(sellerId, doc.s3Key);
+
   const url = data?.url;
   const isImage = /\.(jpe?g|png|webp|gif)$/i.test(doc.s3Key);
+
   return (
-    <div className="overflow-hidden rounded-md border border-border">
-      <div className="flex items-center justify-between gap-2 border-b border-border bg-secondary/30 px-3 py-2">
-        <span className="flex items-center gap-2 text-sm font-medium">
-          <FileText className="h-4 w-4 text-muted-foreground" />
-          {docLabel[doc.type] ?? doc.type}
-        </span>
-        <Badge variant={docStatusVariant[doc.status]}>{doc.status}</Badge>
-      </div>
-      <a
+    <Card variant="outlined" sx={{ overflow: 'hidden' }}>
+      <Stack
+        direction="row"
+        spacing={1}
+        alignItems="center"
+        justifyContent="space-between"
+        sx={{ px: 2, py: 1.5, bgcolor: 'background.neutral' }}
+      >
+        <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+          <Iconify icon="solar:document-text-bold" width={18} sx={{ color: 'text.disabled' }} />
+          <Typography variant="subtitle2" noWrap>
+            {docLabel[doc.type] ?? doc.type}
+          </Typography>
+        </Stack>
+        <Label variant="soft" color={docStatusColor[doc.status] ?? 'default'}>
+          {doc.status}
+        </Label>
+      </Stack>
+
+      <Link
         href={url}
         target="_blank"
         rel="noreferrer"
-        className="block bg-white"
-        onClick={(e) => !url && e.preventDefault()}
+        underline="none"
+        onClick={(e) => {
+          if (!url) e.preventDefault();
+        }}
+        sx={{
+          height: 160,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          bgcolor: 'common.white',
+        }}
       >
         {isImage && url ? (
-          <img src={url} alt={doc.type} className="h-40 w-full bg-white object-contain" />
+          <Box
+            component="img"
+            src={url}
+            alt={doc.type}
+            sx={{ width: 1, height: 1, objectFit: 'contain' }}
+          />
         ) : (
-          <div className="flex h-40 items-center justify-center text-sm text-muted-foreground">
+          <Typography variant="body2" sx={{ color: 'text.disabled' }}>
             {isLoading ? 'Loading…' : isError ? 'Preview unavailable' : 'Open document ↗'}
-          </div>
+          </Typography>
         )}
-      </a>
-      <div className="flex items-center justify-between px-3 py-2 text-xs text-muted-foreground">
-        <span>{formatDate(doc.uploadedAt)}</span>
+      </Link>
+
+      <Stack
+        direction="row"
+        alignItems="center"
+        justifyContent="space-between"
+        sx={{ px: 2, py: 1.5 }}
+      >
+        <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+          {fDate(doc.uploadedAt)}
+        </Typography>
         {url && (
-          <a href={url} target="_blank" rel="noreferrer" className="text-primary hover:underline">
+          <Link href={url} target="_blank" rel="noreferrer" variant="caption">
             Open full ↗
-          </a>
+          </Link>
         )}
-      </div>
-    </div>
+      </Stack>
+    </Card>
   );
 };
-
-const disciplinaryLabel: Record<DisciplinaryActionType, string> = {
-  warning: 'Warning',
-  suspension: 'Suspension',
-  reactivation: 'Reactivation',
-};
-
-const disciplinaryVariant: Record<DisciplinaryActionType, 'warning' | 'destructive' | 'success'> = {
-  warning: 'warning',
-  suspension: 'destructive',
-  reactivation: 'success',
-};
-
-const Field = ({ label, value }: { label: string; value: React.ReactNode }) => (
-  <div>
-    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
-    <div className="mt-1">{value}</div>
-  </div>
-);
