@@ -45,6 +45,12 @@ export interface PresignedUploadUrl {
   /** Backend returns `s3Key`; `key` kept for backward compatibility. */
   s3Key?: string;
   key?: string;
+  /**
+   * Public HTTPS URL the object is reachable at once uploaded. Present for
+   * public-read buckets (storefront assets); absent for KYC, which is private
+   * and read through a short-lived presigned GET.
+   */
+  publicUrl?: string;
   expiresAt?: string;
 }
 
