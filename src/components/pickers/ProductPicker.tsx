@@ -10,6 +10,9 @@ interface CommonProps {
   /** Optional category scope. */
   categoryId?: string;
   placeholder?: string;
+  /** Floating label, so the picker lines up with the fields beside it. */
+  label?: string;
+  required?: boolean;
   disabled?: boolean;
   className?: string;
 }
@@ -58,6 +61,8 @@ export const ProductPicker = (props: ProductPickerProps) => {
         values={props.values}
         onChange={props.onChange}
         loading={isLoading}
+        label={props.label}
+        required={props.required}
         disabled={props.disabled}
         placeholder={props.placeholder ?? 'Pick products…'}
         onSearch={setSearch}
@@ -71,6 +76,8 @@ export const ProductPicker = (props: ProductPickerProps) => {
       value={props.value}
       onChange={props.onChange}
       loading={isLoading}
+      label={props.label}
+      required={props.required}
       disabled={props.disabled}
       placeholder={props.placeholder ?? 'Pick a product…'}
       onSearch={setSearch}

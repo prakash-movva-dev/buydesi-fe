@@ -1,261 +1,430 @@
-import { useMemo, useState } from 'react';
-import { Pencil, Plus, ReceiptText, Wand2 } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+
 import Box from '@mui/material/Box';
-import Stack from '@mui/material/Stack';
 import Tab from '@mui/material/Tab';
+import Card from '@mui/material/Card';
+import Chip from '@mui/material/Chip';
 import Tabs from '@mui/material/Tabs';
 import Table from '@mui/material/Table';
-import MenuItem from '@mui/material/MenuItem';
-import TableRow from '@mui/material/TableRow';
+import Stack from '@mui/material/Stack';
+import Alert from '@mui/material/Alert';
+import Button from '@mui/material/Button';
+import Switch from '@mui/material/Switch';
+import Tooltip from '@mui/material/Tooltip';
 import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
 import TextField from '@mui/material/TextField';
-import IconButton from '@mui/material/IconButton';
-import Typography from '@mui/material/Typography';
-import { CategoryPicker } from '@/components/pickers/CategoryPicker';
-import { ProductPicker } from '@/components/pickers/ProductPicker';
-import { UserPicker } from '@/components/pickers/UserPicker';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/Card';
-import { Label } from '@/components/ui/Label';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { Skeleton } from '@/components/ui/Skeleton';
-import { Scrollbar } from '@/components/scrollbar';
-import { TableHeadCustom } from '@/components/table';
-import { ScopedAdminBanner } from '@/features/scoped-admin/ScopedAdminBanner';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import InputAdornment from '@mui/material/InputAdornment';
+import LinearProgress from '@mui/material/LinearProgress';
+
+import { varAlpha } from '@/theme/styles';
 import { useAuth } from '@/lib/auth';
-import { formatDate } from '@/lib/format';
-import { UserRole } from '@/types/api';
-import { useCommissionRates, useResolveCommission } from './api';
+import { ApiError, UserRole } from '@/types/api';
+
+import { Label } from '@/components/label';
+import { toast } from '@/components/snackbar';
+import { Iconify } from '@/components/iconify';
+import { Scrollbar } from '@/components/scrollbar';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { EmptyContent } from '@/components/empty-content';
+import { ConfirmDialog } from '@/components/custom-dialog';
+import { chipProps, FiltersBlock, FiltersResult } from '@/components/filters-result';
+import { TableHeadCustom, TableNoData } from '@/components/table';
+
+import { ScopedAdminBanner } from '@/features/scoped-admin/ScopedAdminBanner';
+
+import { useCommissionRates, useUpdateCommissionRate } from './api';
 import { CommissionRateDialog } from './CommissionRateDialog';
-import type { CommissionRate, CommissionScope, ResolvedSource } from './types';
+import { CommissionResolverCard } from './CommissionResolverCard';
+import { CommissionTableRow, rateState, SCOPE_LABEL } from './commission-table-row';
+import type { CommissionRate, CommissionScope } from './types';
 
-const SCOPE_OPTIONS: Array<{ value: '' | CommissionScope; label: string }> = [
-  { value: '', label: 'All scopes' },
-  { value: 'category', label: 'Category' },
-  { value: 'product', label: 'Product' },
-  { value: 'seller', label: 'Seller' },
+// ----------------------------------------------------------------------
+
+type RulesView = 'all' | CommissionScope | 'check';
+
+const TAB_OPTIONS: Array<{
+  value: RulesView;
+  label: string;
+  color: 'info' | 'error' | 'warning' | 'default';
+}> = [
+  { value: 'all', label: 'All rules', color: 'info' },
+  { value: 'seller', label: 'Seller overrides', color: 'error' },
+  { value: 'product', label: 'Product overrides', color: 'warning' },
+  { value: 'category', label: 'Category rules', color: 'info' },
+  { value: 'check', label: 'Check a rate', color: 'default' },
 ];
 
-const scopeVariant: Record<CommissionScope, 'info' | 'warning' | 'success'> = {
-  category: 'info',
-  product: 'warning',
-  seller: 'success',
-};
-
-const SOURCE_LABEL: Record<ResolvedSource, string> = {
-  seller: 'Seller override',
-  product: 'Product override',
-  category: 'Category rule',
-  category_default: 'Category default',
-};
-
-const RULE_HEAD = [
-  { id: 'appliesTo', label: 'Applies to' },
-  { id: 'rate', label: 'Rate', align: 'right' as const },
-  { id: 'active', label: 'Active' },
-  { id: 'from', label: 'From' },
-  { id: 'to', label: 'To' },
-  { id: 'notes', label: 'Notes' },
+const TABLE_HEAD = [
+  { id: 'target', label: 'Applies to' },
+  { id: 'rate', label: 'Rate', width: 120, align: 'right' as const },
+  { id: 'state', label: 'Status', width: 150 },
+  { id: 'window', label: 'In effect', width: 170 },
+  { id: 'notes', label: 'Why', width: 260 },
+  { id: '', width: 64 },
 ];
 
-const RULE_HEAD_SUPER = [...RULE_HEAD, { id: 'edit', label: '' }];
+/** The ladder, stated once at the top so the ordering is never a guess. */
+const LADDER: Array<{
+  scope: CommissionScope | null;
+  title: string;
+  blurb: string;
+  color: 'error' | 'warning' | 'info' | 'default';
+  icon: string;
+}> = [
+  {
+    scope: 'seller',
+    title: 'Seller override',
+    blurb: 'A deal with one seller, across everything they sell.',
+    color: 'error',
+    icon: 'solar:shop-bold-duotone',
+  },
+  {
+    scope: 'product',
+    title: 'Product override',
+    blurb: 'One product, whoever is selling it.',
+    color: 'warning',
+    icon: 'solar:box-bold-duotone',
+  },
+  {
+    scope: 'category',
+    title: 'Category rule',
+    blurb: 'Everything in a category, unless overridden above.',
+    color: 'info',
+    icon: 'solar:widget-4-bold-duotone',
+  },
+  {
+    scope: null,
+    title: 'Category default',
+    blurb: 'The rate on the category itself. The last word.',
+    color: 'default',
+    icon: 'solar:shield-check-bold-duotone',
+  },
+];
+
+// ----------------------------------------------------------------------
 
 export const CommissionPage = () => {
   const { user } = useAuth();
-  const isSuper = user?.role === UserRole.SUPER_ADMIN;
-  const [tab, setTab] = useState<'rules' | 'resolve'>('rules');
-  const [scope, setScope] = useState<'' | CommissionScope>('');
-  const [activeOnly, setActiveOnly] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editing, setEditing] = useState<CommissionRate | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const query = useMemo(
-    () => ({
-      scope: scope || undefined,
-      active: activeOnly ? true : undefined,
-    }),
-    [scope, activeOnly],
+  // Only a super admin may write rules; the other ops roles read them.
+  const canEdit = user?.role === UserRole.SUPER_ADMIN;
+
+  const view = (searchParams.get('view') as RulesView | null) ?? 'all';
+  const q = searchParams.get('q') ?? '';
+  const liveOnly = searchParams.get('all') !== '1';
+
+  const setParams = useCallback(
+    (next: Record<string, string | null>) => {
+      const params = new URLSearchParams(searchParams);
+      for (const [key, value] of Object.entries(next)) {
+        if (value === null || value === '') params.delete(key);
+        else params.set(key, value);
+      }
+      setSearchParams(params, { replace: true });
+    },
+    [searchParams, setSearchParams],
   );
 
-  const { data, isLoading, isError, error } = useCommissionRates(query);
+  const [search, setSearch] = useState(q);
+  useEffect(() => {
+    // The list is small and already in memory, so filtering is instant —
+    // no debounce needed, and none of the lag one would add.
+    if (search !== q) setParams({ q: search });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
+  useEffect(() => {
+    if (q !== search) setSearch(q);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
 
-  const grouped = useMemo(() => {
-    const out: Record<CommissionScope, CommissionRate[]> = { category: [], product: [], seller: [] };
-    for (const r of data ?? []) out[r.scope].push(r);
-    for (const s of Object.keys(out) as CommissionScope[]) {
-      out[s].sort((a, b) => new Date(b.effectiveFrom).getTime() - new Date(a.effectiveFrom).getTime());
+  // Always fetch the whole set: it is small, and the tabs, counts and the
+  // resolver's ladder all need to see rules the current tab is hiding.
+  const { data, isLoading, isFetching, isError, error } = useCommissionRates({});
+  const update = useUpdateCommissionRate();
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editing, setEditing] = useState<CommissionRate | null>(null);
+  const [toggling, setToggling] = useState<CommissionRate | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  const all = useMemo(() => data ?? [], [data]);
+
+  const visible = useMemo(() => {
+    const needle = q.trim().toLowerCase();
+    return all
+      .filter((r) => (view === 'all' || view === 'check' ? true : r.scope === view))
+      .filter((r) => (liveOnly ? rateState(r) === 'live' : true))
+      .filter((r) =>
+        needle
+          ? r.targetName.toLowerCase().includes(needle) ||
+            (r.notes ?? '').toLowerCase().includes(needle)
+          : true,
+      )
+      .sort((a, b) => {
+        // Most specific first, then newest — the order the resolver walks.
+        const rank: Record<CommissionScope, number> = { seller: 0, product: 1, category: 2 };
+        if (rank[a.scope] !== rank[b.scope]) return rank[a.scope] - rank[b.scope];
+        return new Date(b.effectiveFrom).getTime() - new Date(a.effectiveFrom).getTime();
+      });
+  }, [all, view, liveOnly, q]);
+
+  const countFor = (v: RulesView) => {
+    if (v === 'check') return 0;
+    const pool = v === 'all' ? all : all.filter((r) => r.scope === v);
+    return liveOnly ? pool.filter((r) => rateState(r) === 'live').length : pool.length;
+  };
+
+  const liveCountFor = (scope: CommissionScope) =>
+    all.filter((r) => r.scope === scope && rateState(r) === 'live').length;
+
+  const canReset = Boolean(q) || !liveOnly;
+
+  const onToggleActive = async () => {
+    if (!toggling) return;
+    setBusyId(toggling.id);
+    try {
+      await update.mutateAsync({ id: toggling.id, patch: { active: !toggling.active } });
+      toast.success(toggling.active ? 'Rate switched off' : 'Rate switched back on');
+      setToggling(null);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Could not change that rate');
+    } finally {
+      setBusyId(null);
     }
-    return out;
-  }, [data]);
+  };
+
+  const notFound = !isLoading && visible.length === 0;
 
   return (
-    <Stack spacing={3}>
+    <>
       <PageHeader
         title="Commission rules"
-        description="Resolution order — seller > product > category > category default. The payout pipeline picks the most specific live rule at payout time."
+        description="What the platform charges on a sale. The most specific rule wins — a seller deal beats a product override, which beats a category rule, which beats the category's own default."
         action={
-          isSuper && tab === 'rules' ? (
+          canEdit ? (
             <Button
+              variant="contained"
+              startIcon={<Iconify icon="mingcute:add-line" />}
               onClick={() => {
                 setEditing(null);
                 setDialogOpen(true);
               }}
             >
-              <Plus className="h-4 w-4" />
               New rule
             </Button>
           ) : undefined
         }
       />
 
-      <ScopedAdminBanner />
+      <Box sx={{ mt: 3 }}>
+        <ScopedAdminBanner />
+      </Box>
 
-      <Tabs
-        value={tab}
-        onChange={(_e, v) => setTab(v)}
-        sx={{ borderBottom: 1, borderColor: 'divider' }}
-      >
-        <Tab value="rules" label="Rules" />
-        <Tab value="resolve" label="Resolve" />
-      </Tabs>
-
-      {tab === 'resolve' && <ResolveTool />}
-
-      {tab === 'rules' && (
-      <Stack direction="row" spacing={2} flexWrap="wrap" alignItems="center">
-        <TextField
-          select
-          label="Scope"
-          value={scope}
-          onChange={(e) => setScope(e.target.value as '' | CommissionScope)}
-          InputLabelProps={{ shrink: true }}
-          sx={{ width: 200 }}
-        >
-          {SCOPE_OPTIONS.map((opt) => (
-            <MenuItem key={opt.value} value={opt.value}>
-              {opt.label}
-            </MenuItem>
-          ))}
-        </TextField>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={activeOnly}
-            onChange={(e) => setActiveOnly(e.target.checked)}
-          />
-          Active only
-        </label>
-      </Stack>
-      )}
-
-      {tab === 'rules' && isLoading && <Skeleton className="h-40 w-full" />}
-      {tab === 'rules' && isError && (
-        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
+      {isError && (
+        <Alert severity="error" sx={{ mt: 3 }}>
           {error instanceof Error ? error.message : 'Failed to load rules'}
-        </div>
+        </Alert>
       )}
 
-      {tab === 'rules' && !isLoading && !isError && (
-        <Stack spacing={3}>
-          {(['seller', 'product', 'category'] as const).map((s) => (
-            <Card key={s}>
-              <CardHeader className="pb-2">
-                <CardTitle className="flex items-center gap-2 text-base capitalize">
-                  <ReceiptText className="h-4 w-4" />
-                  {s} rules
-                  <Badge variant={scopeVariant[s]}>{grouped[s].length}</Badge>
-                </CardTitle>
-                <CardDescription>
-                  {s === 'seller'
-                    ? 'Override for special-deal sellers. Wins over product / category.'
-                    : s === 'product'
-                      ? 'Override for specific products (e.g. featured offers).'
-                      : 'Default per category. Wins when no seller/product override is set.'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="p-0">
-                {grouped[s].length === 0 ? (
-                  <Typography
-                    variant="body2"
-                    sx={{ px: 3, pb: 2, color: 'text.secondary' }}
-                  >
-                    No {s} rules{activeOnly ? ' active' : ''}.
-                  </Typography>
-                ) : (
-                  <Scrollbar>
-                    <Table sx={{ minWidth: 800 }}>
-                      <TableHeadCustom headLabel={isSuper ? RULE_HEAD_SUPER : RULE_HEAD} />
-                      <TableBody>
-                        {grouped[s].map((r) => (
-                          <TableRow key={r.id} hover>
-                            <TableCell>
-                              <Box component="span" sx={{ fontWeight: 600 }}>
-                                {r.targetName}
-                              </Box>
-                              <Box
-                                component="span"
-                                sx={{ ml: 1, color: 'text.secondary', typography: 'caption' }}
-                              >
-                                {r.targetType}
-                              </Box>
-                            </TableCell>
-                            <TableCell align="right" sx={{ fontWeight: 600 }}>
-                              {r.ratePercent}%
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant={r.active ? 'success' : 'muted'}>
-                                {r.active ? 'Active' : 'Inactive'}
-                              </Badge>
-                            </TableCell>
-                            <TableCell sx={{ typography: 'caption' }}>
-                              {formatDate(r.effectiveFrom)}
-                            </TableCell>
-                            <TableCell sx={{ typography: 'caption' }}>
-                              {r.effectiveTo ? formatDate(r.effectiveTo) : 'open-ended'}
-                            </TableCell>
-                            <TableCell
-                              sx={{
-                                maxWidth: 320,
-                                whiteSpace: 'nowrap',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                color: 'text.secondary',
-                                typography: 'caption',
-                              }}
-                            >
-                              {r.notes ?? '—'}
-                            </TableCell>
-                            {isSuper && (
-                              <TableCell>
-                                <IconButton
-                                  size="small"
-                                  onClick={() => {
-                                    setEditing(r);
-                                    setDialogOpen(true);
-                                  }}
-                                >
-                                  <Pencil className="h-3.5 w-3.5" />
-                                </IconButton>
-                              </TableCell>
-                            )}
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </Scrollbar>
-                )}
-              </CardContent>
-            </Card>
+      {/* The ladder. Everything else on this page is easier to read once you
+          know which rule beats which. */}
+      <Card sx={{ mt: 3, p: 3 }}>
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          spacing={{ xs: 2, md: 0 }}
+          alignItems={{ xs: 'stretch', md: 'center' }}
+        >
+          {LADDER.map((tier, index) => (
+            <Stack
+              key={tier.title}
+              direction="row"
+              spacing={1.5}
+              alignItems="center"
+              sx={{ flex: 1, minWidth: 0 }}
+            >
+              <Iconify
+                width={36}
+                icon={tier.icon}
+                sx={{ flexShrink: 0, color: `${tier.color === 'default' ? 'text.disabled' : `${tier.color}.main`}` }}
+              />
+
+              <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                <Stack direction="row" spacing={1} alignItems="center">
+                  <Box sx={{ typography: 'subtitle2' }}>{tier.title}</Box>
+                  {tier.scope && (
+                    <Tooltip
+                      title={`${liveCountFor(tier.scope)} in effect right now`}
+                      placement="top"
+                      arrow
+                    >
+                      <Label
+                        variant="soft"
+                        color={tier.color === 'default' ? 'default' : tier.color}
+                      >
+                        {liveCountFor(tier.scope)} live
+                      </Label>
+                    </Tooltip>
+                  )}
+                </Stack>
+                <Box sx={{ typography: 'caption', color: 'text.secondary' }}>{tier.blurb}</Box>
+              </Box>
+
+              {index < LADDER.length - 1 && (
+                <Iconify
+                  width={18}
+                  icon="eva:arrow-ios-forward-fill"
+                  sx={{
+                    flexShrink: 0,
+                    color: 'text.disabled',
+                    display: { xs: 'none', md: 'block' },
+                  }}
+                />
+              )}
+            </Stack>
           ))}
         </Stack>
+      </Card>
+
+      <Card sx={{ mt: 3 }}>
+        <Tabs
+          value={view}
+          onChange={(_e, value) => setParams({ view: value })}
+          variant="scrollable"
+          scrollButtons="auto"
+          sx={{
+            px: 2.5,
+            boxShadow: (theme) =>
+              `inset 0 -2px 0 0 ${varAlpha(theme.vars.palette.grey['500Channel'], 0.08)}`,
+          }}
+        >
+          {TAB_OPTIONS.map((tab) => (
+            <Tab
+              key={tab.value}
+              value={tab.value}
+              label={tab.label}
+              iconPosition="end"
+              icon={
+                tab.value === 'check' ? (
+                  <Iconify width={18} icon="solar:magnifer-bold" sx={{ opacity: 0.6 }} />
+                ) : (
+                  <Label variant={view === tab.value ? 'filled' : 'soft'} color={tab.color}>
+                    {countFor(tab.value)}
+                  </Label>
+                )
+              }
+            />
+          ))}
+        </Tabs>
+
+        {view !== 'check' && (
+          <>
+            <Stack
+              spacing={2}
+              direction={{ xs: 'column', md: 'row' }}
+              alignItems={{ xs: 'stretch', md: 'center' }}
+              sx={{ p: 2.5 }}
+            >
+              <TextField
+                fullWidth
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by who it applies to, or by note…"
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+
+              <FormControlLabel
+                sx={{ flexShrink: 0, mr: 0 }}
+                label="Only rules in effect"
+                control={
+                  <Switch
+                    checked={liveOnly}
+                    onChange={(e) => setParams({ all: e.target.checked ? null : '1' })}
+                  />
+                }
+              />
+            </Stack>
+
+            {canReset && (
+              <FiltersResult
+                totalResults={visible.length}
+                onReset={() => setParams({ q: null, all: null })}
+                sx={{ px: 2.5, pb: 2.5 }}
+              >
+                <FiltersBlock label="Search:" isShow={!!q}>
+                  <Chip {...chipProps} label={q} onDelete={() => setParams({ q: null })} />
+                </FiltersBlock>
+
+                <FiltersBlock label="Showing:" isShow={!liveOnly}>
+                  <Chip
+                    {...chipProps}
+                    label="Including switched off, expired and scheduled"
+                    onDelete={() => setParams({ all: null })}
+                  />
+                </FiltersBlock>
+              </FiltersResult>
+            )}
+
+            <Box sx={{ position: 'relative' }}>
+              {isFetching && !isLoading && (
+                <LinearProgress
+                  sx={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 9 }}
+                />
+              )}
+
+              {notFound && !isError ? (
+                <EmptyContent
+                  filled
+                  title={liveOnly ? 'No rules in effect here' : 'No rules here'}
+                  description={
+                    liveOnly
+                      ? 'Nothing is charging at this level right now. Switch off "Only rules in effect" to see expired and scheduled ones.'
+                      : 'Nothing matches. Category defaults still apply even with no rules at all.'
+                  }
+                  sx={{ py: 10 }}
+                />
+              ) : (
+                <Scrollbar>
+                  <Table sx={{ minWidth: 960 }}>
+                    <TableHeadCustom headLabel={TABLE_HEAD} />
+
+                    <TableBody>
+                      {visible.map((row) => (
+                        <CommissionTableRow
+                          key={row.id}
+                          row={row}
+                          canEdit={canEdit}
+                          busy={busyId === row.id}
+                          onEdit={() => {
+                            setEditing(row);
+                            setDialogOpen(true);
+                          }}
+                          onToggleActive={() => setToggling(row)}
+                        />
+                      ))}
+
+                      <TableNoData notFound={notFound} />
+                    </TableBody>
+                  </Table>
+                </Scrollbar>
+              )}
+            </Box>
+          </>
+        )}
+      </Card>
+
+      {view === 'check' && (
+        <Box sx={{ mt: 3 }}>
+          <CommissionResolverCard rules={all} />
+        </Box>
       )}
 
       <CommissionRateDialog
@@ -263,76 +432,40 @@ export const CommissionPage = () => {
         editing={editing}
         onClose={() => setDialogOpen(false)}
       />
-    </Stack>
-  );
-};
 
-const ResolveTool = () => {
-  const [sellerId, setSellerId] = useState('');
-  const [productId, setProductId] = useState('');
-  const [categoryId, setCategoryId] = useState('');
-  const result = useResolveCommission({ sellerId, productId, categoryId });
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <Wand2 className="h-4 w-4" />
-          Resolver
-        </CardTitle>
-        <CardDescription>
-          Probe which rule applies for a seller × product × category triple. Useful before
-          rolling out a new override.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <Box
-          sx={{
-            display: 'grid',
-            gap: 1.5,
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
-          }}
-        >
-          <div className="space-y-1.5">
-            <Label>Seller</Label>
-            <UserPicker
-              role={UserRole.SELLER}
-              value={sellerId || null}
-              onChange={(id) => setSellerId(id ?? '')}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Product</Label>
-            <ProductPicker
-              status="LIVE"
-              value={productId || null}
-              onChange={(id) => setProductId(id ?? '')}
-            />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Category</Label>
-            <CategoryPicker
-              value={categoryId || null}
-              onChange={(id) => setCategoryId(id ?? '')}
-            />
-          </div>
-        </Box>
-        {result.data && (
-          <div className="rounded-md border border-border bg-secondary/30 p-3">
-            <Typography variant="h5" sx={{ fontWeight: 600 }}>
-              {result.data.ratePercent}%
-            </Typography>
-            <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
-              Matched rule: <Badge variant="muted">{SOURCE_LABEL[result.data.source]}</Badge>
-            </Typography>
-          </div>
-        )}
-        {result.isError && (
-          <p className="text-sm text-destructive">
-            {result.error instanceof Error ? result.error.message : 'Lookup failed'}
-          </p>
-        )}
-      </CardContent>
-    </Card>
+      <ConfirmDialog
+        open={Boolean(toggling)}
+        onClose={() => setToggling(null)}
+        title={toggling?.active ? 'Switch off this rate?' : 'Switch this rate back on?'}
+        content={
+          toggling?.active ? (
+            <>
+              Sales for <strong>{toggling?.targetName}</strong> stop being charged{' '}
+              <strong>{toggling?.ratePercent}%</strong> and fall through to the next rule down
+              — {SCOPE_LABEL[toggling.scope].toLowerCase() === 'seller'
+                ? 'a product override, then the category'
+                : 'the category rule, then the category default'}
+              . The rate is kept on the record, not deleted.
+            </>
+          ) : (
+            <>
+              <strong>{toggling?.targetName}</strong> goes back to being charged{' '}
+              <strong>{toggling?.ratePercent}%</strong>, as long as today falls inside its
+              effective dates.
+            </>
+          )
+        }
+        action={
+          <Button
+            variant="contained"
+            color={toggling?.active ? 'error' : 'primary'}
+            onClick={onToggleActive}
+            disabled={update.isPending}
+          >
+            {toggling?.active ? 'Switch off' : 'Switch on'}
+          </Button>
+        }
+      />
+    </>
   );
 };
