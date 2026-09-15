@@ -31,6 +31,7 @@ const fetchProductsList = async (q: ProductsListQuery): Promise<ProductsListResu
   if (q.q) params.set('q', q.q);
   if (q.minPrice !== undefined) params.set('minPrice', String(q.minPrice));
   if (q.maxPrice !== undefined) params.set('maxPrice', String(q.maxPrice));
+  if (q.kind) params.set('kind', q.kind);
   if (q.stockState) params.set('stockState', q.stockState);
   if (q.sort) params.set('sort', q.sort);
   params.set('page', String(q.page));

@@ -258,8 +258,6 @@ export const SellersListPage = () => {
                         key={row.id}
                         row={row}
                         clusterName={row.clusterId ? clusterName.get(row.clusterId) : undefined}
-                        selected={table.selected.includes(row.id)}
-                        onSelectRow={() => table.onSelectRow(row.id)}
                         onViewRow={() => navigate(`/admin/sellers/${row.id}`)}
                         onApprove={() => navigate(`/admin/sellers/${row.id}`)}
                       />

@@ -6,7 +6,6 @@ import Tooltip from '@mui/material/Tooltip';
 import MenuList from '@mui/material/MenuList';
 import MenuItem from '@mui/material/MenuItem';
 import TableRow from '@mui/material/TableRow';
-import Checkbox from '@mui/material/Checkbox';
 import TableCell from '@mui/material/TableCell';
 import IconButton from '@mui/material/IconButton';
 import ListItemText from '@mui/material/ListItemText';
@@ -37,31 +36,18 @@ const STATUS_LABEL: Record<SellerStatus, string> = {
 type Props = {
   row: SafeSellerProfile;
   clusterName?: string;
-  selected: boolean;
-  onSelectRow: () => void;
   onViewRow: () => void;
   onApprove: () => void;
 };
 
-export function SellerTableRow({
-  row,
-  clusterName,
-  selected,
-  onSelectRow,
-  onViewRow,
-  onApprove,
-}: Props) {
+export function SellerTableRow({ row, clusterName, onViewRow, onApprove }: Props) {
   const popover = usePopover();
 
   const photo = row.storefront?.profilePhoto;
 
   return (
     <>
-      <TableRow hover selected={selected} aria-checked={selected} tabIndex={-1}>
-        <TableCell padding="checkbox">
-          <Checkbox id={row.id} checked={selected} onClick={onSelectRow} />
-        </TableCell>
-
+      <TableRow hover tabIndex={-1}>
         <TableCell>
           <Stack spacing={2} direction="row" alignItems="center">
             <Avatar alt={row.farmName} src={photo} variant="rounded" sx={{ width: 48, height: 48 }}>
