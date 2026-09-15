@@ -7,7 +7,8 @@ import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { ImageUploadField } from '@/components/ImageUploadField';
 import { UserPicker } from '@/components/pickers/UserPicker';
-import { Button } from '@/components/ui/Button';
+import Button from '@mui/material/Button';
+import LoadingButton from '@mui/lab/LoadingButton';
 import { Dialog } from '@/components/ui/Dialog';
 import { UserRole } from '@/types/api';
 import { useAuth } from '@/lib/auth';
@@ -261,14 +262,14 @@ export const CategoryFormDialog = ({ open, onClose, editing }: CategoryFormDialo
             )}
           </Box>
 
-          <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={onClose} disabled={submitting}>
+          <Stack direction="row" spacing={1.5} justifyContent="flex-end" sx={{ pt: 1 }}>
+            <Button type="button" variant="outlined" onClick={onClose} disabled={submitting}>
               Cancel
             </Button>
-            <Button type="submit" disabled={submitting}>
-              {submitting ? 'Saving…' : submitLabel}
-            </Button>
-          </div>
+            <LoadingButton type="submit" variant="contained" loading={submitting}>
+              {submitLabel}
+            </LoadingButton>
+          </Stack>
         </Stack>
       </form>
     </Dialog>

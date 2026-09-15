@@ -1,19 +1,41 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api } from '@/lib/api';
+import { api, fetchEnvelope } from '@/lib/api';
 import type {
   CreateCategoryInput,
   SafeCategory,
   UpdateCategoryInput,
 } from './types';
 
+export type CategoriesSort =
+  | 'display'
+  | 'name_asc'
+  | 'name_desc'
+  | 'commission_asc'
+  | 'commission_desc'
+  | 'newest';
+
 export interface CategoriesListQuery {
   status?: 'active' | 'inactive';
   q?: string;
 }
 
+/** Paged variant — the admin list is the only caller that wants a page. */
+export interface CategoriesPageQuery extends CategoriesListQuery {
+  page: number;
+  limit: number;
+  sort?: CategoriesSort;
+}
+
+export interface CategoriesListMeta {
+  total: number;
+  page: number | null;
+  limit: number | null;
+}
+
 export const categoryKeys = {
   all: ['categories'] as const,
   list: (q: CategoriesListQuery) => ['categories', 'list', q] as const,
+  page: (q: CategoriesPageQuery) => ['categories', 'page', q] as const,
 };
 
 /**
@@ -34,6 +56,35 @@ export const useCategoriesList = (input?: CategoriesListQuery | 'active' | 'inac
     },
   });
 };
+
+/**
+ * One page of the taxonomy, ordered and filtered by the server. Kept separate
+ * from {@link useCategoriesList} so the pickers and the reorder maths keep
+ * getting the whole list.
+ */
+export const useCategoriesPage = (q: CategoriesPageQuery) =>
+  useQuery({
+    queryKey: categoryKeys.page(q),
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (q.status) params.set('status', q.status);
+      if (q.q) params.set('q', q.q);
+      if (q.sort) params.set('sort', q.sort);
+      params.set('page', String(q.page));
+      params.set('limit', String(q.limit));
+      const { data, meta } = await fetchEnvelope<SafeCategory[]>(
+        `/categories?${params.toString()}`,
+      );
+      return {
+        items: data,
+        meta: (meta as CategoriesListMeta | undefined) ?? {
+          total: data.length,
+          page: q.page,
+          limit: q.limit,
+        },
+      };
+    },
+  });
 
 export const useCreateCategory = () => {
   const qc = useQueryClient();
