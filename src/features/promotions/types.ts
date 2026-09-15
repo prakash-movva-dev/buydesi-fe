@@ -1,12 +1,20 @@
 // Mirrors backend `src/modules/promotions/promotions.types.ts`.
 
-export type PromotionType = 'banner' | 'coupon' | 'featured' | 'sale_event';
+export type PromotionType = 'banner' | 'coupon' | 'featured';
 export type PromotionScope = 'platform' | 'cluster' | 'category';
 export type DiscountType = 'percent' | 'flat';
+
+export type BannerPlacement = 'hero' | 'promo';
 
 export interface BannerPayload {
   imageUrl: string;
   targetUrl: string;
+  /** `hero` = the main carousel, `promo` = the smaller cards beside it. */
+  placement?: BannerPlacement;
+  headline?: string | null;
+  subheadline?: string | null;
+  ctaLabel?: string | null;
+  displayOrder?: number;
 }
 
 export interface CouponPayload {
@@ -26,12 +34,6 @@ export interface FeaturedPayload {
   slotPosition: number;
 }
 
-export interface SaleEventPayload {
-  eligibleCategoryIds: string[];
-  discountMinPercent: number;
-  discountMaxPercent: number;
-}
-
 export interface Promotion {
   _id: string;
   id?: string;
@@ -48,7 +50,6 @@ export interface Promotion {
   banner: BannerPayload | null;
   coupon: CouponPayload | null;
   featured: FeaturedPayload | null;
-  saleEvent: SaleEventPayload | null;
   createdAt: string;
   updatedAt: string;
 }

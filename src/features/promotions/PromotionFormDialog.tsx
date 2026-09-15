@@ -1,22 +1,54 @@
 import { useEffect, useState } from 'react';
+
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
+import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import Divider from '@mui/material/Divider';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
-import Typography from '@mui/material/Typography';
-import { ImageUploadField } from '@/components/ImageUploadField';
-import { CategoryPicker } from '@/components/pickers/CategoryPicker';
-import { ClusterPicker } from '@/components/pickers/ClusterPicker';
-import { ProductPicker } from '@/components/pickers/ProductPicker';
-import { UserPicker } from '@/components/pickers/UserPicker';
-import { Button } from '@/components/ui/Button';
-import { DateTimeField } from '@/components/ui/DateTimeField';
-import { Dialog } from '@/components/ui/Dialog';
-import { ApiError, UserRole } from '@/types/api';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogContent from '@mui/material/DialogContent';
+import DialogActions from '@mui/material/DialogActions';
+import InputAdornment from '@mui/material/InputAdornment';
+import LoadingButton from '@mui/lab/LoadingButton';
+
 import { useAuth } from '@/lib/auth';
+import { ApiError, UserRole } from '@/types/api';
+
+import { Iconify } from '@/components/iconify';
+import { ImageUploadField } from '@/components/ImageUploadField';
+import { DateTimeField } from '@/components/ui/DateTimeField';
+import { UserPicker } from '@/components/pickers/UserPicker';
+import { ProductPicker } from '@/components/pickers/ProductPicker';
+import { ClusterPicker } from '@/components/pickers/ClusterPicker';
+import { CategoryPicker } from '@/components/pickers/CategoryPicker';
+
 import { useCreatePromotion } from './api';
+import { TYPE_COLOR, TYPE_ICON } from './promotion-table-row';
 import type { PromotionScope, PromotionType } from './types';
+
+// ----------------------------------------------------------------------
+
+/** What each type is, in a sentence, so the form explains itself. */
+const TYPE_COPY: Record<PromotionType, { label: string; help: string }> = {
+  banner: {
+    label: 'Banner on the home page',
+    help: 'An image shoppers see when they open the storefront.',
+  },
+  coupon: {
+    label: 'Coupon code',
+    help: 'A code shoppers type at checkout for money off their order.',
+  },
+  featured: {
+    label: 'Featured products',
+    help: 'Pins chosen products to the top of the first page of a listing.',
+  },
+};
+
+/** Mirrors the API rule, so a bad code is caught before the round trip. */
+const CODE_PATTERN = /^[A-Z0-9_-]{3,40}$/;
 
 interface Props {
   open: boolean;
@@ -65,11 +97,6 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
   const [storefrontUserIds, setStorefrontUserIds] = useState<string[]>([]);
   const [slotPosition, setSlotPosition] = useState('0');
 
-  // Sale event
-  const [eligibleCategoryIds, setEligibleCategoryIds] = useState<string[]>([]);
-  const [discountMinPercent, setDiscountMinPercent] = useState('5');
-  const [discountMaxPercent, setDiscountMaxPercent] = useState('20');
-
   useEffect(() => {
     if (!open) return;
     setError(null);
@@ -96,9 +123,6 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
     setProductIds([]);
     setStorefrontUserIds([]);
     setSlotPosition('0');
-    setEligibleCategoryIds([]);
-    setDiscountMinPercent('5');
-    setDiscountMaxPercent('20');
   }, [open, defaultType]);
 
   const submit = async () => {
@@ -144,13 +168,19 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
           };
           break;
         case 'coupon': {
+          const trimmedCode = code.trim().toUpperCase();
+          if (!CODE_PATTERN.test(trimmedCode)) {
+            throw new Error(
+              'A code is 3–40 characters of A–Z, 0–9, _ and - . No spaces.',
+            );
+          }
           const dv = Number(discountValue);
           if (!Number.isFinite(dv) || dv <= 0) throw new Error('Discount value must be positive');
           if (discountType === 'percent' && dv > 100) throw new Error('Percent must be ≤ 100');
           payload = {
             ...base,
             coupon: {
-              code: code.trim().toUpperCase(),
+              code: trimmedCode,
               discountType,
               discountValue: dv,
               maxDiscountInr: maxDiscountInr ? Number(maxDiscountInr) : null,
@@ -173,22 +203,6 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
           };
           break;
         }
-        case 'sale_event': {
-          if (eligibleCategoryIds.length === 0)
-            throw new Error('At least one eligible category required');
-          const min = Number(discountMinPercent);
-          const max = Number(discountMaxPercent);
-          if (max < min) throw new Error('Max % must be ≥ min %');
-          payload = {
-            ...base,
-            saleEvent: {
-              eligibleCategoryIds,
-              discountMinPercent: min,
-              discountMaxPercent: max,
-            },
-          };
-          break;
-        }
       }
       await createMut.mutateAsync(payload);
       onClose();
@@ -200,22 +214,28 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
   return (
     <Dialog
       open={open}
-      onClose={onClose}
-      title="New promotion"
-      description="Pick a type, set scope and validity window, then fill in the type-specific payload."
-      footer={
-        <>
-          <Button variant="outline" onClick={onClose} disabled={createMut.isPending}>
-            Cancel
-          </Button>
-          <Button onClick={submit} disabled={createMut.isPending}>
-            {createMut.isPending ? 'Creating…' : 'Create promotion'}
-          </Button>
-        </>
-      }
-      className="max-w-2xl"
+      onClose={createMut.isPending ? undefined : onClose}
+      fullWidth
+      maxWidth="md"
     >
-      <Stack spacing={2.5}>
+      <DialogTitle sx={{ pb: 2 }}>
+        <Stack direction="row" spacing={1.5} alignItems="center">
+          <Iconify
+            width={24}
+            icon={TYPE_ICON[type]}
+            sx={{ color: `${TYPE_COLOR[type]}.main` }}
+          />
+          New promotion
+        </Stack>
+      </DialogTitle>
+
+      <DialogContent>
+      <Stack spacing={2.5} sx={{ pt: 1 }}>
+        <Box sx={{ typography: 'body2', color: 'text.secondary' }}>
+          {TYPE_COPY[type].help} It shows only between its start and end dates, and only where
+          its scope says.
+        </Box>
+
         {error && <Alert severity="error">{error}</Alert>}
 
         <Box
@@ -234,10 +254,11 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
             onChange={(e) => setType(e.target.value as PromotionType)}
             InputLabelProps={{ shrink: true }}
           >
-            <MenuItem value="banner">Banner</MenuItem>
-            <MenuItem value="coupon">Coupon</MenuItem>
-            <MenuItem value="featured">Featured slot</MenuItem>
-            <MenuItem value="sale_event">Sale event</MenuItem>
+            {(Object.keys(TYPE_COPY) as PromotionType[]).map((t) => (
+              <MenuItem key={t} value={t}>
+                {TYPE_COPY[t].label}
+              </MenuItem>
+            ))}
           </TextField>
           <TextField
             id="p-name"
@@ -271,19 +292,22 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
             <MenuItem value="category">Category</MenuItem>
           </TextField>
           {scope === 'cluster' && (
-            <Stack spacing={1}>
-              <Typography variant="subtitle2">Cluster *</Typography>
-              <ClusterPicker value={clusterId || null} onChange={(id) => setClusterId(id ?? '')} />
-            </Stack>
+            <ClusterPicker
+              label="Cluster"
+              required
+              value={clusterId || null}
+              onChange={(id) => setClusterId(id ?? '')}
+              placeholder="Pick a cluster…"
+            />
           )}
           {scope === 'category' && (
-            <Stack spacing={1}>
-              <Typography variant="subtitle2">Category *</Typography>
-              <CategoryPicker
-                value={categoryId || null}
-                onChange={(id) => setCategoryId(id ?? '')}
-              />
-            </Stack>
+            <CategoryPicker
+              label="Category"
+              required
+              value={categoryId || null}
+              onChange={(id) => setCategoryId(id ?? '')}
+              placeholder="Pick a category…"
+            />
           )}
         </Box>
 
@@ -298,19 +322,19 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
           <DateTimeField label="Ends at" required value={endsAt} onChange={setEndsAt} />
         </Box>
 
-        <hr className="border-border" />
+        <Divider sx={{ borderStyle: 'dashed' }} />
 
         {type === 'banner' && (
           <Stack spacing={2.5}>
-            <Stack spacing={1}>
-              <Typography variant="subtitle2">Banner image</Typography>
+            <Box>
+              <Box sx={{ mb: 1, typography: 'subtitle2' }}>Banner image</Box>
               <ImageUploadField
                 value={imageUrl}
                 onChange={setImageUrl}
                 kind="promotion"
                 variant="wide"
               />
-            </Stack>
+            </Box>
 
             <Box
               sx={{
@@ -415,6 +439,8 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
                 placeholder="e.g. WELCOME10"
                 InputLabelProps={{ shrink: true }}
+                helperText="What shoppers type at checkout"
+                inputProps={{ maxLength: 40 }}
               />
               <TextField
                 id="p-dt"
@@ -444,16 +470,25 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
                 value={discountValue}
                 onChange={(e) => setDiscountValue(e.target.value)}
                 InputLabelProps={{ shrink: true }}
+                InputProps={
+                  discountType === 'percent'
+                    ? { endAdornment: <InputAdornment position="end">%</InputAdornment> }
+                    : { startAdornment: <InputAdornment position="start">₹</InputAdornment> }
+                }
                 inputProps={{ min: 1 }}
               />
               <TextField
                 id="p-max"
                 fullWidth
                 type="number"
-                label="Max discount cap ₹ (optional)"
+                label="Most it can take off"
                 value={maxDiscountInr}
                 onChange={(e) => setMaxDiscountInr(e.target.value)}
                 InputLabelProps={{ shrink: true }}
+                InputProps={{
+                  startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+                }}
+                helperText="Leave blank for no cap"
                 inputProps={{ min: 0 }}
               />
             </Box>
@@ -468,20 +503,25 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
                 id="p-min"
                 fullWidth
                 type="number"
-                label="Min order ₹"
+                label="Minimum order"
                 value={minOrderInr}
                 onChange={(e) => setMinOrderInr(e.target.value)}
                 InputLabelProps={{ shrink: true }}
+                InputProps={{
+                  startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+                }}
+                helperText="0 means any order"
                 inputProps={{ min: 0 }}
               />
               <TextField
                 id="p-uses"
                 fullWidth
                 type="number"
-                label="Max uses (0 = unlimited)"
+                label="How many times it can be used"
                 value={maxUses}
                 onChange={(e) => setMaxUses(e.target.value)}
                 InputLabelProps={{ shrink: true }}
+                helperText="Shared across everyone. 0 means no limit."
                 inputProps={{ min: 0 }}
               />
             </Box>
@@ -490,26 +530,22 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
 
         {type === 'featured' && (
           <Stack spacing={2.5}>
-            <Stack spacing={1}>
-              <Typography variant="subtitle2">Products</Typography>
-              <ProductPicker
-                multi
-                status="LIVE"
-                values={productIds}
-                onChange={setProductIds}
-                placeholder="Pick products to feature…"
-              />
-            </Stack>
-            <Stack spacing={1}>
-              <Typography variant="subtitle2">Storefronts (sellers)</Typography>
-              <UserPicker
-                multi
-                role={UserRole.SELLER}
-                values={storefrontUserIds}
-                onChange={setStorefrontUserIds}
-                placeholder="Pick sellers whose storefronts to feature…"
-              />
-            </Stack>
+            <ProductPicker
+              multi
+              status="LIVE"
+              label="Products to pin"
+              values={productIds}
+              onChange={setProductIds}
+              placeholder="Pick products to feature…"
+            />
+            <UserPicker
+              multi
+              role={UserRole.SELLER}
+              label="Sellers to feature"
+              values={storefrontUserIds}
+              onChange={setStorefrontUserIds}
+              placeholder="Pick sellers whose storefronts to feature…"
+            />
             <TextField
               id="p-slot"
               fullWidth
@@ -523,48 +559,17 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
           </Stack>
         )}
 
-        {type === 'sale_event' && (
-          <Stack spacing={2.5}>
-            <Stack spacing={1}>
-              <Typography variant="subtitle2">Eligible categories</Typography>
-              <CategoryPicker
-                multi
-                values={eligibleCategoryIds}
-                onChange={setEligibleCategoryIds}
-                placeholder="Pick categories included in the sale…"
-              />
-            </Stack>
-            <Box
-              sx={{
-                display: 'grid',
-                gap: 2.5,
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
-              }}
-            >
-              <TextField
-                id="p-min%"
-                fullWidth
-                type="number"
-                label="Min discount %"
-                value={discountMinPercent}
-                onChange={(e) => setDiscountMinPercent(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                inputProps={{ min: 0, max: 100 }}
-              />
-              <TextField
-                id="p-max%"
-                fullWidth
-                type="number"
-                label="Max discount %"
-                value={discountMaxPercent}
-                onChange={(e) => setDiscountMaxPercent(e.target.value)}
-                InputLabelProps={{ shrink: true }}
-                inputProps={{ min: 0, max: 100 }}
-              />
-            </Box>
-          </Stack>
-        )}
       </Stack>
+      </DialogContent>
+
+      <DialogActions>
+        <Button variant="outlined" color="inherit" onClick={onClose} disabled={createMut.isPending}>
+          Cancel
+        </Button>
+        <LoadingButton variant="contained" loading={createMut.isPending} onClick={submit}>
+          Create promotion
+        </LoadingButton>
+      </DialogActions>
     </Dialog>
   );
 };
