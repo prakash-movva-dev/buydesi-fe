@@ -87,6 +87,8 @@ export interface TicketDetailResponse {
   };
 }
 
+export type TicketsSort = 'newest' | 'oldest' | 'due_soon' | 'status_asc' | 'status_desc';
+
 export interface TicketsListQuery {
   status?: SupportStatus;
   category?: SupportCategory;
@@ -94,6 +96,9 @@ export interface TicketsListQuery {
   clusterId?: string;
   /** Either a user ObjectId, or the literal "none" for unassigned tickets. */
   assignedTo?: string;
+  /** Matches the ticket number or the subject. */
+  q?: string;
+  sort?: TicketsSort;
   page: number;
   limit: number;
 }
@@ -102,4 +107,9 @@ export interface TicketsListMeta {
   total: number;
   page: number;
   limit: number;
+  /**
+   * Tickets per status for the current filter, ignoring the status filter —
+   * what the list's tabs show beside their labels. `all` is the sum.
+   */
+  counts?: Partial<Record<SupportStatus | 'all', number>>;
 }

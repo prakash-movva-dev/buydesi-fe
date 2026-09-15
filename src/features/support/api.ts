@@ -36,6 +36,8 @@ const fetchTicketsList = async (q: TicketsListQuery): Promise<TicketsListResult>
   if (q.escalationLevel) params.set('escalationLevel', q.escalationLevel);
   if (q.clusterId) params.set('clusterId', q.clusterId);
   if (q.assignedTo) params.set('assignedTo', q.assignedTo);
+  if (q.q) params.set('q', q.q);
+  if (q.sort) params.set('sort', q.sort);
   params.set('page', String(q.page));
   params.set('limit', String(q.limit));
   const { data, meta } = await fetchEnvelope<SupportTicket[]>(

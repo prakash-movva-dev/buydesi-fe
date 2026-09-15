@@ -1,19 +1,20 @@
-import { Badge } from '@/components/ui/Badge';
-import type {
-  SupportCategory,
-  SupportEscalationLevel,
-  SupportStatus,
-} from './types';
+import { Label } from '@/components/label';
+import type { SupportCategory, SupportEscalationLevel, SupportStatus } from './types';
 
-const statusVariant: Record<SupportStatus, 'info' | 'warning' | 'success' | 'destructive' | 'muted'> = {
+// ----------------------------------------------------------------------
+
+export const STATUS_COLOR: Record<
+  SupportStatus,
+  'info' | 'warning' | 'success' | 'error' | 'default'
+> = {
   OPEN: 'info',
   IN_PROGRESS: 'warning',
   RESOLVED: 'success',
-  ESCALATED: 'destructive',
-  CLOSED: 'muted',
+  ESCALATED: 'error',
+  CLOSED: 'default',
 };
 
-const statusLabel: Record<SupportStatus, string> = {
+export const STATUS_LABEL: Record<SupportStatus, string> = {
   OPEN: 'Open',
   IN_PROGRESS: 'In progress',
   RESOLVED: 'Resolved',
@@ -22,34 +23,52 @@ const statusLabel: Record<SupportStatus, string> = {
 };
 
 export const TicketStatusBadge = ({ status }: { status: SupportStatus }) => (
-  <Badge variant={statusVariant[status]}>{statusLabel[status]}</Badge>
+  <Label variant="soft" color={STATUS_COLOR[status]}>
+    {STATUS_LABEL[status]}
+  </Label>
 );
 
-const levelVariant: Record<SupportEscalationLevel, 'muted' | 'warning' | 'destructive'> = {
-  support: 'muted',
+// ----------------------------------------------------------------------
+
+export const LEVEL_COLOR: Record<SupportEscalationLevel, 'default' | 'warning' | 'error'> = {
+  support: 'default',
   cluster: 'warning',
-  super: 'destructive',
+  super: 'error',
 };
 
-const levelLabel: Record<SupportEscalationLevel, string> = {
+export const LEVEL_LABEL: Record<SupportEscalationLevel, string> = {
   support: 'Support',
   cluster: 'Cluster',
   super: 'Super',
 };
 
 export const TicketLevelBadge = ({ level }: { level: SupportEscalationLevel }) => (
-  <Badge variant={levelVariant[level]}>{levelLabel[level]} tier</Badge>
+  <Label variant="soft" color={LEVEL_COLOR[level]}>
+    {LEVEL_LABEL[level]}
+  </Label>
 );
 
-const categoryLabel: Record<SupportCategory, string> = {
+// ----------------------------------------------------------------------
+
+export const CATEGORY_LABEL: Record<SupportCategory, string> = {
   return: 'Return',
   refund: 'Refund',
   grievance: 'Grievance',
-  product_quality: 'Quality',
+  product_quality: 'Product quality',
   delivery: 'Delivery',
   other: 'Other',
 };
 
+/** Each category gets its own glyph, so a column of rows scans by shape. */
+export const CATEGORY_ICON: Record<SupportCategory, string> = {
+  return: 'solar:restart-bold',
+  refund: 'solar:wallet-money-bold',
+  grievance: 'solar:danger-triangle-bold',
+  product_quality: 'solar:box-bold',
+  delivery: 'solar:delivery-bold',
+  other: 'solar:chat-round-dots-bold',
+};
+
 export const TicketCategoryBadge = ({ category }: { category: SupportCategory }) => (
-  <Badge variant="muted">{categoryLabel[category]}</Badge>
+  <Label variant="soft">{CATEGORY_LABEL[category] ?? category}</Label>
 );
