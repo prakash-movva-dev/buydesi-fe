@@ -1,52 +1,55 @@
 import { useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
-import {
-  AlertCircle,
-  ArrowLeft,
-  CheckCircle2,
-  CircleDollarSign,
-  ExternalLink,
-  FileText,
-  Lock,
-  Mail,
-  MessageSquare,
-  Phone,
-  Send,
-  Truck,
-} from 'lucide-react';
-import Alert from '@mui/material/Alert';
+
 import Box from '@mui/material/Box';
-import MenuItem from '@mui/material/MenuItem';
+import Card from '@mui/material/Card';
+import Grid from '@mui/material/Unstable_Grid2';
 import Stack from '@mui/material/Stack';
+import Alert from '@mui/material/Alert';
+import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import Divider from '@mui/material/Divider';
+import Skeleton from '@mui/material/Skeleton';
+import MenuItem from '@mui/material/MenuItem';
+import Checkbox from '@mui/material/Checkbox';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/Card';
-import { Dialog } from '@/components/ui/Dialog';
+import CardHeader from '@mui/material/CardHeader';
+import CardContent from '@mui/material/CardContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Timeline from '@mui/lab/Timeline';
+import TimelineDot from '@mui/lab/TimelineDot';
+import TimelineContent from '@mui/lab/TimelineContent';
+import TimelineSeparator from '@mui/lab/TimelineSeparator';
+import TimelineConnector from '@mui/lab/TimelineConnector';
+import TimelineItem, { timelineItemClasses } from '@mui/lab/TimelineItem';
+import LoadingButton from '@mui/lab/LoadingButton';
+import { alpha } from '@mui/material/styles';
+
+import { useAuth } from '@/lib/auth';
+import { varAlpha } from '@/theme/styles';
+import { formatInr } from '@/lib/format';
+import { fDateTime } from '@/utils/format-time';
+import { ADMIN_ROLES, ApiError, UserRole } from '@/types/api';
+
+import { Label } from '@/components/label';
+import { Iconify } from '@/components/iconify';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Skeleton } from '@/components/ui/Skeleton';
+import { EmptyContent } from '@/components/empty-content';
+import { LoadingScreen } from '@/components/loading-screen';
+
 import { useOrder } from '@/features/orders/api';
 import { useUser } from '@/features/users/api';
-import {
-  readBoolean,
-  useExposedSettingMap,
-} from '@/features/platform-settings/exposed';
-import { useAuth } from '@/lib/auth';
-import { cn } from '@/lib/cn';
-import { formatDateTime, formatInr } from '@/lib/format';
-import { ADMIN_ROLES, ApiError, UserRole } from '@/types/api';
+import { readBoolean, useExposedSettingMap } from '@/features/platform-settings/exposed';
+
 import {
   useOverrideTicket,
+  usePostTicketMessage,
   useScheduleReversePickup,
   useTicket,
-  usePostTicketMessage,
 } from './api';
 import {
   ClaimDialog,
@@ -55,15 +58,15 @@ import {
   ResolveDialog,
 } from './TicketActionDialogs';
 import {
-  TicketCategoryBadge,
-  TicketLevelBadge,
-  TicketStatusBadge,
+  CATEGORY_LABEL,
+  LEVEL_COLOR,
+  LEVEL_LABEL,
+  STATUS_COLOR,
+  STATUS_LABEL,
 } from './status-badge';
-import type {
-  SupportMessageChannel,
-  SupportTicket,
-  SupportTicketMessage,
-} from './types';
+import type { SupportMessageChannel, SupportTicket, SupportTicketMessage } from './types';
+
+// ----------------------------------------------------------------------
 
 const REFUND_ROLES = new Set<string>([
   UserRole.SUPER_ADMIN,
@@ -72,24 +75,59 @@ const REFUND_ROLES = new Set<string>([
   UserRole.SUPPORT_ADMIN,
 ]);
 
-const slaPill = (dueAt: string, fulfilledAt: string | null) => {
+/** How an SLA window is doing, as one label. */
+const SlaPill = ({ dueAt, fulfilledAt }: { dueAt: string; fulfilledAt: string | null }) => {
   if (fulfilledAt) {
-    return <Badge variant="success">met</Badge>;
+    return (
+      <Label variant="soft" color="success">
+        Met
+      </Label>
+    );
   }
   const ms = new Date(dueAt).getTime() - Date.now();
-  if (ms < 0) return <Badge variant="destructive">breached</Badge>;
-  const h = Math.round(ms / 3_600_000);
-  return <Badge variant={h < 6 ? 'warning' : 'info'}>{h}h left</Badge>;
+  if (ms < 0) {
+    return (
+      <Label variant="soft" color="error">
+        Breached
+      </Label>
+    );
+  }
+  const hours = Math.round(ms / 3_600_000);
+  return (
+    <Label variant="soft" color={hours < 6 ? 'warning' : 'info'}>
+      {hours}h left
+    </Label>
+  );
 };
+
+/** One label/value line. */
+const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
+  <Stack
+    direction="row"
+    spacing={2}
+    sx={{ typography: 'body2', justifyContent: 'space-between', alignItems: 'baseline' }}
+  >
+    <Box component="span" sx={{ color: 'text.secondary', flexShrink: 0 }}>
+      {label}
+    </Box>
+    <Box component="span" sx={{ textAlign: 'right', fontWeight: 'fontWeightMedium' }}>
+      {value}
+    </Box>
+  </Stack>
+);
+
+// ----------------------------------------------------------------------
 
 export const TicketDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+
   const { data, isLoading, isError, error } = useTicket(id);
   const reversePickup = useScheduleReversePickup();
   const override = useOverrideTicket();
+
   const isSuperTier =
     user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.SUB_SUPER_ADMIN;
 
@@ -102,340 +140,511 @@ export const TicketDetailPage = () => {
   const [ovrReason, setOvrReason] = useState('');
   const [ovrErr, setOvrErr] = useState<string | null>(null);
 
-  if (isLoading) {
-    return (
-      <Stack spacing={2}>
-        <Skeleton className="h-8 w-72" />
-        <Skeleton className="h-40 w-full" />
-        <Skeleton className="h-64 w-full" />
-      </Stack>
-    );
-  }
+  // This page is mounted under /admin, /seller and /promoter. Going "back" has
+  // to stay inside the caller's own section — sending a seller to /admin/support
+  // lands them on a 403.
+  const section = location.pathname.startsWith('/seller')
+    ? '/seller'
+    : location.pathname.startsWith('/promoter')
+      ? '/promoter'
+      : '/admin';
+  const ticketsPath = `${section}/support`;
+
+  if (isLoading) return <LoadingScreen sx={{ py: 20 }} />;
 
   if (isError || !data) {
     return (
-      <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
-        {error instanceof Error ? error.message : 'Ticket not found'}
-      </div>
+      <>
+        <PageHeader title="Ticket" />
+        <EmptyContent
+          filled
+          title="Ticket not found"
+          description={error instanceof Error ? error.message : 'It may have been removed.'}
+          action={
+            <Button
+              variant="contained"
+              onClick={() => navigate(ticketsPath)}
+              startIcon={<Iconify icon="eva:arrow-ios-back-fill" />}
+              sx={{ mt: 3 }}
+            >
+              Back to tickets
+            </Button>
+          }
+          sx={{ py: 10, mt: 3 }}
+        />
+      </>
     );
   }
 
   const ticket = data.ticket;
   const isStaff = user ? ADMIN_ROLES.has(user.role) : false;
-  const isAssignedToMe = user && ticket.assignedTo === user.id;
+  const isAssignedToMe = Boolean(user && ticket.assignedTo === user.id);
   const isActive = ticket.status !== 'RESOLVED' && ticket.status !== 'CLOSED';
-  const canRefund = user && REFUND_ROLES.has(user.role);
+  const canRefund = Boolean(user && REFUND_ROLES.has(user.role));
   const canSchedulePickup = isActive && Boolean(ticket.orderId);
 
-  // This page is mounted under /admin, /seller and /promoter. Going "back" has
-  // to stay inside the caller's own section — sending a seller to /admin/support
-  // lands them on a 403.
-  const ticketsPath = location.pathname.startsWith('/seller')
-    ? '/seller/support'
-    : location.pathname.startsWith('/promoter')
-      ? '/promoter/support'
-      : '/admin/support';
+  const applyOverride = async () => {
+    if (ovrReason.trim().length < 3) {
+      setOvrErr('A reason is required.');
+      return;
+    }
+    setOvrErr(null);
+    try {
+      await override.mutateAsync({
+        id: ticket.id,
+        status: ovrStatus,
+        reason: ovrReason.trim(),
+      });
+      setOverrideOpen(false);
+    } catch (err) {
+      setOvrErr(err instanceof ApiError ? err.message : 'Override failed');
+    }
+  };
 
   return (
-    <Stack spacing={3}>
-      <Box>
-        <Button variant="ghost" size="sm" onClick={() => navigate(ticketsPath)}>
-          <ArrowLeft className="h-4 w-4" />
-          Back to tickets
-        </Button>
-      </Box>
+    <>
+      <PageHeader
+        title={ticket.ticketNumber}
+        links={[
+          { name: 'Dashboard', href: section },
+          { name: 'Support', href: ticketsPath },
+          { name: ticket.ticketNumber },
+        ]}
+        action={
+          <Button
+            variant="outlined"
+            onClick={() => navigate(ticketsPath)}
+            startIcon={<Iconify icon="eva:arrow-ios-back-fill" />}
+          >
+            Back to tickets
+          </Button>
+        }
+      />
 
-      <Stack spacing={2}>
-        <PageHeader
-          title={ticket.ticketNumber}
-          action={
-            <>
+      {/* Hero — what the ticket is, how it is doing, and what can be done. */}
+      <Card
+        sx={{
+          mt: 3,
+          p: 3,
+          backgroundImage: (theme) =>
+            `linear-gradient(135deg, ${varAlpha(
+              theme.vars.palette.primary.lighterChannel,
+              0.48,
+            )}, ${varAlpha(theme.vars.palette.primary.lightChannel, 0.32)})`,
+        }}
+      >
+        <Stack spacing={2}>
+          <Stack
+            direction={{ xs: 'column', md: 'row' }}
+            spacing={2}
+            justifyContent="space-between"
+            alignItems={{ xs: 'flex-start', md: 'flex-start' }}
+          >
+            <Stack spacing={1} sx={{ minWidth: 0 }}>
+              <Typography variant="h4">{ticket.subject}</Typography>
+
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap alignItems="center">
+                <Label variant="soft" color={STATUS_COLOR[ticket.status]}>
+                  {STATUS_LABEL[ticket.status]}
+                </Label>
+                <Label variant="soft" color={LEVEL_COLOR[ticket.escalationLevel]}>
+                  {LEVEL_LABEL[ticket.escalationLevel]}
+                </Label>
+                <Label variant="soft">{CATEGORY_LABEL[ticket.category] ?? ticket.category}</Label>
+                {isAssignedToMe && (
+                  <Label variant="soft" color="info">
+                    Assigned to me
+                  </Label>
+                )}
+                {data.sla.responseBreached && (
+                  <Label variant="filled" color="error">
+                    Response SLA breached
+                  </Label>
+                )}
+                {data.sla.resolutionBreached && (
+                  <Label variant="filled" color="error">
+                    Resolution SLA breached
+                  </Label>
+                )}
+              </Stack>
+
+              <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                Raised {fDateTime(ticket.createdAt)} by a {ticket.raiserRole.toLowerCase()}
+              </Typography>
+            </Stack>
+
+            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ flexShrink: 0 }}>
+              {/* An unclaimed ticket is nobody's job until someone takes it. */}
+              {isStaff && isActive && !ticket.assignedTo && (
+                <Button
+                  variant="contained"
+                  onClick={() => setClaimOpen(true)}
+                  startIcon={<Iconify icon="solar:hand-shake-bold" />}
+                >
+                  Claim
+                </Button>
+              )}
+
               {isActive && ticket.assignedTo && (
-                <Button onClick={() => setResolveOpen(true)}>
-                  <CheckCircle2 className="h-4 w-4" />
+                <Button
+                  variant="contained"
+                  color="success"
+                  onClick={() => setResolveOpen(true)}
+                  startIcon={<Iconify icon="solar:check-circle-bold" />}
+                >
                   Resolve
                 </Button>
               )}
+
+              {isStaff && isActive && ticket.escalationLevel !== 'super' && (
+                <Button
+                  variant="outlined"
+                  color="warning"
+                  onClick={() => setEscalateOpen(true)}
+                  startIcon={<Iconify icon="solar:arrow-up-bold" />}
+                >
+                  Escalate
+                </Button>
+              )}
+
               {canRefund && ticket.orderId && (
-                <Button variant="outline" onClick={() => setRefundOpen(true)}>
-                  <CircleDollarSign className="h-4 w-4" />
+                <Button
+                  variant="outlined"
+                  onClick={() => setRefundOpen(true)}
+                  startIcon={<Iconify icon="solar:wallet-money-bold" />}
+                >
                   Force refund
                 </Button>
               )}
+
               {canSchedulePickup && (
-                <Button
-                  variant="outline"
+                <LoadingButton
+                  variant="outlined"
+                  loading={reversePickup.isPending}
                   onClick={() => reversePickup.mutate({ id: ticket.id })}
-                  disabled={reversePickup.isPending}
+                  startIcon={<Iconify icon="solar:delivery-bold" />}
                 >
-                  <Truck className="h-4 w-4" />
                   Reverse pickup
-                </Button>
+                </LoadingButton>
               )}
+
               {isSuperTier && (
                 <Button
-                  variant="outline"
+                  variant="outlined"
+                  color="error"
                   onClick={() => {
                     setOvrStatus(ticket.status);
                     setOvrReason('');
                     setOvrErr(null);
                     setOverrideOpen(true);
                   }}
+                  startIcon={<Iconify icon="solar:lock-password-bold" />}
                 >
-                  <Lock className="h-4 w-4" />
                   Override
                 </Button>
               )}
-            </>
-          }
-        />
-        <Typography variant="body1">{ticket.subject}</Typography>
-        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-          raised {formatDateTime(ticket.createdAt)} by {ticket.raiserRole.toLowerCase()}{' '}
-          {ticket.raisedBy}
-        </Typography>
-        <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
-          <TicketStatusBadge status={ticket.status} />
-          <TicketLevelBadge level={ticket.escalationLevel} />
-          <TicketCategoryBadge category={ticket.category} />
-          {isAssignedToMe && <Badge variant="info">Assigned to me</Badge>}
-          {data.sla.responseBreached && (
-            <Badge variant="destructive">response SLA breached</Badge>
-          )}
-          {data.sla.resolutionBreached && (
-            <Badge variant="destructive">resolution SLA breached</Badge>
-          )}
+            </Stack>
+          </Stack>
         </Stack>
-      </Stack>
-
-      <Dialog
-        open={overrideOpen}
-        onClose={() => setOverrideOpen(false)}
-        title="Override ticket decision"
-        description="Force a new status with a mandatory reason. The previous handler and the customer are notified, and the change is logged."
-        footer={
-          <>
-            <Button variant="outline" onClick={() => setOverrideOpen(false)} disabled={override.isPending}>
-              Cancel
-            </Button>
-            <Button
-              onClick={async () => {
-                if (ovrReason.trim().length < 3) {
-                  setOvrErr('A reason is required.');
-                  return;
-                }
-                try {
-                  await override.mutateAsync({
-                    id: ticket.id,
-                    status: ovrStatus,
-                    reason: ovrReason.trim(),
-                  });
-                  setOverrideOpen(false);
-                } catch (err) {
-                  setOvrErr(err instanceof ApiError ? err.message : 'Override failed');
-                }
-              }}
-              disabled={override.isPending}
-            >
-              {override.isPending ? 'Overriding…' : 'Apply override'}
-            </Button>
-          </>
-        }
-      >
-        <Stack spacing={2}>
-          <TextField
-            select
-            fullWidth
-            label="New status"
-            value={ovrStatus}
-            onChange={(e) => setOvrStatus(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-          >
-            <MenuItem value="OPEN">Open (reopen)</MenuItem>
-            <MenuItem value="IN_PROGRESS">In progress</MenuItem>
-            <MenuItem value="ESCALATED">Escalated</MenuItem>
-            <MenuItem value="RESOLVED">Resolved</MenuItem>
-            <MenuItem value="CLOSED">Closed</MenuItem>
-          </TextField>
-          <TextField
-            fullWidth
-            multiline
-            minRows={3}
-            label="Reason"
-            required
-            value={ovrReason}
-            onChange={(e) => setOvrReason(e.target.value)}
-            placeholder="Why is this decision being overridden?"
-            InputLabelProps={{ shrink: true }}
-          />
-          {ovrErr && <Alert severity="error">{ovrErr}</Alert>}
-        </Stack>
-      </Dialog>
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Description</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="whitespace-pre-wrap text-sm">{ticket.description}</p>
-            </CardContent>
-          </Card>
-
-          <ConversationCard ticket={ticket} active={isActive} isStaff={isStaff} />
-        </div>
-
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>SLA</CardTitle>
-              <CardDescription>Windows are set from platform settings.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <Row
-                label="First response"
-                value={slaPill(ticket.sla.responseDueAt, ticket.sla.firstResponseAt)}
-              />
-              <p className="-mt-2 text-xs text-muted-foreground">
-                due {formatDateTime(ticket.sla.responseDueAt)}
-              </p>
-              <Row
-                label="Resolution"
-                value={slaPill(ticket.sla.resolutionDueAt, ticket.sla.resolvedAt)}
-              />
-              <p className="-mt-2 text-xs text-muted-foreground">
-                due {formatDateTime(ticket.sla.resolutionDueAt)}
-              </p>
-              {ticket.sla.firstResponseAt === null && (
-                <div className="flex items-start gap-2 rounded-md bg-amber-50 p-2 text-xs text-amber-900">
-                  <AlertCircle className="mt-0.5 h-3.5 w-3.5" />
-                  <span>
-                    No first response yet — posting a customer reply below stamps it.
-                  </span>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <OrderContextCard orderId={ticket.orderId} raisedBy={ticket.raisedBy} />
-        </div>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Resolution</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <Row label="Action" value={ticket.resolution.action ?? '—'} />
-            <Row
-              label="By"
-              value={
-                ticket.resolution.by ?? <span className="text-muted-foreground">—</span>
-              }
-            />
-            <Row
-              label="At"
-              value={ticket.resolution.at ? formatDateTime(ticket.resolution.at) : '—'}
-            />
-            {ticket.resolution.notes && (
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Notes
-                </p>
-                <p className="mt-1 whitespace-pre-wrap">{ticket.resolution.notes}</p>
-              </div>
-            )}
-            {ticket.refundIssued && (
-              <div className="mt-3 rounded-md bg-emerald-50 p-2 text-xs text-emerald-900">
-                Refund of {formatInr(ticket.refundIssued.amountInr)} issued{' '}
-                {formatDateTime(ticket.refundIssued.at)} by {ticket.refundIssued.by}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Attachments</CardTitle>
-            <CardDescription>{ticket.attachments.length} file(s).</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {ticket.attachments.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No attachments uploaded.</p>
-            ) : (
-              <ul className="space-y-2 text-sm">
-                {ticket.attachments.map((key, i) => (
-                  <li key={`${key}-${i}`} className="flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-mono text-xs">{key}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>History</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ol className="space-y-3">
-            {ticket.history.map((event, i) => (
-              <li key={i} className="flex items-start gap-3">
-                <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{event.event}</span>
-                    {event.fromStatus && event.toStatus && (
-                      <span className="text-xs text-muted-foreground">
-                        {event.fromStatus} → {event.toStatus}
-                      </span>
-                    )}
-                    {event.fromLevel && event.toLevel && (
-                      <span className="text-xs text-muted-foreground">
-                        {event.fromLevel} → {event.toLevel}
-                      </span>
-                    )}
-                    <span className="text-xs text-muted-foreground">
-                      {formatDateTime(event.at)}
-                    </span>
-                  </div>
-                  {event.notes && (
-                    <p className="mt-1 whitespace-pre-wrap text-sm">{event.notes}</p>
-                  )}
-                  {event.byUserId && (
-                    <p className="text-xs text-muted-foreground">by {event.byUserId}</p>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ol>
-        </CardContent>
       </Card>
 
+      <Grid container spacing={3} sx={{ mt: 0 }}>
+        <Grid xs={12} lg={8}>
+          <Stack spacing={3}>
+            <Card>
+              <CardHeader title="Description" />
+              <CardContent>
+                <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                  {ticket.description}
+                </Typography>
+              </CardContent>
+            </Card>
+
+            <ConversationCard ticket={ticket} active={isActive} isStaff={isStaff} />
+          </Stack>
+        </Grid>
+
+        <Grid xs={12} lg={4}>
+          <Stack spacing={3}>
+            <Card>
+              <CardHeader title="SLA" subheader="Windows come from platform settings." />
+              <CardContent>
+                <Stack spacing={2}>
+                  <Stack spacing={0.5}>
+                    <Row
+                      label="First response"
+                      value={
+                        <SlaPill
+                          dueAt={ticket.sla.responseDueAt}
+                          fulfilledAt={ticket.sla.firstResponseAt}
+                        />
+                      }
+                    />
+                    <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                      due {fDateTime(ticket.sla.responseDueAt)}
+                    </Typography>
+                  </Stack>
+
+                  <Stack spacing={0.5}>
+                    <Row
+                      label="Resolution"
+                      value={
+                        <SlaPill
+                          dueAt={ticket.sla.resolutionDueAt}
+                          fulfilledAt={ticket.sla.resolvedAt}
+                        />
+                      }
+                    />
+                    <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                      due {fDateTime(ticket.sla.resolutionDueAt)}
+                    </Typography>
+                  </Stack>
+
+                  {ticket.sla.firstResponseAt === null && (
+                    <Alert severity="warning" sx={{ typography: 'caption' }}>
+                      No first response yet — posting a customer reply below stamps it.
+                    </Alert>
+                  )}
+                </Stack>
+              </CardContent>
+            </Card>
+
+            <OrderContextCard
+              orderId={ticket.orderId}
+              raisedBy={ticket.raisedBy}
+              section={section}
+            />
+
+            <Card>
+              <CardHeader title="Resolution" />
+              <CardContent>
+                <Stack spacing={1.5}>
+                  <Row label="Action" value={ticket.resolution.action ?? '—'} />
+                  <Row label="By" value={ticket.resolution.by ?? '—'} />
+                  <Row
+                    label="At"
+                    value={ticket.resolution.at ? fDateTime(ticket.resolution.at) : '—'}
+                  />
+
+                  {ticket.resolution.notes && (
+                    <>
+                      <Divider sx={{ borderStyle: 'dashed' }} />
+                      <Box>
+                        <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                          Notes
+                        </Typography>
+                        <Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>
+                          {ticket.resolution.notes}
+                        </Typography>
+                      </Box>
+                    </>
+                  )}
+
+                  {ticket.refundIssued && (
+                    <Alert severity="success" sx={{ typography: 'caption' }}>
+                      Refund of {formatInr(ticket.refundIssued.amountInr)} issued{' '}
+                      {fDateTime(ticket.refundIssued.at)}
+                    </Alert>
+                  )}
+                </Stack>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader
+                title="Attachments"
+                subheader={`${ticket.attachments.length} file${
+                  ticket.attachments.length === 1 ? '' : 's'
+                }`}
+              />
+              <CardContent>
+                {ticket.attachments.length === 0 ? (
+                  <Typography variant="body2" sx={{ color: 'text.disabled' }}>
+                    No attachments uploaded.
+                  </Typography>
+                ) : (
+                  <Stack spacing={1}>
+                    {ticket.attachments.map((key, i) => (
+                      <Stack
+                        key={`${key}-${i}`}
+                        direction="row"
+                        spacing={1}
+                        alignItems="center"
+                        sx={{ minWidth: 0 }}
+                      >
+                        <Iconify
+                          icon="solar:document-text-bold"
+                          width={18}
+                          sx={{ color: 'text.disabled', flexShrink: 0 }}
+                        />
+                        <Box
+                          component="span"
+                          sx={{
+                            typography: 'caption',
+                            fontFamily: 'monospace',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          {key}
+                        </Box>
+                      </Stack>
+                    ))}
+                  </Stack>
+                )}
+              </CardContent>
+            </Card>
+          </Stack>
+        </Grid>
+
+        <Grid xs={12}>
+          <Card>
+            <CardHeader title="History" subheader="Everything that has happened to this ticket." />
+            {ticket.history.length === 0 ? (
+              <CardContent>
+                <Typography variant="body2" sx={{ color: 'text.disabled' }}>
+                  Nothing recorded yet.
+                </Typography>
+              </CardContent>
+            ) : (
+              <Timeline
+                sx={{
+                  m: 0,
+                  p: 3,
+                  [`& .${timelineItemClasses.root}:before`]: { flex: 0, padding: 0 },
+                }}
+              >
+                {ticket.history.map((event, i) => (
+                  <TimelineItem key={i}>
+                    <TimelineSeparator>
+                      <TimelineDot
+                        color={
+                          /escalat/i.test(event.event)
+                            ? 'warning'
+                            : /resolv|close/i.test(event.event)
+                              ? 'success'
+                              : /overrid|reject/i.test(event.event)
+                                ? 'error'
+                                : 'primary'
+                        }
+                      />
+                      {i !== ticket.history.length - 1 && <TimelineConnector />}
+                    </TimelineSeparator>
+
+                    <TimelineContent>
+                      <Stack
+                        direction="row"
+                        spacing={1}
+                        alignItems="center"
+                        flexWrap="wrap"
+                        useFlexGap
+                      >
+                        <Typography variant="subtitle2">{event.event}</Typography>
+                        {event.fromStatus && event.toStatus && (
+                          <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                            {event.fromStatus} → {event.toStatus}
+                          </Typography>
+                        )}
+                        {event.fromLevel && event.toLevel && (
+                          <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                            {event.fromLevel} → {event.toLevel}
+                          </Typography>
+                        )}
+                      </Stack>
+
+                      <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                        {fDateTime(event.at)}
+                      </Typography>
+
+                      {event.notes && (
+                        <Typography variant="body2" sx={{ mt: 0.5, whiteSpace: 'pre-wrap' }}>
+                          {event.notes}
+                        </Typography>
+                      )}
+                    </TimelineContent>
+                  </TimelineItem>
+                ))}
+              </Timeline>
+            )}
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Override — super tier only, and always with a reason on record. */}
+      <Dialog open={overrideOpen} onClose={() => setOverrideOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Override ticket decision</DialogTitle>
+
+        <DialogContent>
+          <Stack spacing={2.5}>
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              Force a new status with a mandatory reason. The previous handler and the customer
+              are notified, and the change is logged.
+            </Typography>
+
+            <TextField
+              select
+              fullWidth
+              label="New status"
+              value={ovrStatus}
+              onChange={(e) => setOvrStatus(e.target.value)}
+              InputLabelProps={{ shrink: true }}
+            >
+              <MenuItem value="OPEN">Open (reopen)</MenuItem>
+              <MenuItem value="IN_PROGRESS">In progress</MenuItem>
+              <MenuItem value="ESCALATED">Escalated</MenuItem>
+              <MenuItem value="RESOLVED">Resolved</MenuItem>
+              <MenuItem value="CLOSED">Closed</MenuItem>
+            </TextField>
+
+            <TextField
+              fullWidth
+              multiline
+              minRows={3}
+              required
+              label="Reason"
+              value={ovrReason}
+              onChange={(e) => setOvrReason(e.target.value)}
+              placeholder="Why is this decision being overridden?"
+              InputLabelProps={{ shrink: true }}
+            />
+
+            {ovrErr && <Alert severity="error">{ovrErr}</Alert>}
+          </Stack>
+        </DialogContent>
+
+        <DialogActions>
+          <Button
+            variant="outlined"
+            onClick={() => setOverrideOpen(false)}
+            disabled={override.isPending}
+          >
+            Cancel
+          </Button>
+          <LoadingButton
+            variant="contained"
+            color="error"
+            loading={override.isPending}
+            onClick={applyOverride}
+          >
+            Apply override
+          </LoadingButton>
+        </DialogActions>
+      </Dialog>
+
       <ClaimDialog open={claimOpen} ticketId={ticket.id} onClose={() => setClaimOpen(false)} />
-      <ResolveDialog
-        open={resolveOpen}
-        ticketId={ticket.id}
-        onClose={() => setResolveOpen(false)}
-      />
+      <ResolveDialog open={resolveOpen} ticketId={ticket.id} onClose={() => setResolveOpen(false)} />
       <EscalateDialog
         open={escalateOpen}
         ticketId={ticket.id}
         onClose={() => setEscalateOpen(false)}
       />
-      <ForceRefundDialog
-        open={refundOpen}
-        ticketId={ticket.id}
-        onClose={() => setRefundOpen(false)}
-      />
-    </Stack>
+      <ForceRefundDialog open={refundOpen} ticketId={ticket.id} onClose={() => setRefundOpen(false)} />
+    </>
   );
 };
+
+// ----------------------------------------------------------------------
 
 const ConversationCard = ({
   ticket,
@@ -448,8 +657,7 @@ const ConversationCard = ({
 }) => {
   // The exposed-settings endpoint is admin-only — skip it for raiser views.
   const { map: settings } = useExposedSettingMap(isStaff);
-  const internalAllowed =
-    isStaff && readBoolean(settings, 'support.allowInternalNotes', true);
+  const internalAllowed = isStaff && readBoolean(settings, 'support.allowInternalNotes', true);
   const post = usePostTicketMessage();
 
   const [body, setBody] = useState('');
@@ -487,173 +695,215 @@ const ConversationCard = ({
     }
   };
 
+  const sendIcon =
+    effectiveChannel === 'email'
+      ? 'solar:letter-bold'
+      : effectiveChannel === 'call'
+        ? 'solar:phone-bold'
+        : 'solar:plain-bold';
+
+  const sendLabel = isInternal
+    ? 'Post internal note'
+    : effectiveChannel === 'email'
+      ? 'Send as email'
+      : effectiveChannel === 'call'
+        ? 'Log call'
+        : 'Send reply';
+
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <MessageSquare className="h-5 w-5" />
-          Conversation
-        </CardTitle>
-        <CardDescription>
-          Customer replies are visible to the raiser. Internal notes stay staff-only.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {messages.length === 0 ? (
-          <p className="text-sm text-muted-foreground">
-            No messages yet. Post a reply to start the thread.
-          </p>
-        ) : (
-          <ul className="space-y-3">
-            {messages.map((m, i) => (
-              <MessageBubble key={m._id ?? i} message={m} />
-            ))}
-          </ul>
-        )}
+      <CardHeader
+        title="Conversation"
+        subheader="Customer replies are visible to the raiser. Internal notes stay staff-only."
+      />
 
-        {active ? (
-          <div className="space-y-2 border-t border-border pt-4">
-            <TextField
-              fullWidth
-              multiline
-              minRows={3}
-              value={body}
-              onChange={(e) => setBody(e.target.value)}
-              placeholder={
-                isInternal
-                  ? 'Internal note — visible to staff only…'
-                  : effectiveChannel === 'email'
-                    ? 'Reply — also emailed to the customer…'
-                    : effectiveChannel === 'call'
-                      ? 'Call-log note — what was discussed on the call…'
-                      : 'Reply to the customer…'
-              }
-              sx={isInternal ? { '& .MuiInputBase-root': { bgcolor: '#fffbeb' } } : undefined}
-            />
-            <div className="flex flex-wrap items-center gap-3">
-              {internalAllowed && (
-                <label className="flex cursor-pointer items-center gap-2 text-sm">
-                  <input
-                    type="checkbox"
-                    checked={internal}
-                    onChange={(e) => setInternal(e.target.checked)}
-                    className="h-4 w-4 rounded border-input"
+      <CardContent>
+        <Stack spacing={2}>
+          {messages.length === 0 ? (
+            <Typography variant="body2" sx={{ color: 'text.disabled' }}>
+              No messages yet. Post a reply to start the thread.
+            </Typography>
+          ) : (
+            <Stack spacing={2}>
+              {messages.map((m, i) => (
+                <MessageBubble key={m._id ?? i} message={m} />
+              ))}
+            </Stack>
+          )}
+
+          <Divider sx={{ borderStyle: 'dashed' }} />
+
+          {active ? (
+            <Stack spacing={2}>
+              <TextField
+                fullWidth
+                multiline
+                minRows={3}
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                placeholder={
+                  isInternal
+                    ? 'Internal note — visible to staff only…'
+                    : effectiveChannel === 'email'
+                      ? 'Reply — also emailed to the customer…'
+                      : effectiveChannel === 'call'
+                        ? 'Call-log note — what was discussed on the call…'
+                        : 'Reply to the customer…'
+                }
+                // A tinted box is a standing reminder that this one is not
+                // going to the customer.
+                sx={
+                  isInternal
+                    ? {
+                        '& .MuiInputBase-root': {
+                          bgcolor: (theme) => alpha(theme.palette.warning.main, 0.08),
+                        },
+                      }
+                    : undefined
+                }
+              />
+
+              <Stack
+                direction="row"
+                spacing={2}
+                alignItems="center"
+                flexWrap="wrap"
+                useFlexGap
+              >
+                {internalAllowed && (
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        checked={internal}
+                        onChange={(e) => setInternal(e.target.checked)}
+                      />
+                    }
+                    label={
+                      <Stack direction="row" spacing={0.5} alignItems="center">
+                        <Iconify icon="solar:lock-password-bold" width={16} />
+                        <Box component="span" sx={{ typography: 'body2' }}>
+                          Internal note (staff-only)
+                        </Box>
+                      </Stack>
+                    }
                   />
-                  <span className="inline-flex items-center gap-1">
-                    <Lock className="h-3.5 w-3.5" />
-                    Internal note (staff-only)
-                  </span>
-                </label>
-              )}
-              {!isInternal && (
-                <label className="flex items-center gap-2 text-sm">
-                  <span className="text-muted-foreground">Channel</span>
+                )}
+
+                {!isInternal && (
                   <TextField
                     select
                     size="small"
+                    label="Channel"
                     value={channel}
-                    onChange={(e) =>
-                      setChannel(e.target.value as SupportMessageChannel)
-                    }
-                    sx={{ width: 160 }}
+                    onChange={(e) => setChannel(e.target.value as SupportMessageChannel)}
+                    sx={{ width: 180 }}
+                    InputLabelProps={{ shrink: true }}
                   >
                     <MenuItem value="in_app">In-app reply</MenuItem>
                     <MenuItem value="email">Send as email</MenuItem>
                     <MenuItem value="call">Log a call</MenuItem>
                   </TextField>
-                </label>
-              )}
-              <Button
-                size="sm"
-                onClick={submit}
-                disabled={post.isPending || !body.trim()}
-                className="ml-auto"
-              >
-                {effectiveChannel === 'email' ? (
-                  <Mail className="h-4 w-4" />
-                ) : effectiveChannel === 'call' ? (
-                  <Phone className="h-4 w-4" />
-                ) : (
-                  <Send className="h-4 w-4" />
                 )}
-                {post.isPending
-                  ? 'Posting…'
-                  : isInternal
-                    ? 'Post internal note'
-                    : effectiveChannel === 'email'
-                      ? 'Send as email'
-                      : effectiveChannel === 'call'
-                        ? 'Log call'
-                        : 'Send reply'}
-              </Button>
-            </div>
-            {error && <Alert severity="error">{error}</Alert>}
-          </div>
-        ) : (
-          <p className="border-t border-border pt-4 text-sm text-muted-foreground">
-            This ticket is {ticket.status.toLowerCase()} — the thread is closed to new
-            messages.
-          </p>
-        )}
+
+                <LoadingButton
+                  variant="contained"
+                  loading={post.isPending}
+                  disabled={!body.trim()}
+                  onClick={submit}
+                  startIcon={<Iconify icon={sendIcon} />}
+                  sx={{ ml: 'auto' }}
+                >
+                  {sendLabel}
+                </LoadingButton>
+              </Stack>
+
+              {error && <Alert severity="error">{error}</Alert>}
+            </Stack>
+          ) : (
+            <Typography variant="body2" sx={{ color: 'text.disabled' }}>
+              This ticket is {ticket.status.toLowerCase()} — the thread is closed to new messages.
+            </Typography>
+          )}
+        </Stack>
       </CardContent>
     </Card>
   );
 };
 
+// ----------------------------------------------------------------------
+
 const MessageBubble = ({ message }: { message: SupportTicketMessage }) => {
   const isStaff = message.authorRole === 'STAFF';
-  if (message.internal) {
-    return (
-      <li className="rounded-md border border-amber-200 bg-amber-50 p-3">
-        <div className="mb-1 flex items-center gap-2">
-          <Badge variant="warning">
-            <Lock className="mr-1 h-3 w-3" />
-            Internal note
-          </Badge>
-          <span className="text-xs text-muted-foreground">
-            {formatDateTime(message.at)}
-          </span>
-        </div>
-        <p className="whitespace-pre-wrap text-sm">{message.body}</p>
-      </li>
-    );
-  }
+
+  const authorLabel = isStaff
+    ? 'Support'
+    : message.authorRole === 'SELLER'
+      ? 'Seller'
+      : 'Buyer';
+
   return (
-    <li
-      className={cn(
-        'rounded-md border p-3',
-        isStaff ? 'border-blue-200 bg-blue-50/60' : 'border-border bg-secondary/30',
-      )}
+    <Card
+      variant="outlined"
+      sx={{
+        p: 2,
+        ...(message.internal
+          ? {
+              borderColor: (theme) => alpha(theme.palette.warning.main, 0.32),
+              bgcolor: (theme) => alpha(theme.palette.warning.main, 0.08),
+            }
+          : isStaff
+            ? { bgcolor: (theme) => alpha(theme.palette.info.main, 0.06) }
+            : { bgcolor: 'background.neutral' }),
+      }}
     >
-      <div className="mb-1 flex items-center gap-2">
-        <Badge variant={isStaff ? 'info' : 'muted'}>
-          {isStaff ? 'Support' : message.authorRole === 'SELLER' ? 'Seller' : 'Buyer'}
-        </Badge>
+      <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+        {message.internal ? (
+          <Label
+            variant="soft"
+            color="warning"
+            startIcon={<Iconify icon="solar:lock-password-bold" />}
+          >
+            Internal note
+          </Label>
+        ) : (
+          <Label variant="soft" color={isStaff ? 'info' : 'default'}>
+            {authorLabel}
+          </Label>
+        )}
+
         {message.channel === 'email' && (
-          <Badge variant="muted">
-            <Mail className="mr-1 h-3 w-3" />
-            email
-          </Badge>
+          <Label variant="soft" startIcon={<Iconify icon="solar:letter-bold" />}>
+            Email
+          </Label>
         )}
         {message.channel === 'call' && (
-          <Badge variant="muted">
-            <Phone className="mr-1 h-3 w-3" />
-            call
-          </Badge>
+          <Label variant="soft" startIcon={<Iconify icon="solar:phone-bold" />}>
+            Call
+          </Label>
         )}
-        <span className="text-xs text-muted-foreground">{formatDateTime(message.at)}</span>
-      </div>
-      <p className="whitespace-pre-wrap text-sm">{message.body}</p>
-    </li>
+
+        <Typography variant="caption" sx={{ color: 'text.disabled', ml: 'auto' }}>
+          {fDateTime(message.at)}
+        </Typography>
+      </Stack>
+
+      <Typography variant="body2" sx={{ mt: 1, whiteSpace: 'pre-wrap' }}>
+        {message.body}
+      </Typography>
+    </Card>
   );
 };
+
+// ----------------------------------------------------------------------
 
 const OrderContextCard = ({
   orderId,
   raisedBy,
+  section,
 }: {
   orderId: string | null;
   raisedBy: string;
+  section: string;
 }) => {
   const navigate = useNavigate();
   const order = useOrder(orderId ?? undefined);
@@ -662,12 +912,21 @@ const OrderContextCard = ({
   if (!orderId) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Context</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm">
-          <Row label="Raiser" value={<span className="font-mono text-xs">{raisedBy}</span>} />
-          <p className="text-muted-foreground">No order linked to this ticket.</p>
+        <CardHeader title="Context" />
+        <CardContent>
+          <Stack spacing={1.5}>
+            <Row
+              label="Raiser"
+              value={
+                <Box component="span" sx={{ fontFamily: 'monospace', typography: 'caption' }}>
+                  {raisedBy.slice(-8)}
+                </Box>
+              }
+            />
+            <Typography variant="body2" sx={{ color: 'text.disabled' }}>
+              No order linked to this ticket.
+            </Typography>
+          </Stack>
         </CardContent>
       </Card>
     );
@@ -675,82 +934,76 @@ const OrderContextCard = ({
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-start justify-between gap-2 space-y-0">
-        <div>
-          <CardTitle className="text-base">Linked order</CardTitle>
-          <CardDescription>Context for resolving this ticket.</CardDescription>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => navigate(`/admin/orders/${orderId}`)}
-        >
-          Open
-          <ExternalLink className="h-3 w-3" />
-        </Button>
-      </CardHeader>
-      <CardContent className="space-y-2 text-sm">
-        {order.isLoading && <Skeleton className="h-24 w-full" />}
+      <CardHeader
+        title="Linked order"
+        subheader="Context for resolving this ticket."
+        action={
+          <Button
+            size="small"
+            color="inherit"
+            onClick={() => navigate(`${section}/orders/${orderId}`)}
+            endIcon={<Iconify icon="eva:arrow-ios-forward-fill" width={16} sx={{ ml: -0.5 }} />}
+          >
+            Open
+          </Button>
+        }
+      />
+
+      <CardContent>
+        {order.isLoading && <Skeleton height={96} />}
+
         {order.isError && (
-          <p className="text-xs text-destructive">
+          <Alert severity="error" sx={{ typography: 'caption' }}>
             {order.error instanceof Error ? order.error.message : 'Failed to load order'}
-          </p>
+          </Alert>
         )}
+
         {order.data && (
-          <>
+          <Stack spacing={1.5}>
             <Row label="Order" value={order.data.orderNumber} />
-            <Row
-              label="Status"
-              value={<Badge variant="muted">{order.data.status}</Badge>}
-            />
+            <Row label="Status" value={<Label variant="soft">{order.data.status}</Label>} />
             <Row
               label="Payment"
-              value={
-                <span>
-                  {order.data.payment.mode} · {order.data.payment.status}
-                </span>
-              }
+              value={`${order.data.payment.mode} · ${order.data.payment.status}`}
             />
-            <Row label="Escrow" value={<Badge variant="muted">{order.data.escrowStatus}</Badge>} />
+            <Row label="Escrow" value={<Label variant="soft">{order.data.escrowStatus}</Label>} />
             <Row label="Total" value={formatInr(order.data.totalInr)} />
-            <Row
-              label="Items"
-              value={`${order.data.items.length} · ${order.data.items
-                .reduce((n, it) => n + it.quantity, 0)} units`}
-            />
-            <div className="border-t border-border pt-2">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Items
-              </p>
-              <ul className="mt-1 space-y-1">
-                {order.data.items.slice(0, 5).map((it, i) => (
-                  <li key={it.id ?? i} className="flex justify-between gap-2 text-xs">
-                    <span className="truncate">
-                      {it.name} ×{it.quantity}
-                    </span>
-                    <span className="shrink-0 text-muted-foreground">
-                      {formatInr(it.subtotalInr)}
-                    </span>
-                  </li>
-                ))}
-                {order.data.items.length > 5 && (
-                  <li className="text-xs text-muted-foreground">
-                    +{order.data.items.length - 5} more
-                  </li>
-                )}
-              </ul>
-            </div>
             <Row label="Buyer" value={buyer.data?.name ?? '—'} />
-          </>
+
+            <Divider sx={{ borderStyle: 'dashed' }} />
+
+            <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+              Items
+            </Typography>
+            <Stack spacing={0.75}>
+              {order.data.items.slice(0, 5).map((it, i) => (
+                <Stack
+                  key={it.id ?? i}
+                  direction="row"
+                  spacing={1}
+                  justifyContent="space-between"
+                  sx={{ typography: 'caption' }}
+                >
+                  <Box
+                    component="span"
+                    sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                  >
+                    {it.name} ×{it.quantity}
+                  </Box>
+                  <Box component="span" sx={{ color: 'text.disabled', flexShrink: 0 }}>
+                    {formatInr(it.subtotalInr)}
+                  </Box>
+                </Stack>
+              ))}
+              {order.data.items.length > 5 && (
+                <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                  +{order.data.items.length - 5} more
+                </Typography>
+              )}
+            </Stack>
+          </Stack>
         )}
       </CardContent>
     </Card>
   );
 };
-
-const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
-  <div className="flex items-center justify-between gap-4">
-    <span className="text-muted-foreground">{label}</span>
-    <span>{value}</span>
-  </div>
-);
