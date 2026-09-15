@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, fetchEnvelope } from '@/lib/api';
 import type {
+  AdminWalletStats,
   WalletSnapshot,
   WalletSummary,
   WalletTransaction,
@@ -14,6 +15,7 @@ export const walletKeys = {
   all: ['wallet'] as const,
   txList: (q: WalletTxListQuery) => ['wallet', 'tx', q] as const,
   snapshot: (sellerId: string) => ['wallet', 'snapshot', sellerId] as const,
+  stats: (clusterId?: string) => ['wallet', 'stats', clusterId ?? 'all'] as const,
 };
 
 // ─── Transactions list ────────────────────────────────────────────────────
@@ -85,11 +87,19 @@ export const useAdjustWallet = () => {
   });
 };
 
+/**
+ * Settling a withdrawal transfers real money to a bank account, so the body is
+ * only ever sent with a reason the admin typed — never a bare `{ reason:
+ * undefined }`, which the API's strict validator rejects anyway.
+ */
 export const useCompleteWithdrawal = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
-      api.put<WalletTransaction>(`/admin/wallet/withdrawals/${id}/complete`, { reason }),
+      api.put<WalletTransaction>(
+        `/admin/wallet/withdrawals/${id}/complete`,
+        reason ? { reason } : {},
+      ),
     onSuccess: () => invalidate(qc),
   });
 };
@@ -98,10 +108,23 @@ export const useCancelWithdrawal = () => {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, reason }: { id: string; reason?: string }) =>
-      api.put<WalletTransaction>(`/admin/wallet/withdrawals/${id}/cancel`, { reason }),
+      api.put<WalletTransaction>(
+        `/admin/wallet/withdrawals/${id}/cancel`,
+        reason ? { reason } : {},
+      ),
     onSuccess: () => invalidate(qc),
   });
 };
+
+/** What is waiting on an admin, what moved lately, and what is still owed. */
+export const useAdminWalletStats = (clusterId?: string) =>
+  useQuery({
+    queryKey: walletKeys.stats(clusterId),
+    queryFn: () =>
+      api.get<AdminWalletStats>(
+        `/admin/wallet/stats${clusterId ? `?clusterId=${clusterId}` : ''}`,
+      ),
+  });
 
 /** Same series as the seller sees, for whichever wallet the admin picked. */
 export const useSellerWalletSummary = (sellerId?: string) =>

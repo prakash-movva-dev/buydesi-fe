@@ -8,6 +8,14 @@ export type WalletTxSource =
   | 'platform_fee'
   | 'admin_adjustment';
 
+/** Who owns the wallet a movement belongs to — the admin ledger spans sellers. */
+export interface WalletTxSeller {
+  id: string;
+  name: string;
+  farmName: string | null;
+  sellerCode: string | null;
+}
+
 export interface WalletTransaction {
   id: string;
   userId: string;
@@ -25,6 +33,8 @@ export interface WalletTransaction {
   metadata: Record<string, unknown>;
   createdAt: string;
   updatedAt: string;
+  /** Present on the admin ledger; the seller's own list does not need it. */
+  seller?: WalletTxSeller | null;
 }
 
 export interface WalletSnapshot {
@@ -68,4 +78,20 @@ export interface WalletSummary {
   totalDebitInr: number;
   creditChangePercent: number;
   debitChangePercent: number;
+}
+
+// ─── Admin overview ───────────────────────────────────────────────────────
+
+export interface AdminWalletStats {
+  windowDays: number;
+  /** Withdrawals in PENDING — the only rows on this page waiting for a human. */
+  pendingWithdrawals: { count: number; amountInr: number };
+  /** Withdrawals actually settled to a bank inside the window. */
+  paidOut: { count: number; amountInr: number };
+  /** What sellers earned inside the window. */
+  earned: { count: number; amountInr: number };
+  /** Manual corrections inside the window; net of credits against debits. */
+  adjustments: { count: number; netInr: number };
+  /** What the platform currently owes sellers, across every wallet in scope. */
+  heldInr: number;
 }
