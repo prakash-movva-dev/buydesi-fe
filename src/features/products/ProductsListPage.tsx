@@ -1,366 +1,380 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { CheckCircle2, Upload, XCircle } from 'lucide-react';
+
 import Box from '@mui/material/Box';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
 import Card from '@mui/material/Card';
-import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
-import MenuItem from '@mui/material/MenuItem';
-import TableRow from '@mui/material/TableRow';
+import Alert from '@mui/material/Alert';
+import Button from '@mui/material/Button';
+import Tooltip from '@mui/material/Tooltip';
 import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TextField from '@mui/material/TextField';
-import { BulkUploadDialog } from './BulkUploadDialog';
-import { Button } from '@/components/ui/Button';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { Skeleton } from '@/components/ui/Skeleton';
+import IconButton from '@mui/material/IconButton';
+
+import { useBoolean } from '@/hooks/use-boolean';
+
+import { varAlpha } from '@/theme/styles';
+
+import { Label } from '@/components/label';
+import { Iconify } from '@/components/iconify';
 import { Scrollbar } from '@/components/scrollbar';
-import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
+import { PageHeader } from '@/components/ui/PageHeader';
+import {
+  useTable,
+  emptyRows,
+  TableNoData,
+  TableSkeleton,
+  TableEmptyRows,
+  TableHeadCustom,
+  TableSelectedAction,
+  TablePaginationCustom,
+} from '@/components/table';
+
 import { useCategoriesList } from '@/features/categories/api';
 import { ScopedAdminBanner } from '@/features/scoped-admin/ScopedAdminBanner';
-import { formatDate } from '@/lib/format';
-import { displayPrice } from './price';
+
 import { useProductsList, useSetProductStatus } from './api';
-import { ProductStatusBadge } from './status-badge';
+import { BulkUploadDialog } from './BulkUploadDialog';
+import { ProductTableRow } from './product-table-row';
 import { StatusReviewDialog, type StatusAction } from './StatusReviewDialog';
-import type { ProductStatus, ProductsListQuery } from './types';
+import { AdminProductTableToolbar, type AdminProductFilters } from './product-table-toolbar';
+import { AdminProductTableFiltersResult } from './product-table-filters-result';
+import type {
+  ProductKind,
+  ProductStatus,
+  ProductsListQuery,
+  ProductsSort,
+} from './types';
+
+// ----------------------------------------------------------------------
 
 const STATUS_OPTIONS: Array<{ value: '' | ProductStatus; label: string }> = [
-  { value: '', label: 'All statuses' },
-  { value: 'PENDING', label: 'Pending approval' },
+  { value: '', label: 'All' },
+  { value: 'PENDING', label: 'Pending' },
   { value: 'LIVE', label: 'Live' },
   { value: 'SUSPENDED', label: 'Suspended' },
   { value: 'REJECTED', label: 'Rejected' },
 ];
 
-const PAGE_SIZE = 20;
+const TABLE_HEAD = [
+  { id: 'name', label: 'Product' },
+  { id: 'category', label: 'Category', width: 160 },
+  { id: 'stock', label: 'Stock', width: 110, align: 'right' as const },
+  { id: 'price', label: 'Price', width: 150, align: 'right' as const },
+  { id: 'updated', label: 'Last updated', width: 150 },
+  { id: 'status', label: 'Status', width: 120 },
+  { id: '', width: 100 },
+];
 
+/** Only these columns can be ordered by the API. */
+const SORTABLE = new Set(['name', 'stock', 'price', 'status', 'updated']);
 
+const toSortParam = (orderBy: string, order: 'asc' | 'desc'): ProductsSort => {
+  if (orderBy === 'updated') return order === 'asc' ? 'updated_asc' : 'updated_desc';
+  return `${orderBy}_${order}` as ProductsSort;
+};
 
+const fromSortParam = (sort: string | null): { orderBy: string; order: 'asc' | 'desc' } => {
+  if (!sort || sort === 'newest') return { orderBy: 'updated', order: 'desc' };
+  const [column, direction] = sort.split('_');
+  return { orderBy: column, order: direction === 'asc' ? 'asc' : 'desc' };
+};
+
+const DEFAULT_LIMIT = 10;
+
+// ----------------------------------------------------------------------
+
+/**
+ * The whole catalogue, across every seller. Filters, sort and page live in the
+ * URL and are answered by the API, so the table stays correct at any size.
+ */
 export const ProductsListPage = () => {
   const navigate = useNavigate();
+
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const status = (searchParams.get('status') as ProductStatus | null) ?? '';
-  const category = searchParams.get('category') ?? '';
-  const q = searchParams.get('q') ?? '';
-  const page = Math.max(1, Number(searchParams.get('page') ?? 1));
+  const table = useTable({ defaultRowsPerPage: DEFAULT_LIMIT });
 
-  const query = useMemo<ProductsListQuery>(
-    () => ({
-      status: status || undefined,
-      category: category || undefined,
-      q: q || undefined,
-      page,
-      limit: PAGE_SIZE,
-    }),
-    [status, category, q, page],
-  );
+  const bulkUpload = useBoolean();
 
-  const { data, isLoading, isError, error } = useProductsList(query);
-  const { data: categories } = useCategoriesList();
-  const total = data?.meta.total ?? 0;
-
-  const categoryName = useMemo(() => {
-    const map = new Map<string, string>();
-    (categories ?? []).forEach((c) => map.set(c.id, c.name));
-    return (id: string) => map.get(id) ?? id;
-  }, [categories]);
-
-  const setParam = (next: Record<string, string | null>) => {
-    const params = new URLSearchParams(searchParams);
-    for (const [k, v] of Object.entries(next)) {
-      if (v === null || v === '') params.delete(k);
-      else params.set(k, v);
-    }
-    if (!('page' in next)) params.set('page', '1');
-    setSearchParams(params);
-  };
-
-  // Keep the search box on local state so typing stays responsive and the input
-  // never loses focus; only sync to the query (which refetches) after a pause.
-  const [searchInput, setSearchInput] = useState(q);
-  useEffect(() => {
-    const t = setTimeout(() => {
-      setSearchParams((prev) => {
-        const params = new URLSearchParams(prev);
-        const current = params.get('q') ?? '';
-        if (searchInput === current) return prev;
-        if (searchInput) params.set('q', searchInput);
-        else params.delete('q');
-        params.set('page', '1');
-        return params;
-      });
-    }, 350);
-    return () => clearTimeout(t);
-  }, [searchInput, setSearchParams]);
-
-  // ─── Bulk select state ─────────────────────────────────────────────────
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [bulkAction, setBulkAction] = useState<StatusAction | null>(null);
   const setStatusMut = useSetProductStatus();
 
-  const toggle = (id: string) =>
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-
-  const allOnPageSelected =
-    data && data.items.length > 0 && data.items.every((p) => selected.has(p.id));
-
-  const toggleAll = () => {
-    if (!data) return;
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (allOnPageSelected) {
-        data.items.forEach((p) => next.delete(p.id));
-      } else {
-        data.items.forEach((p) => next.add(p.id));
-      }
-      return next;
-    });
-  };
-
-  const submitBulk = async (notes: string | undefined) => {
-    if (!bulkAction) return;
-    const target: ProductStatus =
-      bulkAction === 'approve' ? 'LIVE' : bulkAction === 'reject' ? 'REJECTED' : 'SUSPENDED';
-    // Run sequentially — the backend doesn't expose a bulk-status endpoint,
-    // and parallel writes against the same indexes can deadlock under load.
-    const ids = Array.from(selected);
-    for (const id of ids) {
-      await setStatusMut.mutateAsync({ id, status: target, notes });
-    }
-    setSelected(new Set());
-  };
-
-  // ─── Quick single-row action ────────────────────────────────────────────
+  const [bulkAction, setBulkAction] = useState<StatusAction | null>(null);
   const [singleAction, setSingleAction] = useState<{ id: string; action: StatusAction } | null>(
     null,
   );
 
-  const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
+  const status = (searchParams.get('status') as ProductStatus | null) ?? '';
+  const filters: AdminProductFilters = {
+    q: searchParams.get('q') ?? '',
+    category: searchParams.get('category') ?? '',
+    kind: (searchParams.get('kind') as ProductKind | null) ?? '',
+  };
+  const page = Math.max(1, Number(searchParams.get('page') ?? 1));
+  const limit = Math.max(1, Number(searchParams.get('limit') ?? DEFAULT_LIMIT));
+  const { orderBy, order } = fromSortParam(searchParams.get('sort'));
 
-  const head = [
-    {
-      id: 'select',
-      label: (
-        <input
-          type="checkbox"
-          checked={Boolean(allOnPageSelected)}
-          onChange={toggleAll}
-          aria-label="Select all rows"
-        />
-      ),
+  const setParams = useCallback(
+    (next: Record<string, string | null>) => {
+      const params = new URLSearchParams(searchParams);
+      for (const [key, value] of Object.entries(next)) {
+        if (value === null || value === '') params.delete(key);
+        else params.set(key, value);
+      }
+      if (!('page' in next)) params.delete('page');
+      setSearchParams(params, { replace: true });
+      table.setSelected([]);
     },
-    { id: 'product', label: 'Product' },
-    { id: 'category', label: 'Category' },
-    { id: 'status', label: 'Status' },
-    { id: 'from', label: 'Seller' },
-    { id: 'stock', label: 'Stock' },
-    { id: 'submitted', label: 'Submitted' },
-    { id: 'actions', label: '' },
-  ];
+    [searchParams, setSearchParams, table],
+  );
+
+  const query = useMemo<ProductsListQuery>(
+    () => ({
+      status: status || undefined,
+      category: filters.category || undefined,
+      kind: filters.kind || undefined,
+      q: filters.q || undefined,
+      sort: toSortParam(orderBy, order),
+      page,
+      limit,
+    }),
+    [status, filters.category, filters.kind, filters.q, orderBy, order, page, limit],
+  );
+
+  const { data, isLoading, isError, error } = useProductsList(query);
+  const { data: categories } = useCategoriesList();
+
+  const rows = data?.items ?? [];
+  const total = data?.meta.total ?? 0;
+
+  const categoryName = useMemo(
+    () => new Map((categories ?? []).map((c) => [c.id, c.name])),
+    [categories],
+  );
+
+  const handleFilters = useCallback(
+    (patch: Partial<AdminProductFilters>) => {
+      setParams(
+        Object.fromEntries(Object.entries(patch).map(([key, value]) => [key, value ?? null])),
+      );
+    },
+    [setParams],
+  );
+
+  const handleResetFilters = useCallback(() => {
+    setParams({ q: null, category: null, kind: null });
+  }, [setParams]);
+
+  const handleSort = useCallback(
+    (id: string) => {
+      if (!SORTABLE.has(id)) return;
+      const next = orderBy === id && order === 'desc' ? 'asc' : 'desc';
+      setParams({ sort: toSortParam(id, next) });
+    },
+    [order, orderBy, setParams],
+  );
+
+  const targetStatus = (action: StatusAction): ProductStatus =>
+    action === 'approve' ? 'LIVE' : action === 'reject' ? 'REJECTED' : 'SUSPENDED';
+
+  const submitBulk = async (notes: string | undefined) => {
+    if (!bulkAction) return;
+    // Run sequentially — there is no bulk-status endpoint, and parallel writes
+    // against the same indexes can deadlock under load.
+    for (const id of table.selected) {
+      await setStatusMut.mutateAsync({ id, status: targetStatus(bulkAction), notes });
+    }
+    table.setSelected([]);
+  };
+
+  const submitSingle = async (notes: string | undefined) => {
+    if (!singleAction) return;
+    await setStatusMut.mutateAsync({
+      id: singleAction.id,
+      status: targetStatus(singleAction.action),
+      notes,
+    });
+  };
+
+  const canReset = !!filters.q || !!filters.category || !!filters.kind;
+  const notFound = !isLoading && rows.length === 0;
 
   return (
-    <Stack spacing={3}>
+    <>
       <PageHeader
         title="Products"
-        description="Approval queue and catalogue. Category Admins see only their assigned branch."
+        description="Every listing across all sellers — review what is waiting and act on it."
         action={
-          <Button variant="outline" onClick={() => setBulkUploadOpen(true)}>
-            <Upload className="h-4 w-4" />
-            Bulk upload CSV
+          <Button
+            variant="outlined"
+            onClick={bulkUpload.onTrue}
+            startIcon={<Iconify icon="solar:upload-bold" />}
+          >
+            Bulk upload
           </Button>
         }
       />
 
-      <BulkUploadDialog open={bulkUploadOpen} onClose={() => setBulkUploadOpen(false)} />
-
-      <ScopedAdminBanner />
-
-      {selected.size > 0 && (
-        <Box
-          className="rounded-md border border-border bg-secondary/40 px-4 py-3 text-sm"
-          sx={{ display: 'flex', alignItems: 'center', gap: 1.5, flexWrap: 'wrap' }}
-        >
-          <span className="font-medium">{selected.size} selected</span>
-          <span className="text-muted-foreground">·</span>
-          <Button size="sm" onClick={() => setBulkAction('approve')}>
-            <CheckCircle2 className="h-4 w-4" />
-            Approve all
-          </Button>
-          <Button size="sm" variant="destructive" onClick={() => setBulkAction('reject')}>
-            <XCircle className="h-4 w-4" />
-            Reject all
-          </Button>
-          <Button size="sm" variant="outline" onClick={() => setBulkAction('suspend')}>
-            Suspend all
-          </Button>
-          <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>
-            Clear
-          </Button>
-        </Box>
-      )}
-
-      {isLoading && (
-        <div className="space-y-2">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-12 w-full" />
-          ))}
-        </div>
-      )}
+      <Box sx={{ mt: 3 }}>
+        <ScopedAdminBanner />
+      </Box>
 
       {isError && (
-        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
-          {error instanceof Error ? error.message : 'Failed to load products'}
-        </div>
+        <Alert severity="error" sx={{ mt: 3 }}>
+          {error instanceof Error ? error.message : 'Could not load products'}
+        </Alert>
       )}
 
-      {!isLoading && !isError && (
-        <Card>
-          <Stack
-            direction="row"
-            spacing={2}
-            flexWrap="wrap"
-            alignItems="center"
-            sx={{ p: 2.5 }}
-          >
-            <TextField
-              select
-              label="Status"
-              value={status}
-              onChange={(e) => setParam({ status: e.target.value })}
-              InputLabelProps={{ shrink: true }}
-              sx={{ width: 200 }}
-            >
-              {STATUS_OPTIONS.map((opt) => (
-                <MenuItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
-              label="Category"
-              value={category}
-              onChange={(e) => setParam({ category: e.target.value })}
-              InputLabelProps={{ shrink: true }}
-              sx={{ width: 240 }}
-            >
-              <MenuItem value="">All categories</MenuItem>
-              {(categories ?? []).map((c) => (
-                <MenuItem key={c.id} value={c.id}>
-                  {c.name}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              label="Search"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="Search by name / description"
-              InputLabelProps={{ shrink: true }}
-              sx={{ width: 320 }}
+      <Card sx={{ mt: 3 }}>
+        <Tabs
+          value={status}
+          onChange={(_e, value) => setParams({ status: value })}
+          sx={{
+            px: 2.5,
+            boxShadow: (theme) =>
+              `inset 0 -2px 0 0 ${varAlpha(theme.vars.palette.grey['500Channel'], 0.08)}`,
+          }}
+        >
+          {STATUS_OPTIONS.map((tab) => (
+            <Tab
+              key={tab.value || 'all'}
+              iconPosition="end"
+              value={tab.value}
+              label={tab.label}
+              icon={
+                // Only the selected tab's count is known — the API answers one
+                // filter at a time, so a number on every tab would be a guess.
+                tab.value === status ? (
+                  <Label
+                    variant="filled"
+                    color={
+                      (tab.value === 'LIVE' && 'success') ||
+                      (tab.value === 'PENDING' && 'warning') ||
+                      (tab.value === 'REJECTED' && 'error') ||
+                      'default'
+                    }
+                  >
+                    {total}
+                  </Label>
+                ) : undefined
+              }
             />
-          </Stack>
+          ))}
+        </Tabs>
+
+        <AdminProductTableToolbar
+          filters={filters}
+          categories={categories ?? []}
+          onFilters={handleFilters}
+        />
+
+        {canReset && (
+          <AdminProductTableFiltersResult
+            filters={filters}
+            categoryName={categoryName.get(filters.category)}
+            totalResults={total}
+            onFilters={handleFilters}
+            onReset={handleResetFilters}
+            sx={{ p: 2.5, pt: 0 }}
+          />
+        )}
+
+        <Box sx={{ position: 'relative' }}>
+          <TableSelectedAction
+            dense={table.dense}
+            numSelected={table.selected.length}
+            rowCount={rows.length}
+            onSelectAllRows={(checked) =>
+              table.onSelectAllRows(
+                checked,
+                rows.map((row) => row.id),
+              )
+            }
+            action={
+              <>
+                <Tooltip title="Approve">
+                  <IconButton color="success" onClick={() => setBulkAction('approve')}>
+                    <Iconify icon="solar:check-circle-bold" />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Suspend">
+                  <IconButton color="warning" onClick={() => setBulkAction('suspend')}>
+                    <Iconify icon="solar:pause-circle-bold" />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Reject">
+                  <IconButton color="error" onClick={() => setBulkAction('reject')}>
+                    <Iconify icon="solar:close-circle-bold" />
+                  </IconButton>
+                </Tooltip>
+              </>
+            }
+          />
 
           <Scrollbar>
-            <Table sx={{ minWidth: 800 }}>
-              <TableHeadCustom headLabel={head} />
+            <Table size={table.dense ? 'small' : 'medium'} sx={{ minWidth: 1080 }}>
+              <TableHeadCustom
+                order={order}
+                orderBy={orderBy}
+                headLabel={TABLE_HEAD}
+                rowCount={rows.length}
+                numSelected={table.selected.length}
+                onSort={handleSort}
+                onSelectAllRows={(checked) =>
+                  table.onSelectAllRows(
+                    checked,
+                    rows.map((row) => row.id),
+                  )
+                }
+              />
+
               <TableBody>
-                {(data?.items ?? []).map((product) => (
-                  <TableRow key={product.id} hover>
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <input
-                        type="checkbox"
-                        checked={selected.has(product.id)}
-                        onChange={() => toggle(product.id)}
-                        aria-label={`Select ${product.name}`}
+                {isLoading
+                  ? Array.from({ length: Math.min(limit, 5) }).map((_, index) => (
+                      <TableSkeleton key={index} sx={{ height: table.dense ? 56 : 76 }} />
+                    ))
+                  : rows.map((row) => (
+                      <ProductTableRow
+                        key={row.id}
+                        row={row}
+                        categoryName={categoryName.get(row.categoryId)}
+                        selected={table.selected.includes(row.id)}
+                        onSelectRow={() => table.onSelectRow(row.id)}
+                        onViewRow={() => navigate(`/admin/products/${row.id}`)}
+                        onApprove={() => setSingleAction({ id: row.id, action: 'approve' })}
+                        onReject={() => setSingleAction({ id: row.id, action: 'reject' })}
+                        onSuspend={() => setSingleAction({ id: row.id, action: 'suspend' })}
                       />
-                    </TableCell>
-                    <TableCell
-                      className="cursor-pointer font-medium"
-                      onClick={() => navigate(`/admin/products/${product.id}`)}
-                    >
-                      <div>{product.name}</div>
-                      <div className="text-xs text-muted-foreground">{displayPrice(product)} / {product.unit}</div>
-                    </TableCell>
-                    <TableCell onClick={() => navigate(`/admin/products/${product.id}`)} className="cursor-pointer">
-                      {categoryName(product.categoryId)}
-                    </TableCell>
-                    <TableCell onClick={() => navigate(`/admin/products/${product.id}`)} className="cursor-pointer">
-                      <ProductStatusBadge status={product.status} />
-                    </TableCell>
-                    <TableCell onClick={() => navigate(`/admin/products/${product.id}`)} className="cursor-pointer">
-                      <span className="text-sm">{product.sellerName ?? product.sellerId.slice(-6)}</span>
-                    </TableCell>
-                    <TableCell onClick={() => navigate(`/admin/products/${product.id}`)} className="cursor-pointer">
-                      {product.stock.quantity}
-                      {product.stock.quantity <= product.stock.threshold && (
-                        <span className="ml-1 text-xs text-amber-700">low</span>
-                      )}
-                    </TableCell>
-                    <TableCell onClick={() => navigate(`/admin/products/${product.id}`)} className="cursor-pointer">
-                      {formatDate(product.createdAt)}
-                    </TableCell>
-                    <TableCell>
-                      {product.status === 'PENDING' ? (
-                        <div className="flex gap-1">
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setSingleAction({ id: product.id, action: 'approve' })}
-                            aria-label="Quick approve"
-                            title="Approve"
-                          >
-                            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setSingleAction({ id: product.id, action: 'reject' })}
-                            aria-label="Quick reject"
-                            title="Reject"
-                          >
-                            <XCircle className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => navigate(`/admin/products/${product.id}`)}
-                        >
-                          Open
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                <TableNoData notFound={!isLoading && (data?.items.length ?? 0) === 0} />
+                    ))}
+
+                <TableEmptyRows
+                  height={table.dense ? 56 : 76}
+                  emptyRows={emptyRows(page - 1, limit, total)}
+                />
+
+                <TableNoData notFound={notFound} />
               </TableBody>
             </Table>
           </Scrollbar>
+        </Box>
 
-          <TablePaginationCustom
-            count={total}
-            page={page - 1}
-            rowsPerPage={PAGE_SIZE}
-            rowsPerPageOptions={[10, 25, 50]}
-            onPageChange={(_e, newPage) => setParam({ page: String(newPage + 1) })}
-            onRowsPerPageChange={(e) => setParam({ limit: e.target.value, page: '1' })}
-          />
-        </Card>
-      )}
+        <TablePaginationCustom
+          page={page - 1}
+          dense={table.dense}
+          count={total}
+          rowsPerPage={limit}
+          rowsPerPageOptions={[5, 10, 25, 50]}
+          onPageChange={(_e, next) => setParams({ page: String(next + 1) })}
+          onChangeDense={table.onChangeDense}
+          onRowsPerPageChange={(e) => setParams({ limit: e.target.value, page: '1' })}
+        />
+      </Card>
 
       <StatusReviewDialog
         open={bulkAction !== null}
         action={bulkAction}
-        count={selected.size}
+        count={table.selected.length}
         onClose={() => setBulkAction(null)}
         onSubmit={submitBulk}
       />
@@ -370,17 +384,10 @@ export const ProductsListPage = () => {
         action={singleAction?.action ?? null}
         count={1}
         onClose={() => setSingleAction(null)}
-        onSubmit={async (notes) => {
-          if (!singleAction) return;
-          const target: ProductStatus =
-            singleAction.action === 'approve'
-              ? 'LIVE'
-              : singleAction.action === 'reject'
-                ? 'REJECTED'
-                : 'SUSPENDED';
-          await setStatusMut.mutateAsync({ id: singleAction.id, status: target, notes });
-        }}
+        onSubmit={submitSingle}
       />
-    </Stack>
+
+      <BulkUploadDialog open={bulkUpload.value} onClose={bulkUpload.onFalse} />
+    </>
   );
 };

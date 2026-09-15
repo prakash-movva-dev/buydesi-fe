@@ -1,91 +1,141 @@
 import { useMemo, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import {
-  AlertTriangle,
-  ArrowLeft,
-  CheckCircle2,
-  Copy,
-  ExternalLink,
-  Image as ImageIcon,
-  PauseCircle,
-  RotateCcw,
-  XCircle,
-} from 'lucide-react';
+import { Link as RouterLink, useNavigate, useParams } from 'react-router-dom';
+
 import Box from '@mui/material/Box';
-import Stack from '@mui/material/Stack';
 import Tab from '@mui/material/Tab';
+import Card from '@mui/material/Card';
 import Tabs from '@mui/material/Tabs';
+import Chip from '@mui/material/Chip';
+import Grid from '@mui/material/Unstable_Grid2';
+import Link from '@mui/material/Link';
 import Table from '@mui/material/Table';
+import Stack from '@mui/material/Stack';
+import Alert from '@mui/material/Alert';
+import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import Divider from '@mui/material/Divider';
+import Skeleton from '@mui/material/Skeleton';
 import TableRow from '@mui/material/TableRow';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
-import Typography from '@mui/material/Typography';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/Card';
-import { Dialog } from '@/components/ui/Dialog';
-import { Skeleton } from '@/components/ui/Skeleton';
-import Alert from '@mui/material/Alert';
 import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+import CardHeader from '@mui/material/CardHeader';
+import CardContent from '@mui/material/CardContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import LoadingButton from '@mui/lab/LoadingButton';
+
+import { varAlpha } from '@/theme/styles';
+import { ApiError } from '@/types/api';
+import { formatInr } from '@/lib/format';
+import { fDate, fDateTime } from '@/utils/format-time';
+
+import { Label } from '@/components/label';
+import { Iconify } from '@/components/iconify';
 import { Scrollbar } from '@/components/scrollbar';
 import { TableHeadCustom } from '@/components/table';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { EmptyContent } from '@/components/empty-content';
+import { LoadingScreen } from '@/components/loading-screen';
+
 import { useCategoriesList } from '@/features/categories/api';
 import { useUser } from '@/features/users/api';
-import { formatDate, formatDateTime, formatInr } from '@/lib/format';
-import { ApiError } from '@/types/api';
+
+import { displayPrice } from './price';
 import {
   useProduct,
   useProductDuplicates,
   useProductQualityCheck,
   useSetProductStatus,
 } from './api';
-import { displayPrice } from './price';
-import { ProductStatusBadge } from './status-badge';
 import { StatusReviewDialog, type StatusAction } from './StatusReviewDialog';
-import { KIND_LABELS, type DuplicateCandidate, type ProductStatus } from './types';
+import {
+  KIND_LABELS,
+  type DuplicateCandidate,
+  type ProductStatus,
+  type SafeProduct,
+} from './types';
 
+// ----------------------------------------------------------------------
 
+const STATUS_COLOR: Record<ProductStatus, 'success' | 'warning' | 'error' | 'default'> = {
+  LIVE: 'success',
+  PENDING: 'warning',
+  REJECTED: 'error',
+  SUSPENDED: 'default',
+};
+
+const STATUS_LABEL: Record<ProductStatus, string> = {
+  LIVE: 'Live',
+  PENDING: 'Pending review',
+  REJECTED: 'Rejected',
+  SUSPENDED: 'Suspended',
+};
+
+/** One label/value line. */
+const Row = ({ label, value }: { label: string; value: React.ReactNode }) => (
+  <Stack
+    direction="row"
+    spacing={2}
+    sx={{ typography: 'body2', justifyContent: 'space-between', alignItems: 'baseline' }}
+  >
+    <Box component="span" sx={{ color: 'text.secondary', flexShrink: 0 }}>
+      {label}
+    </Box>
+    <Box component="span" sx={{ textAlign: 'right', fontWeight: 'fontWeightMedium' }}>
+      {value}
+    </Box>
+  </Stack>
+);
+
+// ----------------------------------------------------------------------
 
 export const ProductDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+
   const { data: product, isLoading, isError, error } = useProduct(id);
-  const { data: categories } = useCategoriesList();
   const setStatusMut = useSetProductStatus();
+
   const [action, setAction] = useState<StatusAction | null>(null);
   const [dupCandidate, setDupCandidate] = useState<DuplicateCandidate | null>(null);
   const [tab, setTab] = useState<'details' | 'reviews' | 'quality' | 'duplicates'>('details');
   const [activeImage, setActiveImage] = useState(0);
 
+  const { data: categories } = useCategoriesList();
+  const { data: seller } = useUser(product?.sellerId);
+
   const categoryName = useMemo(
-    () => categories?.find((c) => c.id === product?.categoryId)?.name ?? product?.categoryId,
+    () => (categories ?? []).find((c) => c.id === product?.categoryId)?.name ?? '—',
     [categories, product?.categoryId],
   );
+  const sellerName = product?.sellerName ?? seller?.name ?? '—';
 
-  const seller = useUser(product?.sellerId);
-  const sellerName = seller.data?.name ?? '—';
-
-  if (isLoading) {
-    return (
-      <Stack spacing={2}>
-        <Skeleton className="h-8 w-72" />
-        <Skeleton className="h-64 w-full" />
-        <Skeleton className="h-40 w-full" />
-      </Stack>
-    );
-  }
+  if (isLoading) return <LoadingScreen sx={{ py: 20 }} />;
 
   if (isError || !product) {
     return (
-      <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
-        {error instanceof Error ? error.message : 'Product not found'}
-      </div>
+      <>
+        <PageHeader title="Product" />
+        <EmptyContent
+          filled
+          title="Product not found"
+          description={error instanceof Error ? error.message : 'It may have been deleted.'}
+          action={
+            <Button
+              variant="contained"
+              onClick={() => navigate('/admin/products')}
+              startIcon={<Iconify icon="eva:arrow-ios-back-fill" />}
+              sx={{ mt: 3 }}
+            >
+              Back to products
+            </Button>
+          }
+          sx={{ py: 10, mt: 3 }}
+        />
+      </>
     );
   }
 
@@ -105,356 +155,383 @@ export const ProductDetailPage = () => {
     await setStatusMut.mutateAsync({ id: product.id, status: 'PENDING' });
   };
 
+  const stock = product.variantSummary?.hasVariants
+    ? product.variantSummary.totalStock
+    : product.stock.quantity;
+
   return (
-    <Stack spacing={3}>
-      <Button variant="ghost" size="sm" onClick={() => navigate('/admin/products')}>
-        <ArrowLeft className="h-4 w-4" />
-        Back to products
-      </Button>
+    <>
+      <PageHeader
+        title={product.name}
+        links={[
+          { name: 'Dashboard', href: '/admin' },
+          { name: 'Products', href: '/admin/products' },
+          { name: product.name },
+        ]}
+        action={
+          <Button
+            variant="outlined"
+            onClick={() => navigate('/admin/products')}
+            startIcon={<Iconify icon="eva:arrow-ios-back-fill" />}
+          >
+            Back to products
+          </Button>
+        }
+      />
 
       {product.duplicateOfId && (
-        <div className="flex flex-wrap items-center gap-2 rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          <Copy className="h-4 w-4 shrink-0" />
-          <span>
-            This product was marked as a duplicate of another listing.
-          </span>
-          <Link
-            to={`/admin/products/${product.duplicateOfId}`}
-            className="inline-flex items-center gap-1 font-medium underline underline-offset-2"
-          >
-            View original
-            <ExternalLink className="h-3.5 w-3.5" />
-          </Link>
-        </div>
+        <Alert
+          severity="warning"
+          sx={{ mt: 3 }}
+          action={
+            <Button
+              size="small"
+              color="inherit"
+              component={RouterLink}
+              to={`/admin/products/${product.duplicateOfId}`}
+            >
+              View original
+            </Button>
+          }
+        >
+          This product was marked as a duplicate of another listing.
+        </Alert>
       )}
 
-      <Box
+      {/* Hero — what this is, and every action that applies to it. */}
+      <Card
         sx={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          alignItems: 'flex-start',
-          justifyContent: 'space-between',
-          gap: 2,
+          mt: 3,
+          p: 3,
+          backgroundImage: (theme) =>
+            `linear-gradient(135deg, ${varAlpha(
+              theme.vars.palette.primary.lighterChannel,
+              0.48,
+            )}, ${varAlpha(theme.vars.palette.primary.lightChannel, 0.32)})`,
         }}
       >
-        <Box>
-          <Typography variant="h4" component="h1">
-            {product.name}
-          </Typography>
-          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-            category {categoryName} · seller {sellerName}
-          </Typography>
-          <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center" sx={{ mt: 1 }}>
-            <ProductStatusBadge status={product.status} />
-            {product.stock.quantity <= product.stock.threshold && (
-              <Badge variant="warning">Low stock</Badge>
-            )}
-          </Stack>
-        </Box>
-        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-          {isPending && (
-            <>
-              <Button onClick={() => setAction('approve')}>
-                <CheckCircle2 className="h-4 w-4" />
-                Approve
-              </Button>
-              <Button variant="destructive" onClick={() => setAction('reject')}>
-                <XCircle className="h-4 w-4" />
-                Reject
-              </Button>
-            </>
-          )}
-          {isLive && (
-            <Button variant="outline" onClick={() => setAction('suspend')}>
-              <PauseCircle className="h-4 w-4" />
-              Suspend
-            </Button>
-          )}
-          {(isSuspended || isRejected) && (
-            <Button variant="outline" onClick={restore} disabled={setStatusMut.isPending}>
-              <RotateCcw className="h-4 w-4" />
-              Move to pending
-            </Button>
-          )}
-        </Box>
-      </Box>
-
-      <Tabs
-        value={tab}
-        onChange={(_e, v) => setTab(v)}
-        sx={{ borderBottom: 1, borderColor: 'divider' }}
-      >
-        <Tab value="details" label="Details" />
-        <Tab value="reviews" label="Reviews" />
-        <Tab value="quality" label="Quality" />
-        <Tab value="duplicates" label="Duplicates" />
-      </Tabs>
-
-      {tab === 'details' && (
-      <Stack spacing={3}>
-      <Box
-        sx={{
-          display: 'grid',
-          gap: 3,
-          alignItems: 'start',
-          gridTemplateColumns: { xs: '1fr', md: 'minmax(0, 440px) 1fr' },
-        }}
-      >
-        {/* Image gallery — main image + thumbnail strip */}
-        <Card>
-          <Box sx={{ p: 2 }}>
-            {product.images.length === 0 ? (
-              <Stack
-                spacing={1}
-                alignItems="center"
-                justifyContent="center"
-                sx={{
-                  aspectRatio: '1 / 1',
-                  borderRadius: 2,
-                  bgcolor: 'background.neutral',
-                  color: 'text.disabled',
-                  textAlign: 'center',
-                  px: 2,
-                }}
-              >
-                <ImageIcon className="h-8 w-8" />
-                <Typography variant="body2">
-                  No images. Sellers should upload at least one before approval.
-                </Typography>
-              </Stack>
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          spacing={3}
+          alignItems={{ xs: 'flex-start', md: 'center' }}
+        >
+          <Box
+            sx={{
+              width: 80,
+              height: 80,
+              flexShrink: 0,
+              borderRadius: 1.5,
+              overflow: 'hidden',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              bgcolor: 'background.neutral',
+              color: 'text.disabled',
+            }}
+          >
+            {product.images[0] ? (
+              <Box
+                component="img"
+                src={product.images[0]}
+                alt={product.name}
+                sx={{ width: 1, height: 1, objectFit: 'cover' }}
+              />
             ) : (
-              <Stack spacing={1.5}>
-                <Box
-                  component="a"
-                  href={product.images[activeImage] ?? product.images[0]}
-                  target="_blank"
-                  rel="noreferrer"
-                  sx={{
-                    display: 'block',
-                    aspectRatio: '1 / 1',
-                    borderRadius: 2,
-                    overflow: 'hidden',
-                    bgcolor: 'background.neutral',
-                    border: (t) => `1px solid ${t.vars.palette.divider}`,
-                  }}
-                >
-                  <Box
-                    component="img"
-                    src={product.images[activeImage] ?? product.images[0]}
-                    alt={product.name}
-                    onError={(e) => {
-                      (e.currentTarget as HTMLImageElement).style.visibility = 'hidden';
-                    }}
-                    sx={{ width: 1, height: 1, objectFit: 'cover' }}
-                  />
-                </Box>
-                {product.images.length > 1 && (
-                  <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 1 }}>
-                    {product.images.map((src, i) => (
-                      <Box
-                        key={src}
-                        component="button"
-                        type="button"
-                        onClick={() => setActiveImage(i)}
-                        sx={{
-                          p: 0,
-                          aspectRatio: '1 / 1',
-                          borderRadius: 1,
-                          overflow: 'hidden',
-                          cursor: 'pointer',
-                          bgcolor: 'background.neutral',
-                          border: (t) =>
-                            i === activeImage
-                              ? `2px solid ${t.vars.palette.primary.main}`
-                              : `1px solid ${t.vars.palette.divider}`,
-                        }}
-                      >
-                        <Box
-                          component="img"
-                          src={src}
-                          alt={`${product.name} ${i + 1}`}
-                          onError={(e) => {
-                            (e.currentTarget as HTMLImageElement).style.visibility = 'hidden';
-                          }}
-                          sx={{ width: 1, height: 1, objectFit: 'cover', display: 'block' }}
-                        />
-                      </Box>
-                    ))}
-                  </Box>
-                )}
-              </Stack>
+              <Iconify icon="solar:gallery-wide-bold" width={32} />
             )}
           </Box>
-        </Card>
 
-        {/* Pricing, stock & at-a-glance facts */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Pricing & stock</CardTitle>
-            <CardDescription>What this listing is, and what it sells for.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Kind</span>
-              <span className="font-medium">{KIND_LABELS[product.kind]}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Price</span>
-              <span className="font-medium">
+          <Stack spacing={1} sx={{ flexGrow: 1, minWidth: 0 }}>
+            <Typography variant="h4">{product.name}</Typography>
+
+            <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+              <Label variant="soft" color={STATUS_COLOR[product.status]}>
+                {STATUS_LABEL[product.status]}
+              </Label>
+              <Label
+                variant="soft"
+                color={
+                  product.kind === 'organic'
+                    ? 'success'
+                    : product.kind === 'premium'
+                      ? 'warning'
+                      : 'default'
+                }
+              >
+                {KIND_LABELS[product.kind]}
+              </Label>
+              {stock <= product.stock.threshold && (
+                <Label variant="soft" color={stock <= 0 ? 'error' : 'warning'}>
+                  {stock <= 0 ? 'Out of stock' : 'Low stock'}
+                </Label>
+              )}
+            </Stack>
+
+            <Stack
+              direction="row"
+              spacing={2}
+              flexWrap="wrap"
+              useFlexGap
+              sx={{ typography: 'body2', color: 'text.secondary' }}
+            >
+              <Box component="span">{categoryName}</Box>
+              <Box component="span">{sellerName}</Box>
+              <Box component="span">
                 {displayPrice(product)} / {product.unit}
-              </span>
-            </div>
-            <hr className="my-2 border-border" />
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Stock on hand</span>
-              <span className="font-medium">
-                {product.stock.quantity} {product.unit}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Low-stock threshold</span>
-              <span>{product.stock.threshold}</span>
-            </div>
-            {product.weightGrams !== null && (
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Weight</span>
-                <span>{product.weightGrams} g</span>
-              </div>
-            )}
+              </Box>
+            </Stack>
+          </Stack>
 
-            {/* Options — when present these are what buyers actually purchase,
-                so they replace the product-level price/stock above. */}
-            {product.variants && product.variants.length > 0 && (
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap sx={{ flexShrink: 0 }}>
+            {isPending && (
               <>
-                <hr className="my-2 border-border" />
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Options</span>
-                  <span className="font-medium">
-                    {product.variantSummary?.variantCount ?? product.variants.length} · total stock{' '}
-                    {product.variantSummary?.totalStock ?? 0}
-                  </span>
-                </div>
-                <div className="space-y-1.5 pt-1">
-                  {product.variants.map((v) => (
-                    <div
-                      key={v.id}
-                      className="rounded-md border border-border px-2.5 py-2 text-xs"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-medium">
-                          {v.label}
-                          {v.isDefault && (
-                            <span className="ml-1 text-[10px] text-primary">· default</span>
-                          )}
-                          {!v.active && (
-                            <span className="ml-1 text-[10px] text-destructive">· disabled</span>
-                          )}
-                        </span>
-                        <span>
-                          {formatInr(v.price)}
-                          {v.mrp !== null && (
-                            <span className="ml-1 text-muted-foreground line-through">
-                              {formatInr(v.mrp)}
-                            </span>
-                          )}
-                        </span>
-                      </div>
-                      <div className="mt-0.5 flex items-center justify-between gap-2 text-muted-foreground">
-                        <span>{v.sku ?? 'no SKU'}</span>
-                        <span>
-                          stock {v.stock.quantity}
-                          {typeof v.costPrice === 'number' && ` · cost ${formatInr(v.costPrice)}`}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <Button
+                  variant="contained"
+                  color="success"
+                  onClick={() => setAction('approve')}
+                  startIcon={<Iconify icon="solar:check-circle-bold" />}
+                >
+                  Approve
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  onClick={() => setAction('reject')}
+                  startIcon={<Iconify icon="solar:close-circle-bold" />}
+                >
+                  Reject
+                </Button>
               </>
             )}
-            <hr className="my-2 border-border" />
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">Category</span>
-              <span className="font-medium">{categoryName}</span>
-            </div>
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-muted-foreground">Seller</span>
-              <span className="truncate font-medium">{sellerName}</span>
-            </div>
+            {isLive && (
+              <Button
+                variant="outlined"
+                color="warning"
+                onClick={() => setAction('suspend')}
+                startIcon={<Iconify icon="solar:pause-circle-bold" />}
+              >
+                Suspend
+              </Button>
+            )}
+            {(isSuspended || isRejected) && (
+              <LoadingButton
+                variant="outlined"
+                loading={setStatusMut.isPending}
+                onClick={restore}
+                startIcon={<Iconify icon="solar:restart-bold" />}
+              >
+                Move to pending
+              </LoadingButton>
+            )}
+          </Stack>
+        </Stack>
+      </Card>
+
+      <Card sx={{ mt: 3 }}>
+        <Tabs
+          value={tab}
+          onChange={(_e, v) => setTab(v)}
+          sx={{
+            px: 3,
+            boxShadow: (theme) =>
+              `inset 0 -2px 0 0 ${varAlpha(theme.vars.palette.grey['500Channel'], 0.08)}`,
+          }}
+        >
+          <Tab value="details" label="Details" />
+          <Tab value="quality" label="Quality" />
+          <Tab value="duplicates" label="Duplicates" />
+          <Tab value="reviews" label="Review history" />
+        </Tabs>
+
+        {tab === 'details' && (
+          <Grid container spacing={3} sx={{ p: 3 }}>
+            <Grid xs={12} md={5}>
+              {product.images.length === 0 ? (
+                <EmptyContent
+                  filled
+                  title="No images"
+                  description="Sellers should upload at least one before approval."
+                  sx={{ py: 8 }}
+                />
+              ) : (
+                <Stack spacing={1.5}>
+                  <Box
+                    component="a"
+                    href={product.images[activeImage] ?? product.images[0]}
+                    target="_blank"
+                    rel="noreferrer"
+                    sx={{
+                      display: 'block',
+                      aspectRatio: '1 / 1',
+                      borderRadius: 2,
+                      overflow: 'hidden',
+                      bgcolor: 'background.neutral',
+                    }}
+                  >
+                    <Box
+                      component="img"
+                      src={product.images[activeImage] ?? product.images[0]}
+                      alt={product.name}
+                      onError={(e) => {
+                        (e.currentTarget as HTMLImageElement).style.visibility = 'hidden';
+                      }}
+                      sx={{ width: 1, height: 1, objectFit: 'cover' }}
+                    />
+                  </Box>
+
+                  {product.images.length > 1 && (
+                    <Box
+                      sx={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 1 }}
+                    >
+                      {product.images.map((src, i) => (
+                        <Box
+                          key={src}
+                          component="button"
+                          type="button"
+                          onClick={() => setActiveImage(i)}
+                          sx={{
+                            p: 0,
+                            border: 'none',
+                            aspectRatio: '1 / 1',
+                            borderRadius: 1,
+                            overflow: 'hidden',
+                            cursor: 'pointer',
+                            bgcolor: 'background.neutral',
+                            ...(i === activeImage
+                              ? { boxShadow: (t) => `0 0 0 2px ${t.palette.primary.main}` }
+                              : { opacity: 0.64, '&:hover': { opacity: 1 } }),
+                          }}
+                        >
+                          <Box
+                            component="img"
+                            src={src}
+                            alt={`${product.name} ${i + 1}`}
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).style.visibility = 'hidden';
+                            }}
+                            sx={{ width: 1, height: 1, objectFit: 'cover', display: 'block' }}
+                          />
+                        </Box>
+                      ))}
+                    </Box>
+                  )}
+                </Stack>
+              )}
+            </Grid>
+
+            <Grid xs={12} md={7}>
+              <Stack spacing={2}>
+                <CardHeader
+                  title="Pricing & stock"
+                  subheader="What this listing is, and what it sells for."
+                  sx={{ p: 0, mb: 1 }}
+                />
+
+                <Row label="Kind" value={KIND_LABELS[product.kind]} />
+                <Row label="Price" value={`${displayPrice(product)} / ${product.unit}`} />
+
+                <Divider sx={{ borderStyle: 'dashed' }} />
+
+                <Row label="Stock on hand" value={`${stock} ${product.unit}`} />
+                <Row label="Low-stock threshold" value={product.stock.threshold} />
+                {product.weightGrams !== null && (
+                  <Row label="Weight" value={`${product.weightGrams} g`} />
+                )}
+
+                {product.variants && product.variants.length > 0 && (
+                  <>
+                    <Divider sx={{ borderStyle: 'dashed' }} />
+                    <Row
+                      label="Options"
+                      value={`${product.variantSummary?.variantCount ?? product.variants.length} · ${
+                        product.variantSummary?.totalStock ?? 0
+                      } in stock`}
+                    />
+                    <Stack spacing={1}>
+                      {product.variants.map((v) => (
+                        <Card key={v.id} variant="outlined" sx={{ p: 1.5 }}>
+                          <Stack
+                            direction="row"
+                            justifyContent="space-between"
+                            alignItems="center"
+                            spacing={1}
+                          >
+                            <Stack direction="row" spacing={0.75} alignItems="center">
+                              <Typography variant="subtitle2">{v.label}</Typography>
+                              {v.isDefault && (
+                                <Label variant="soft" color="primary">
+                                  Default
+                                </Label>
+                              )}
+                              {!v.active && <Label variant="soft">Disabled</Label>}
+                            </Stack>
+                            <Typography variant="subtitle2">{formatInr(v.price)}</Typography>
+                          </Stack>
+                          <Stack
+                            direction="row"
+                            justifyContent="space-between"
+                            sx={{ mt: 0.5, typography: 'caption', color: 'text.disabled' }}
+                          >
+                            <Box component="span">{v.sku ?? 'no SKU'}</Box>
+                            <Box component="span">stock {v.stock.quantity}</Box>
+                          </Stack>
+                        </Card>
+                      ))}
+                    </Stack>
+                  </>
+                )}
+
+                <Divider sx={{ borderStyle: 'dashed' }} />
+
+                <Row label="Category" value={categoryName} />
+                <Row label="Seller" value={sellerName} />
+              </Stack>
+            </Grid>
+
+            <Grid xs={12}>
+              <Divider sx={{ borderStyle: 'dashed', mb: 3 }} />
+              <CardHeader title="Description" sx={{ p: 0, mb: 2 }} />
+              <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
+                {product.description || 'No description was added.'}
+              </Typography>
+            </Grid>
+
+            <Grid xs={12}>
+              <ListingDetails product={product} />
+            </Grid>
+          </Grid>
+        )}
+
+        {tab === 'quality' && (
+          <CardContent>
+            <QualityChecklist productId={product.id} />
           </CardContent>
-        </Card>
-      </Box>
+        )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Description</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="whitespace-pre-wrap text-sm">{product.description}</p>
-          {product.descriptionI18n && Object.keys(product.descriptionI18n).length > 0 && (
-            <details className="mt-4 rounded-md border border-border bg-secondary/30 p-3 text-sm">
-              <summary className="cursor-pointer text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Translations ({Object.keys(product.descriptionI18n).length})
-              </summary>
-              <dl className="mt-2 space-y-2">
-                {Object.entries(product.descriptionI18n).map(([locale, value]) => (
-                  <div key={locale}>
-                    <dt className="text-xs font-medium uppercase">{locale}</dt>
-                    <dd className="whitespace-pre-wrap text-sm">{value}</dd>
-                  </div>
-                ))}
-              </dl>
-            </details>
-          )}
-        </CardContent>
-      </Card>
-
-      <ListingDetails product={product} />
-      </Stack>
-      )}
-
-      {tab === 'quality' && (
-      <Stack spacing={3}>
-      <QualityChecklist productId={product.id} />
-      </Stack>
-      )}
-
-      {tab === 'duplicates' && (
-      <Stack spacing={3}>
-      <DuplicateCheck
-        productId={product.id}
-        categoryName={categoryName}
-        onMarkDuplicate={setDupCandidate}
-      />
-      </Stack>
-      )}
-
-      {tab === 'reviews' && (
-      <Stack spacing={3}>
-      <Card>
-        <CardHeader>
-          <CardTitle>Review history</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3 text-sm">
-          <div className="grid grid-cols-2 gap-4">
-            <Field label="Submitted" value={formatDateTime(product.createdAt)} />
-            <Field label="Last updated" value={formatDateTime(product.updatedAt)} />
-            <Field
-              label="Approved at"
-              value={product.approvedAt ? formatDateTime(product.approvedAt) : '—'}
+        {tab === 'duplicates' && (
+          <CardContent>
+            <DuplicateCheck
+              productId={product.id}
+              categoryName={categoryName}
+              onMarkDuplicate={setDupCandidate}
             />
-            <Field
-              label="Notes"
-              value={
-                product.approvalNotes ?? (
-                  <span className="text-muted-foreground">No notes recorded</span>
-                )
-              }
-            />
-          </div>
-        </CardContent>
+          </CardContent>
+        )}
+
+        {tab === 'reviews' && (
+          <CardContent>
+            <Stack spacing={2} sx={{ maxWidth: 600 }}>
+              <Row label="Submitted" value={fDateTime(product.createdAt)} />
+              <Row label="Last updated" value={fDateTime(product.updatedAt)} />
+              <Row
+                label="Approved at"
+                value={product.approvedAt ? fDateTime(product.approvedAt) : '—'}
+              />
+              <Row label="Notes" value={product.approvalNotes ?? '—'} />
+            </Stack>
+          </CardContent>
+        )}
       </Card>
-      </Stack>
-      )}
 
       <StatusReviewDialog
         open={action !== null}
@@ -477,16 +554,18 @@ export const ProductDetailPage = () => {
           });
         }}
       />
-    </Stack>
+    </>
   );
 };
 
-const ListingDetails = ({ product }: { product: import('./types').SafeProduct }) => {
+// ----------------------------------------------------------------------
+
+const ListingDetails = ({ product }: { product: SafeProduct }) => {
   const badges = [
-    product.womenEntrepreneur && { label: 'Women entrepreneur', variant: 'info' as const },
-    product.youthEmpowerment && { label: 'Youth empowerment', variant: 'info' as const },
-    product.organicCertified && { label: 'Organic certified', variant: 'success' as const },
-  ].filter(Boolean) as Array<{ label: string; variant: 'info' | 'success' }>;
+    product.womenEntrepreneur && { label: 'Women entrepreneur', color: 'info' as const },
+    product.youthEmpowerment && { label: 'Youth empowerment', color: 'info' as const },
+    product.organicCertified && { label: 'Organic certified', color: 'success' as const },
+  ].filter(Boolean) as Array<{ label: string; color: 'info' | 'success' }>;
 
   const rows: Array<[string, React.ReactNode]> = [
     ['Cash on Delivery', product.codAvailable === false ? 'Not available' : 'Available'],
@@ -499,76 +578,83 @@ const ListingDetails = ({ product }: { product: import('./types').SafeProduct })
     ['SKU', product.sku || '—'],
     ['HSN code', product.hsnCode || '—'],
     ['Packaging', product.packagingType || '—'],
-    ['Harvest / packed', product.harvestDate ? formatDate(product.harvestDate) : '—'],
+    ['Harvest / packed', product.harvestDate ? fDate(product.harvestDate) : '—'],
     ['Shelf life', product.shelfLifeDays ? `${product.shelfLifeDays} days` : '—'],
-    [
-      'Organic cert.',
-      product.organicCertified ? product.organicCertification || 'Yes' : '—',
-    ],
+    ['Organic cert.', product.organicCertified ? product.organicCertification || 'Yes' : '—'],
   ];
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Listing details</CardTitle>
-        <CardDescription>Seller-provided attributes buyers see on the storefront.</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4 text-sm">
+    <>
+      <Divider sx={{ borderStyle: 'dashed', mb: 3 }} />
+      <CardHeader
+        title="Listing details"
+        subheader="Seller-provided attributes buyers see on the storefront."
+        sx={{ p: 0, mb: 2 }}
+      />
+
+      <Stack spacing={3}>
         {badges.length > 0 && (
-          <div className="flex flex-wrap gap-2">
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
             {badges.map((b) => (
-              <Badge key={b.label} variant={b.variant}>
+              <Label key={b.label} variant="soft" color={b.color}>
                 {b.label}
-              </Badge>
+              </Label>
             ))}
-          </div>
+          </Stack>
         )}
-        <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2 lg:grid-cols-3">
+
+        <Box
+          sx={{
+            display: 'grid',
+            columnGap: 4,
+            rowGap: 1.5,
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' },
+          }}
+        >
           {rows.map(([label, value]) => (
-            <div key={label} className="flex items-center justify-between gap-3 border-b border-border/60 pb-1.5">
-              <dt className="text-muted-foreground">{label}</dt>
-              <dd className="text-right font-medium">{value}</dd>
-            </div>
+            <Row key={label} label={label} value={value} />
           ))}
-        </dl>
+        </Box>
+
         {product.highlights && product.highlights.length > 0 && (
-          <div>
-            <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          <Box>
+            <Typography variant="subtitle2" sx={{ mb: 1 }}>
               Highlights
-            </p>
-            <ul className="list-inside list-disc space-y-0.5">
+            </Typography>
+            <Stack spacing={0.5}>
               {product.highlights.map((h) => (
-                <li key={h}>{h}</li>
+                <Stack key={h} direction="row" spacing={1} alignItems="flex-start">
+                  <Iconify
+                    icon="eva:checkmark-circle-2-fill"
+                    width={16}
+                    sx={{ mt: 0.25, color: 'primary.main', flexShrink: 0 }}
+                  />
+                  <Typography variant="body2">{h}</Typography>
+                </Stack>
               ))}
-            </ul>
-          </div>
+            </Stack>
+          </Box>
         )}
+
         {product.tags && product.tags.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Tags
-            </span>
+          <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
             {product.tags.map((t) => (
-              <span key={t} className="rounded bg-secondary px-2 py-0.5 text-xs">
-                {t}
-              </span>
+              <Chip key={t} size="small" variant="soft" label={t} />
             ))}
-          </div>
+          </Stack>
         )}
+
         {product.videoUrl && (
-          <a
-            href={product.videoUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1 text-primary underline underline-offset-2"
-          >
-            <ExternalLink className="h-3.5 w-3.5" /> Product video
-          </a>
+          <Link href={product.videoUrl} target="_blank" rel="noreferrer" variant="body2">
+            Product video ↗
+          </Link>
         )}
-      </CardContent>
-    </Card>
+      </Stack>
+    </>
   );
 };
+
+// ----------------------------------------------------------------------
 
 const checklistLabels: Record<string, string> = {
   hasImage: 'At least one product image',
@@ -584,54 +670,62 @@ const QualityChecklist = ({ productId }: { productId: string }) => {
   const { data, isLoading, isError, error } = useProductQualityCheck(productId);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Quality checklist</CardTitle>
-        <CardDescription>
-          Listing-completeness checks and restricted-item screening to run before approving.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {isLoading && <Skeleton className="h-40 w-full" />}
-        {isError && (
-          <p className="text-sm text-destructive">
-            {error instanceof Error ? error.message : 'Failed to run quality check'}
-          </p>
-        )}
-        {!isLoading && !isError && data && (
-          <>
-            {data.restrictedTermsFound.length > 0 && (
-              <div className="flex items-start gap-2 rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
-                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
-                <span>
-                  Restricted terms detected: {data.restrictedTermsFound.join(', ')}. Review this
-                  listing carefully before approving.
-                </span>
-              </div>
-            )}
-            <ul className="space-y-2 text-sm">
-              {checklistOrder.map((key) => {
-                const ok = data.checklist[key];
-                return (
-                  <li key={key} className="flex items-center gap-2">
-                    {ok ? (
-                      <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
-                    ) : (
-                      <XCircle className="h-4 w-4 shrink-0 text-destructive" />
-                    )}
-                    <span className={ok ? '' : 'text-muted-foreground'}>
-                      {checklistLabels[key]}
-                    </span>
-                  </li>
-                );
-              })}
-            </ul>
-          </>
-        )}
-      </CardContent>
-    </Card>
+    <Stack spacing={3}>
+      <CardHeader
+        title="Quality checklist"
+        subheader="Completeness checks and restricted-item screening to run before approving."
+        sx={{ p: 0 }}
+      />
+
+      {isLoading && <Skeleton height={160} />}
+
+      {isError && (
+        <Alert severity="error">
+          {error instanceof Error ? error.message : 'Failed to run quality check'}
+        </Alert>
+      )}
+
+      {!isLoading && !isError && data && (
+        <>
+          {data.restrictedTermsFound.length > 0 && (
+            <Alert severity="error">
+              Restricted terms detected: {data.restrictedTermsFound.join(', ')}. Review this
+              listing carefully before approving.
+            </Alert>
+          )}
+
+          <Stack spacing={1.5}>
+            {checklistOrder.map((key) => {
+              const ok = data.checklist[key];
+              return (
+                <Stack key={key} direction="row" spacing={1.5} alignItems="center">
+                  <Iconify
+                    width={20}
+                    icon={ok ? 'solar:check-circle-bold' : 'solar:close-circle-bold'}
+                    sx={{ flexShrink: 0, color: ok ? 'success.main' : 'error.main' }}
+                  />
+                  <Typography variant="body2" sx={{ color: ok ? 'text.primary' : 'text.secondary' }}>
+                    {checklistLabels[key]}
+                  </Typography>
+                </Stack>
+              );
+            })}
+          </Stack>
+        </>
+      )}
+    </Stack>
   );
 };
+
+// ----------------------------------------------------------------------
+
+const DUP_HEAD = [
+  { id: 'thumb', label: '', width: 72 },
+  { id: 'name', label: 'Name' },
+  { id: 'status', label: 'Status', width: 120 },
+  { id: 'submitted', label: 'Submitted', width: 140 },
+  { id: 'actions', label: '', width: 180 },
+];
 
 const DuplicateCheck = ({
   productId,
@@ -644,92 +738,108 @@ const DuplicateCheck = ({
 }) => {
   const { data, isLoading, isError, error } = useProductDuplicates(productId);
 
-  const dupHead = [
-    { id: 'thumb', label: '' },
-    { id: 'name', label: 'Name' },
-    { id: 'seller', label: 'Seller' },
-    { id: 'status', label: 'Status' },
-    { id: 'submitted', label: 'Submitted' },
-    { id: 'actions', label: '' },
-  ];
-
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Duplicate check</CardTitle>
-        <CardDescription>
-          Other PENDING or LIVE listings in {categoryName} with similar names. If this product is a
-          copy, mark it as a duplicate of the original.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {isLoading && <Skeleton className="h-24 w-full" />}
-        {isError && (
-          <p className="text-sm text-destructive">
-            {error instanceof Error ? error.message : 'Failed to load duplicate candidates'}
-          </p>
-        )}
-        {!isLoading && !isError && (data?.length ?? 0) === 0 && (
-          <div className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-            No likely duplicates found.
-          </div>
-        )}
-        {!isLoading && !isError && (data?.length ?? 0) > 0 && (
-          <Scrollbar>
-            <Table sx={{ minWidth: 800 }}>
-              <TableHeadCustom headLabel={dupHead} />
-              <TableBody>
-                {(data ?? []).map((c) => (
-                  <TableRow key={c.id} hover>
-                    <TableCell>
+    <Stack spacing={3}>
+      <CardHeader
+        title="Duplicate check"
+        subheader={
+          <>
+            Other pending or live listings in {categoryName} with similar names. If this is a copy,
+            mark it as a duplicate of the original.
+          </>
+        }
+        sx={{ p: 0 }}
+      />
+
+      {isLoading && <Skeleton height={96} />}
+
+      {isError && (
+        <Alert severity="error">
+          {error instanceof Error ? error.message : 'Failed to load duplicate candidates'}
+        </Alert>
+      )}
+
+      {!isLoading && !isError && (data?.length ?? 0) === 0 && (
+        <Alert severity="success">No likely duplicates found.</Alert>
+      )}
+
+      {!isLoading && !isError && (data?.length ?? 0) > 0 && (
+        <Scrollbar>
+          <Table sx={{ minWidth: 720 }}>
+            <TableHeadCustom headLabel={DUP_HEAD} />
+            <TableBody>
+              {(data ?? []).map((c) => (
+                <TableRow key={c.id} hover>
+                  <TableCell>
+                    <Box
+                      sx={{
+                        width: 40,
+                        height: 40,
+                        borderRadius: 1,
+                        overflow: 'hidden',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        bgcolor: 'background.neutral',
+                        color: 'text.disabled',
+                      }}
+                    >
                       {c.image ? (
-                        <img
+                        <Box
+                          component="img"
                           src={c.image}
                           alt={c.name}
-                          className="h-10 w-10 rounded-md border border-border object-cover"
+                          sx={{ width: 1, height: 1, objectFit: 'cover' }}
                         />
                       ) : (
-                        <div className="flex h-10 w-10 items-center justify-center rounded-md border border-border bg-secondary text-muted-foreground">
-                          <ImageIcon className="h-4 w-4" />
-                        </div>
+                        <Iconify icon="solar:gallery-wide-bold" width={18} />
                       )}
-                    </TableCell>
-                    <TableCell>
-                      <Link
-                        to={`/admin/products/${c.id}`}
-                        className="font-medium text-primary underline-offset-2 hover:underline"
-                      >
-                        {c.name}
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {c.sellerId.slice(-6)}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      <ProductStatusBadge status={c.status} />
-                    </TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
-                      {formatDate(c.createdAt)}
-                    </TableCell>
-                    <TableCell>
-                      <Button size="sm" variant="outline" onClick={() => onMarkDuplicate(c)}>
-                        <Copy className="h-3.5 w-3.5" />
-                        Mark as duplicate
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Scrollbar>
-        )}
-      </CardContent>
-    </Card>
+                    </Box>
+                  </TableCell>
+
+                  <TableCell>
+                    <Link
+                      component={RouterLink}
+                      to={`/admin/products/${c.id}`}
+                      variant="subtitle2"
+                      color="inherit"
+                    >
+                      {c.name}
+                    </Link>
+                  </TableCell>
+
+                  <TableCell>
+                    <Label variant="soft" color={STATUS_COLOR[c.status]}>
+                      {STATUS_LABEL[c.status]}
+                    </Label>
+                  </TableCell>
+
+                  <TableCell sx={{ typography: 'caption', color: 'text.disabled' }}>
+                    {fDate(c.createdAt)}
+                  </TableCell>
+
+                  <TableCell align="right">
+                    <Button
+                      size="small"
+                      variant="outlined"
+                      color="error"
+                      onClick={() => onMarkDuplicate(c)}
+                      startIcon={<Iconify icon="solar:copy-bold" width={16} />}
+                    >
+                      Mark duplicate
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </Scrollbar>
+      )}
+    </Stack>
   );
 };
+
+// ----------------------------------------------------------------------
 
 const MarkDuplicateDialog = ({
   candidate,
@@ -744,7 +854,11 @@ const MarkDuplicateDialog = ({
   const [submitting, setSubmitting] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  const open = candidate !== null;
+  const handleClose = () => {
+    setNotes('');
+    setErr(null);
+    onClose();
+  };
 
   const handleSubmit = async () => {
     setErr(null);
@@ -761,54 +875,48 @@ const MarkDuplicateDialog = ({
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={() => {
-        setNotes('');
-        setErr(null);
-        onClose();
-      }}
-      title="Mark as duplicate"
-      description={
-        candidate
-          ? `This product will be REJECTED and linked to "${candidate.name}" as the original.`
-          : undefined
-      }
-      footer={
-        <>
-          <Button variant="outline" onClick={onClose} disabled={submitting}>
-            Cancel
-          </Button>
-          <Button variant="destructive" onClick={handleSubmit} disabled={submitting}>
-            {submitting ? 'Working…' : 'Reject as duplicate'}
-          </Button>
-        </>
-      }
-    >
-      <div className="space-y-2">
-        <div className="flex items-start gap-2 rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-          <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          The seller will see your note explaining why their listing was rejected.
-        </div>
-        <TextField
-          fullWidth
-          label="Notes (optional)"
-          multiline
-          minRows={4}
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="Visible to the seller."
-          InputLabelProps={{ shrink: true }}
-        />
-        {err && <Alert severity="error">{err}</Alert>}
-      </div>
+    <Dialog open={candidate !== null} onClose={handleClose} fullWidth maxWidth="sm">
+      <DialogTitle>Mark as duplicate</DialogTitle>
+
+      <DialogContent>
+        <Stack spacing={2.5}>
+          <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+            {candidate
+              ? `This product will be rejected and linked to "${candidate.name}" as the original.`
+              : ''}
+          </Typography>
+
+          <Alert severity="warning">
+            The seller will see your note explaining why their listing was rejected.
+          </Alert>
+
+          <TextField
+            fullWidth
+            multiline
+            minRows={3}
+            label="Note to the seller"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+          />
+
+          {err && <Alert severity="error">{err}</Alert>}
+        </Stack>
+      </DialogContent>
+
+      <DialogActions>
+        <Button variant="outlined" onClick={handleClose} disabled={submitting}>
+          Cancel
+        </Button>
+        <LoadingButton
+          variant="contained"
+          color="error"
+          loading={submitting}
+          onClick={handleSubmit}
+        >
+          Reject as duplicate
+        </LoadingButton>
+      </DialogActions>
     </Dialog>
   );
 };
-
-const Field = ({ label, value }: { label: string; value: React.ReactNode }) => (
-  <div>
-    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
-    <div className="mt-1 whitespace-pre-wrap">{value}</div>
-  </div>
-);
