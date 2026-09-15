@@ -18,7 +18,8 @@ import { Scrollbar } from '@/components/scrollbar';
 import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
 import { useCategoriesList } from '@/features/categories/api';
 import { ScopedAdminBanner } from '@/features/scoped-admin/ScopedAdminBanner';
-import { formatDate, formatInr } from '@/lib/format';
+import { formatDate } from '@/lib/format';
+import { displayPrice } from './price';
 import { useProductsList, useSetProductStatus } from './api';
 import { ProductStatusBadge } from './status-badge';
 import { StatusReviewDialog, type StatusAction } from './StatusReviewDialog';
@@ -34,12 +35,7 @@ const STATUS_OPTIONS: Array<{ value: '' | ProductStatus; label: string }> = [
 
 const PAGE_SIZE = 20;
 
-const lowestPrice = (p: { pricing: { standard?: number; organic?: number; premium?: number } }) =>
-  Math.min(
-    ...[p.pricing.standard, p.pricing.organic, p.pricing.premium].filter(
-      (x): x is number => typeof x === 'number',
-    ),
-  );
+
 
 export const ProductsListPage = () => {
   const navigate = useNavigate();
@@ -291,7 +287,7 @@ export const ProductsListPage = () => {
                       onClick={() => navigate(`/admin/products/${product.id}`)}
                     >
                       <div>{product.name}</div>
-                      <div className="text-xs text-muted-foreground">{formatInr(lowestPrice(product))} / {product.unit}</div>
+                      <div className="text-xs text-muted-foreground">{displayPrice(product)} / {product.unit}</div>
                     </TableCell>
                     <TableCell onClick={() => navigate(`/admin/products/${product.id}`)} className="cursor-pointer">
                       {categoryName(product.categoryId)}

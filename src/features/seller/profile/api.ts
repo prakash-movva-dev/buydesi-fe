@@ -216,14 +216,6 @@ export interface SellerAnalytics {
     totalCreditedInr: number;
     totalDebitedInr: number;
   };
-  trade: {
-    tradesPlaced: number;
-    tradesReceived: number;
-    tradeRevenueInr: number;
-    tradeSpendInr: number;
-    cashCount: number;
-    onlineCount: number;
-  };
 }
 
 export interface AnalyticsQuery {

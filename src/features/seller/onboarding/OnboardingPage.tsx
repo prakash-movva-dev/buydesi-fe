@@ -584,17 +584,14 @@ export const SellerOnboardingPage = () => {
             {step === 2 && (
               <>
                 <Typography variant="h6">Products & categories</Typography>
-                <div>
-                  <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                    Categories you'll sell in *
-                  </Typography>
-                  <CategoryPicker
-                    multi
-                    values={form.categoryIds}
-                    onChange={(v) => set('categoryIds', v)}
-                    placeholder="Pick one or more categories…"
-                  />
-                </div>
+                <CategoryPicker
+                  multi
+                  required
+                  label="Categories you'll sell in"
+                  values={form.categoryIds}
+                  onChange={(v) => set('categoryIds', v)}
+                  placeholder="Pick one or more categories…"
+                />
                 <div className="grid gap-3 sm:grid-cols-2">
                   <TextField
                     select

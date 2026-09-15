@@ -2,26 +2,38 @@
 
 export type ProductStatus = 'PENDING' | 'LIVE' | 'SUSPENDED' | 'REJECTED';
 
-export interface ProductPricing {
-  standard?: number;
-  organic?: number;
-  premium?: number;
-}
+/**
+ * What sort of produce a listing is. Standard, organic and premium are three
+ * different goods, each its own listing with its own price and stock — never
+ * three prices on one product.
+ */
+export type ProductKind = 'standard' | 'organic' | 'premium';
+
+export const PRODUCT_KINDS: ProductKind[] = ['standard', 'organic', 'premium'];
+
+export const KIND_LABELS: Record<ProductKind, string> = {
+  standard: 'Standard',
+  organic: 'Organic',
+  premium: 'Premium',
+};
 
 export interface ProductStock {
   quantity: number;
   threshold: number;
 }
 
-/** A buyable option of a product — pack size, dimension, colour. */
+/** A buyable option of a product — the axis, the buyer's choice, its price. */
 export interface ProductVariant {
   id: string;
   productId: string;
+  /** "Weight", "Size", "Colour" — what the choice is about. */
+  optionType: string;
+  /** "500 g", "Red" — the choice itself. */
+  optionValue: string;
+  /** Display string the API derives: "Weight: 500 g". */
   label: string;
   sku: string | null;
-  size: string | null;
-  colour: string | null;
-  pricing: ProductPricing;
+  price: number;
   mrp: number | null;
   /** Internal margin data — present only on seller/admin reads. */
   costPrice?: number | null;
@@ -64,7 +76,8 @@ export interface SafeProduct {
   unit: string;
   weightGrams: number | null;
   images: string[];
-  pricing: ProductPricing;
+  kind: ProductKind;
+  price: number;
   stock: ProductStock;
   status: ProductStatus;
   approvalNotes: string | null;
@@ -93,7 +106,18 @@ export interface SafeProduct {
 }
 
 export type StockState = 'low' | 'out';
-export type ProductsSort = 'stock_asc' | 'stock_desc' | 'price_asc' | 'price_desc';
+export type ProductsSort =
+  | 'newest'
+  | 'name_asc'
+  | 'name_desc'
+  | 'price_asc'
+  | 'price_desc'
+  | 'stock_asc'
+  | 'stock_desc'
+  | 'status_asc'
+  | 'status_desc'
+  | 'updated_asc'
+  | 'updated_desc';
 
 export interface ProductsListQuery {
   status?: ProductStatus;
@@ -101,6 +125,7 @@ export interface ProductsListQuery {
   cluster?: string;
   sellerId?: string;
   q?: string;
+  kind?: ProductKind;
   minPrice?: number;
   maxPrice?: number;
   stockState?: StockState;
@@ -123,6 +148,11 @@ export interface ProductsListMeta {
   total: number;
   page: number;
   limit: number;
+  /**
+   * Products per status for the current filter, ignoring the status filter —
+   * what the list's status tabs show beside their labels. `all` is the sum.
+   */
+  counts?: Partial<Record<ProductStatus | 'all', number>>;
 }
 
 /** Result of GET /products/:id/quality-check. */

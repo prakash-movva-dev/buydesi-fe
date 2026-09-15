@@ -20,7 +20,6 @@ import {
   ShoppingBag,
   ShoppingCart,
   Sliders,
-  Sparkles,
   Star,
   Store,
   Truck,
@@ -105,38 +104,9 @@ export const navSections: NavSection[] = [
       { label: 'Wallet', path: '/seller/wallet', icon: Wallet, roles: [UserRole.SELLER] },
       { label: 'Payouts', path: '/seller/payouts', icon: CreditCard, roles: [UserRole.SELLER] },
       {
-        label: 'Cash entries',
-        path: '/seller/cash-entries',
-        icon: Receipt,
-        roles: [UserRole.SELLER],
-      },
-      {
         label: 'My commission',
         path: '/seller/commission',
         icon: ReceiptText,
-        roles: [UserRole.SELLER],
-      },
-    ],
-  },
-  {
-    label: 'Trade',
-    items: [
-      {
-        label: 'My listings',
-        path: '/seller/trade/listings',
-        icon: Sparkles,
-        roles: [UserRole.SELLER],
-      },
-      {
-        label: 'Catalogue',
-        path: '/seller/trade/catalogue',
-        icon: ShoppingBag,
-        roles: [UserRole.SELLER],
-      },
-      {
-        label: 'Trade orders',
-        path: '/seller/trade/orders',
-        icon: ClipboardList,
         roles: [UserRole.SELLER],
       },
     ],
@@ -293,12 +263,6 @@ export const navSections: NavSection[] = [
     label: 'Money',
     items: [
       { label: 'Wallet', path: '/admin/wallet', icon: Wallet, roles: OPS_ADMINS },
-      {
-        label: 'Cash transactions',
-        path: '/admin/cash-transactions',
-        icon: Receipt,
-        roles: OPS_ADMINS,
-      },
       { label: 'Payouts', path: '/admin/payouts', icon: CreditCard, roles: OPS_ADMINS },
       { label: 'Commission', path: '/admin/commission', icon: Receipt, roles: OPS_ADMINS },
     ],
@@ -337,12 +301,6 @@ export const navSections: NavSection[] = [
   {
     label: 'Admin',
     items: [
-      {
-        label: 'Trade settings',
-        path: '/admin/trade',
-        icon: Sparkles,
-        roles: [UserRole.SUPER_ADMIN, UserRole.SUB_SUPER_ADMIN],
-      },
       {
         label: 'Escalation panel',
         path: '/admin/escalation',

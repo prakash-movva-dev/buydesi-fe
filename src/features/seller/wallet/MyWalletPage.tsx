@@ -1,28 +1,34 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Wallet as WalletIcon } from 'lucide-react';
+
 import Box from '@mui/material/Box';
-import Card from '@mui/material/Card';
+import Grid from '@mui/material/Unstable_Grid2';
 import Stack from '@mui/material/Stack';
-import Table from '@mui/material/Table';
-import MenuItem from '@mui/material/MenuItem';
-import TableRow from '@mui/material/TableRow';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TextField from '@mui/material/TextField';
 import Alert from '@mui/material/Alert';
-import { Button } from '@/components/ui/Button';
-import { Dialog } from '@/components/ui/Dialog';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { Skeleton } from '@/components/ui/Skeleton';
-import { StatCard } from '@/components/ui/StatCard';
-import { Scrollbar } from '@/components/scrollbar';
-import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
-import { TxSourceBadge, TxStatusBadge, TxTypeBadge } from '@/features/wallet/status-badge';
-import { formatDate, formatInr } from '@/lib/format';
+import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import InputAdornment from '@mui/material/InputAdornment';
+import LoadingButton from '@mui/lab/LoadingButton';
+
+import { useAuth } from '@/lib/auth';
 import { ApiError } from '@/types/api';
-import { useMyTransactions, useMyWallet, useRequestWithdrawal } from './api';
+import { formatInr } from '@/lib/format';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { WalletBalanceCard } from '@/features/wallet/WalletBalanceCard';
+import { WalletOverviewCard } from '@/features/wallet/WalletOverviewCard';
+import { WalletTransactionsCard } from '@/features/wallet/WalletTransactionsCard';
+
+import { QuickWithdrawCard } from './QuickWithdrawCard';
+import { useMyTransactions, useMyWallet, useMyWalletSummary, useRequestWithdrawal } from './api';
 import type { WalletTxSource, WalletTxStatus, WalletTxType } from '@/features/wallet/types';
+
+// ----------------------------------------------------------------------
 
 const TYPE_OPTIONS: Array<{ value: '' | WalletTxType; label: string }> = [
   { value: '', label: 'Any type' },
@@ -41,35 +47,26 @@ const STATUS_OPTIONS: Array<{ value: '' | WalletTxStatus; label: string }> = [
 const SOURCE_OPTIONS: Array<{ value: '' | WalletTxSource; label: string }> = [
   { value: '', label: 'Any source' },
   { value: 'consumer_payout', label: 'Consumer payout' },
-  { value: 'trade_sale', label: 'Trade sale' },
-  { value: 'trade_purchase', label: 'Trade purchase' },
-  { value: 'trade_refund', label: 'Trade refund' },
   { value: 'withdrawal', label: 'Withdrawal' },
-  { value: 'cash_received', label: 'Cash received' },
-  { value: 'cash_paid', label: 'Cash paid' },
   { value: 'platform_fee', label: 'Platform fee' },
   { value: 'admin_adjustment', label: 'Admin adjustment' },
 ];
 
 const PAGE_SIZE = 25;
 
-const HEAD = [
-  { id: 'type', label: 'Type' },
-  { id: 'source', label: 'Source' },
-  { id: 'status', label: 'Status' },
-  { id: 'amount', label: 'Amount', align: 'right' as const },
-  { id: 'notes', label: 'Notes' },
-  { id: 'created', label: 'Created' },
-];
+// ----------------------------------------------------------------------
 
 export const MyWalletPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { user } = useAuth();
+
   const type = (searchParams.get('type') as WalletTxType | null) ?? '';
   const status = (searchParams.get('status') as WalletTxStatus | null) ?? '';
   const source = (searchParams.get('source') as WalletTxSource | null) ?? '';
   const page = Math.max(1, Number(searchParams.get('page') ?? 1));
 
   const snapshot = useMyWallet();
+  const summary = useMyWalletSummary();
   const txs = useMyTransactions({
     type: type || undefined,
     source: source || undefined,
@@ -91,166 +88,108 @@ export const MyWalletPage = () => {
 
   const [withdrawOpen, setWithdrawOpen] = useState(false);
 
+  const filters = (
+    <Stack
+      direction={{ xs: 'column', md: 'row' }}
+      spacing={2}
+      sx={{ px: 2.5, pb: 2.5, pt: 1 }}
+    >
+      <TextField
+        select
+        label="Type"
+        value={type}
+        onChange={(e) => setParam({ type: e.target.value })}
+        InputLabelProps={{ shrink: true }}
+        sx={{ width: { xs: 1, md: 144 } }}
+      >
+        {TYPE_OPTIONS.map((opt) => (
+          <MenuItem key={opt.value} value={opt.value}>
+            {opt.label}
+          </MenuItem>
+        ))}
+      </TextField>
+
+      <TextField
+        select
+        label="Status"
+        value={status}
+        onChange={(e) => setParam({ status: e.target.value })}
+        InputLabelProps={{ shrink: true }}
+        sx={{ width: { xs: 1, md: 160 } }}
+      >
+        {STATUS_OPTIONS.map((opt) => (
+          <MenuItem key={opt.value} value={opt.value}>
+            {opt.label}
+          </MenuItem>
+        ))}
+      </TextField>
+
+      <TextField
+        select
+        label="Source"
+        value={source}
+        onChange={(e) => setParam({ source: e.target.value })}
+        InputLabelProps={{ shrink: true }}
+        sx={{ width: { xs: 1, md: 200 } }}
+      >
+        {SOURCE_OPTIONS.map((opt) => (
+          <MenuItem key={opt.value} value={opt.value}>
+            {opt.label}
+          </MenuItem>
+        ))}
+      </TextField>
+    </Stack>
+  );
+
   return (
-    <Stack spacing={3}>
+    <>
       <PageHeader
         title="My wallet"
-        description="Balance, pending credits, and every transaction. Withdraw to your bank when ready."
-        action={
-          <Button
-            onClick={() => setWithdrawOpen(true)}
-            disabled={!snapshot.data || snapshot.data.availableInr <= 0}
-          >
-            <WalletIcon className="h-4 w-4" />
-            Withdraw
-          </Button>
-        }
+        description="Your balance, what is still settling, and every movement in and out."
       />
 
-      <Box
-        sx={{
-          display: 'grid',
-          gap: 2,
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(4,1fr)' },
-        }}
-      >
-        <StatCard label="Balance" value={snapshot.data ? formatInr(snapshot.data.balanceInr) : null} />
-        <StatCard
-          label="Available to withdraw"
-          value={snapshot.data ? formatInr(snapshot.data.availableInr) : null}
-          tone="success"
-        />
-        <StatCard
-          label="Pending credit"
-          value={snapshot.data ? formatInr(snapshot.data.pendingCreditInr) : null}
-        />
-        <StatCard
-          label="Pending debit"
-          value={snapshot.data ? formatInr(snapshot.data.pendingDebitInr) : null}
-        />
-      </Box>
+      <Grid container spacing={3} sx={{ mt: 3 }}>
+        <Grid xs={12} md={7} lg={8}>
+          <WalletOverviewCard
+            snapshot={snapshot.data}
+            summary={summary.data}
+            onWithdraw={() => setWithdrawOpen(true)}
+            withdrawDisabled={!snapshot.data || snapshot.data.availableInr <= 0}
+          />
+        </Grid>
 
-      <Card>
-        <Stack
-          direction="row"
-          spacing={2}
-          flexWrap="wrap"
-          alignItems="center"
-          sx={{ p: 2.5 }}
-        >
-          <TextField
-            select
-            label="Type"
-            value={type}
-            onChange={(e) => setParam({ type: e.target.value })}
-            InputLabelProps={{ shrink: true }}
-            sx={{ width: 144 }}
-          >
-            {TYPE_OPTIONS.map((opt) => (
-              <MenuItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            label="Status"
-            value={status}
-            onChange={(e) => setParam({ status: e.target.value })}
-            InputLabelProps={{ shrink: true }}
-            sx={{ width: 160 }}
-          >
-            {STATUS_OPTIONS.map((opt) => (
-              <MenuItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            label="Source"
-            value={source}
-            onChange={(e) => setParam({ source: e.target.value })}
-            InputLabelProps={{ shrink: true }}
-            sx={{ width: 192 }}
-          >
-            {SOURCE_OPTIONS.map((opt) => (
-              <MenuItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </MenuItem>
-            ))}
-          </TextField>
-        </Stack>
+        <Grid xs={12} md={5} lg={4}>
+          <Stack spacing={3}>
+            <WalletBalanceCard snapshot={snapshot.data} holder={user?.name} />
+            <QuickWithdrawCard available={snapshot.data?.availableInr ?? 0} />
+          </Stack>
+        </Grid>
 
-        {txs.isLoading && (
-          <Box sx={{ p: 2.5 }}>
-            <Skeleton className="h-40 w-full" />
-          </Box>
-        )}
-
-        {!txs.isLoading && (
-          <>
-            <Scrollbar>
-              <Table sx={{ minWidth: 800 }}>
-                <TableHeadCustom headLabel={HEAD} />
-                <TableBody>
-                  {(txs.data?.items ?? []).map((tx) => (
-                    <TableRow key={tx.id} hover>
-                      <TableCell>
-                        <TxTypeBadge type={tx.type} />
-                      </TableCell>
-                      <TableCell>
-                        <TxSourceBadge source={tx.source} />
-                      </TableCell>
-                      <TableCell>
-                        <TxStatusBadge status={tx.status} />
-                      </TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 600 }}>
-                        {tx.type === 'DEBIT' ? '−' : '+'}
-                        {formatInr(tx.amountInr)}
-                      </TableCell>
-                      <TableCell
-                        sx={{ maxWidth: 320, color: 'text.secondary', typography: 'caption' }}
-                        title={tx.notes ?? ''}
-                      >
-                        <Box
-                          sx={{
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            whiteSpace: 'nowrap',
-                          }}
-                        >
-                          {tx.notes ?? '—'}
-                        </Box>
-                      </TableCell>
-                      <TableCell sx={{ typography: 'caption' }}>{formatDate(tx.createdAt)}</TableCell>
-                    </TableRow>
-                  ))}
-                  <TableNoData notFound={!txs.isLoading && (txs.data?.items.length ?? 0) === 0} />
-                </TableBody>
-              </Table>
-            </Scrollbar>
-
-            <TablePaginationCustom
-              count={total}
-              page={page - 1}
-              rowsPerPage={PAGE_SIZE}
-              rowsPerPageOptions={[10, 25, 50]}
-              onPageChange={(_e, newPage) => setParam({ page: String(newPage + 1) })}
-              onRowsPerPageChange={() => {}}
-            />
-          </>
-        )}
-      </Card>
+        <Grid xs={12}>
+          <WalletTransactionsCard
+            title="Transactions"
+            subheader={total ? `${total} movement${total === 1 ? '' : 's'}` : undefined}
+            rows={txs.data?.items ?? []}
+            loading={txs.isLoading}
+            filters={filters}
+            page={page}
+            rowsPerPage={PAGE_SIZE}
+            total={total}
+            onPageChange={(next) => setParam({ page: String(next) })}
+          />
+        </Grid>
+      </Grid>
 
       <WithdrawDialog
         open={withdrawOpen}
         onClose={() => setWithdrawOpen(false)}
         maxAmount={snapshot.data?.availableInr ?? 0}
       />
-    </Stack>
+    </>
   );
 };
+
+// ----------------------------------------------------------------------
 
 const WithdrawDialog = ({
   open,
@@ -282,7 +221,7 @@ const WithdrawDialog = ({
       return;
     }
     if (n > maxAmount) {
-      setError(`Cannot exceed available ₹${maxAmount}.`);
+      setError(`Cannot exceed the ${formatInr(maxAmount)} available.`);
       return;
     }
     try {
@@ -294,44 +233,57 @@ const WithdrawDialog = ({
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      title="Request withdrawal"
-      description={`Available to withdraw: ${formatInr(maxAmount)}. Funds settle in your bank account within 1–2 business days.`}
-      footer={
-        <>
-          <Button variant="outline" onClick={onClose} disabled={mut.isPending}>
-            Cancel
-          </Button>
-          <Button onClick={submit} disabled={mut.isPending}>
-            {mut.isPending ? 'Requesting…' : 'Request'}
-          </Button>
-        </>
-      }
-    >
-      <div className="space-y-3">
-        <TextField
-          fullWidth
-          required
-          type="number"
-          label="Amount (₹)"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          InputLabelProps={{ shrink: true }}
-          inputProps={{ min: 1, max: maxAmount, step: '1' }}
-        />
-        <TextField
-          fullWidth
-          multiline
-          minRows={2}
-          label="Notes (optional)"
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          InputLabelProps={{ shrink: true }}
-        />
-        {error && <Alert severity="error">{error}</Alert>}
-      </div>
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="xs">
+      <DialogTitle>Request withdrawal</DialogTitle>
+
+      <DialogContent>
+        <DialogContentText sx={{ mb: 3, typography: 'body2' }}>
+          {formatInr(maxAmount)} available. Funds settle in your bank account within 1–2 business
+          days.
+        </DialogContentText>
+
+        <Stack spacing={2.5}>
+          <TextField
+            fullWidth
+            autoFocus
+            type="number"
+            label="Amount"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }}
+            InputLabelProps={{ shrink: true }}
+            inputProps={{ min: 1, max: maxAmount, step: '1' }}
+          />
+
+          {/* One tap for the common case — take everything that has settled. */}
+          <Box>
+            <Button size="small" variant="outlined" onClick={() => setAmount(String(maxAmount))}>
+              Withdraw all
+            </Button>
+          </Box>
+
+          <TextField
+            fullWidth
+            multiline
+            minRows={2}
+            label="Notes (optional)"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            InputLabelProps={{ shrink: true }}
+          />
+
+          {error && <Alert severity="error">{error}</Alert>}
+        </Stack>
+      </DialogContent>
+
+      <DialogActions>
+        <Button variant="outlined" onClick={onClose} disabled={mut.isPending}>
+          Cancel
+        </Button>
+        <LoadingButton variant="contained" loading={mut.isPending} onClick={submit}>
+          Request
+        </LoadingButton>
+      </DialogActions>
     </Dialog>
   );
 };

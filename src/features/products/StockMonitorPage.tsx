@@ -26,6 +26,7 @@ import { ScopedAdminBanner } from '@/features/scoped-admin/ScopedAdminBanner';
 import { useAuth } from '@/lib/auth';
 import { cn } from '@/lib/cn';
 import { ApiError, UserRole } from '@/types/api';
+import { lowestPrice } from '@/features/products/price';
 import { formatInr } from '@/lib/format';
 import {
   useBatchRestockAlert,
@@ -67,12 +68,7 @@ const STOCK_OPTIONS: Array<{ value: '' | StockState; label: string }> = [
 
 const PAGE_SIZE = 20;
 
-const lowestPrice = (p: SafeProduct) => {
-  const prices = [p.pricing.standard, p.pricing.organic, p.pricing.premium].filter(
-    (x): x is number => typeof x === 'number',
-  );
-  return prices.length ? Math.min(...prices) : null;
-};
+
 
 export const StockMonitorPage = () => {
   const navigate = useNavigate();

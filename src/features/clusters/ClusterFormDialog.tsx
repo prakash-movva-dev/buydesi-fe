@@ -21,7 +21,7 @@ import { useRegionsList } from '@/features/regions/api';
 import { INDIA_STATES, districtsForState } from '@/utils/india-geo';
 import { ApiError } from '@/types/api';
 import { useCreateCluster, useUpdateCluster } from './api';
-import type { ClusterStatus, SafeCluster, TradeTransportMode } from './types';
+import type { ClusterStatus, SafeCluster } from './types';
 
 interface Props {
   open: boolean;
@@ -50,7 +50,6 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
   const [regionId, setRegionId] = useState('');
   const [zone, setZone] = useState('');
   const [statusVal, setStatusVal] = useState<ClusterStatus>('active');
-  const [defaultTradeTransport, setTransport] = useState<TradeTransportMode>('LOCAL');
   const [activeCategories, setActiveCategories] = useState<string[]>([]);
   // Extended details
   const [code, setCode] = useState('');
@@ -76,7 +75,6 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
       setRegionId(editing.regionId ?? '');
       setZone(editing.zone ?? '');
       setStatusVal(editing.status);
-      setTransport(editing.defaultTradeTransport);
       setActiveCategories(editing.activeCategories ?? []);
       setCode(editing.code ?? '');
       setDescription(editing.description ?? '');
@@ -97,7 +95,6 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
       setRegionId('');
       setZone('');
       setStatusVal('active');
-      setTransport('LOCAL');
       setActiveCategories([]);
       setCode('');
       setDescription('');
@@ -147,7 +144,6 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
         regionId: regionId || null,
         zone: zone.trim() || undefined,
         status: statusVal,
-        defaultTradeTransport,
         activeCategories,
         code: code.trim() || null,
         description: description.trim() || null,
@@ -466,29 +462,6 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
                 gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
               }}
             >
-              <TextField
-                select
-                fullWidth
-                label="Status"
-                value={statusVal}
-                onChange={(e) => setStatusVal(e.target.value as ClusterStatus)}
-                InputLabelProps={{ shrink: true }}
-              >
-                <MenuItem value="active">Active</MenuItem>
-                <MenuItem value="pending">Pending</MenuItem>
-                <MenuItem value="inactive">Inactive</MenuItem>
-              </TextField>
-              <TextField
-                select
-                fullWidth
-                label="Default trade transport"
-                value={defaultTradeTransport}
-                onChange={(e) => setTransport(e.target.value as TradeTransportMode)}
-                InputLabelProps={{ shrink: true }}
-              >
-                <MenuItem value="LOCAL">Local (within cluster)</MenuItem>
-                <MenuItem value="DELHIVERY">Delhivery (inter-cluster)</MenuItem>
-              </TextField>
             </Box>
 
             {isEdit && (

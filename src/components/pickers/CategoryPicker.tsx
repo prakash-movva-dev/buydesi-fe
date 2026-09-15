@@ -18,6 +18,11 @@ interface MultiProps {
 
 type CategoryPickerProps = (SingleProps | MultiProps) & {
   placeholder?: string;
+  /** Floating label — use it on forms so the field matches the TextFields around it. */
+  label?: string;
+  required?: boolean;
+  error?: boolean;
+  helperText?: string;
   disabled?: boolean;
   className?: string;
   /** Filter to one of these (defaults to all active). */
@@ -53,6 +58,10 @@ export const CategoryPicker = (props: CategoryPickerProps) => {
         onChange={props.onChange}
         loading={isLoading}
         disabled={props.disabled}
+        label={props.label}
+        required={props.required}
+        error={props.error}
+        helperText={props.helperText}
         placeholder={props.placeholder ?? 'Pick one or more categories…'}
         onSearch={setSearch}
       />
@@ -66,6 +75,10 @@ export const CategoryPicker = (props: CategoryPickerProps) => {
       onChange={props.onChange}
       loading={isLoading}
       disabled={props.disabled}
+      label={props.label}
+      required={props.required}
+      error={props.error}
+      helperText={props.helperText}
       placeholder={props.placeholder ?? 'Pick a category…'}
       onSearch={setSearch}
     />

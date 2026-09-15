@@ -85,7 +85,11 @@ export const PageHeader = ({
         <CustomBreadcrumbs
           heading={typeof title === 'string' ? title : undefined}
           links={derived}
-          action={action}
+          action={
+            action && (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>{action}</Box>
+            )
+          }
           sx={{ mb: description ? 1 : 0 }}
         />
       )}

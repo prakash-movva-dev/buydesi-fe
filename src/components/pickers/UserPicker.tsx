@@ -12,6 +12,9 @@ interface CommonProps {
   /** Limit to a specific cluster (useful for picking a regional admin). */
   clusterId?: string;
   placeholder?: string;
+  /** Floating label, so the picker lines up with the fields beside it. */
+  label?: string;
+  required?: boolean;
   disabled?: boolean;
   className?: string;
 }
@@ -62,6 +65,8 @@ export const UserPicker = (props: UserPickerProps) => {
         onChange={props.onChange}
         loading={isLoading}
         disabled={props.disabled}
+        label={props.label}
+        required={props.required}
         placeholder={props.placeholder ?? 'Pick users…'}
         onSearch={setSearch}
       />
@@ -75,6 +80,8 @@ export const UserPicker = (props: UserPickerProps) => {
       onChange={props.onChange}
       loading={isLoading}
       disabled={props.disabled}
+      label={props.label}
+      required={props.required}
       placeholder={
         props.placeholder ?? `Pick ${props.role ? `a ${props.role.toLowerCase()}` : 'a user'}…`
       }

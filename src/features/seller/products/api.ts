@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, fetchEnvelope } from '@/lib/api';
 import { productKeys } from '@/features/products/api';
 import type {
+  ProductKind,
   ProductsListMeta,
   ProductsListQuery,
   SafeProduct,
@@ -14,7 +15,9 @@ export const useMyProducts = (q: ProductsListQuery) =>
     queryFn: async () => {
       const params = new URLSearchParams();
       if (q.status) params.set('status', q.status);
+      if (q.kind) params.set('kind', q.kind);
       if (q.category) params.set('category', q.category);
+      if (q.stockState) params.set('stockState', q.stockState);
       if (q.q) params.set('q', q.q);
       if (q.sort) params.set('sort', q.sort);
       params.set('page', String(q.page));
@@ -34,11 +37,7 @@ export const useMyProducts = (q: ProductsListQuery) =>
     },
   });
 
-export interface ProductPricing {
-  standard?: number;
-  organic?: number;
-  premium?: number;
-}
+
 
 export interface ProductStock {
   quantity: number;
@@ -52,7 +51,8 @@ export interface CreateProductInput {
   unit: string;
   weightGrams?: number;
   images: string[];
-  pricing: ProductPricing;
+  kind: ProductKind;
+  price: number;
   stock: ProductStock;
   // Extended listing attributes (all optional).
   highlights?: string[];
@@ -117,4 +117,66 @@ export const useProductImageUploadUrl = () =>
   useMutation({
     mutationFn: (input: { contentType: string; ext?: string }) =>
       api.post<ProductImagePresign>('/products/image-upload-url', input),
+  });
+
+// ----------------------------------------------------------------------
+
+export interface StockAdjustInput {
+  /** Move the count by this much — the everyday restock. */
+  delta?: number;
+  /** Or set it outright, after a stock-take. */
+  quantity?: number;
+  threshold?: number;
+  reason?: string;
+}
+
+export interface StockAdjustResult {
+  product: SafeProduct;
+  quantityBefore: number;
+  quantityAfter: number;
+}
+
+export interface StockHistoryRow {
+  id: string;
+  variantId: string | null;
+  quantityBefore: number;
+  quantityAfter: number;
+  delta: number;
+  reason: string | null;
+  actorName: string | null;
+  createdAt: string;
+}
+
+/**
+ * Restocking without opening the edit wizard. Sending a delta is race-safe
+ * against a sale landing at the same moment, so it is the default path.
+ */
+export const useAdjustStock = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      productId,
+      variantId,
+      ...body
+    }: StockAdjustInput & { productId: string; variantId?: string }) =>
+      api.patch<StockAdjustResult>(
+        variantId
+          ? `/products/${productId}/variants/${variantId}/stock`
+          : `/products/${productId}/stock`,
+        body,
+      ),
+    onSuccess: (_d, vars) => {
+      qc.invalidateQueries({ queryKey: ['products'] });
+      qc.invalidateQueries({ queryKey: productKeys.detail(vars.productId) });
+      qc.invalidateQueries({ queryKey: ['variants', vars.productId] });
+      qc.invalidateQueries({ queryKey: ['stock-history', vars.productId] });
+    },
+  });
+};
+
+export const useStockHistory = (productId: string | undefined) =>
+  useQuery({
+    queryKey: ['stock-history', productId ?? 'none'],
+    queryFn: () => api.get<StockHistoryRow[]>(`/products/${productId}/stock/history`),
+    enabled: Boolean(productId),
   });

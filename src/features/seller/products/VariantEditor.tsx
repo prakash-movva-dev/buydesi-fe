@@ -1,14 +1,16 @@
 import { useMemo } from 'react';
 
 import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
 import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
 import Button from '@mui/material/Button';
 import Checkbox from '@mui/material/Checkbox';
-import Chip from '@mui/material/Chip';
-import IconButton from '@mui/material/IconButton';
 import TextField from '@mui/material/TextField';
+import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
+import Autocomplete from '@mui/material/Autocomplete';
+import InputAdornment from '@mui/material/InputAdornment';
 import FormControlLabel from '@mui/material/FormControlLabel';
 import { alpha } from '@mui/material/styles';
 
@@ -18,16 +20,16 @@ import type { VariantInput } from './variants.api';
 
 // ----------------------------------------------------------------------
 
+/** The axes sellers reach for most — the field still takes anything typed. */
+const OPTION_TYPES = ['Weight', 'Size', 'Colour', 'Pack', 'Grade', 'Flavour', 'Length'];
+
 /** Editable row — numbers are held as strings so fields can be cleared. */
 export interface VariantRow {
   id?: string;
-  label: string;
+  optionType: string;
+  optionValue: string;
   sku: string;
-  size: string;
-  colour: string;
-  standard: string;
-  organic: string;
-  premium: string;
+  price: string;
   quantity: string;
   threshold: string;
   weightGrams: string;
@@ -38,13 +40,10 @@ export interface VariantRow {
 }
 
 export const emptyVariantRow = (): VariantRow => ({
-  label: '',
+  optionType: 'Weight',
+  optionValue: '',
   sku: '',
-  size: '',
-  colour: '',
-  standard: '',
-  organic: '',
-  premium: '',
+  price: '',
   quantity: '0',
   threshold: '5',
   weightGrams: '',
@@ -63,15 +62,10 @@ const num = (v: string): number | undefined => {
 export const rowsToPayload = (rows: VariantRow[]): VariantInput[] =>
   rows.map((r, i) => ({
     ...(r.id ? { id: r.id } : {}),
-    label: r.label.trim(),
+    optionType: r.optionType.trim(),
+    optionValue: r.optionValue.trim(),
     sku: r.sku.trim() || null,
-    size: r.size.trim() || null,
-    colour: r.colour.trim() || null,
-    pricing: {
-      ...(num(r.standard) !== undefined ? { standard: num(r.standard) } : {}),
-      ...(num(r.organic) !== undefined ? { organic: num(r.organic) } : {}),
-      ...(num(r.premium) !== undefined ? { premium: num(r.premium) } : {}),
-    },
+    price: num(r.price) ?? 0,
     stock: { quantity: num(r.quantity) ?? 0, threshold: num(r.threshold) ?? 5 },
     weightGrams: num(r.weightGrams) ?? null,
     dimensions: r.dimensions.trim() || null,
@@ -85,18 +79,16 @@ export const rowsToPayload = (rows: VariantRow[]): VariantInput[] =>
 export const validateVariantRows = (rows: VariantRow[]): string | null => {
   if (rows.length === 0) return null;
   for (const [i, r] of rows.entries()) {
-    const where = `Option ${i + 1}${r.label ? ` (${r.label})` : ''}`;
-    if (!r.label.trim()) return `${where}: name is required, e.g. "500g"`;
-    if (
-      num(r.standard) === undefined &&
-      num(r.organic) === undefined &&
-      num(r.premium) === undefined
-    ) {
-      return `${where}: needs a price on at least one tier`;
-    }
+    const where = `Option ${i + 1}${r.optionValue ? ` (${r.optionValue})` : ''}`;
+    if (!r.optionType.trim()) return `${where}: needs a type, e.g. "Weight"`;
+    if (!r.optionValue.trim()) return `${where}: needs a value, e.g. "500 g"`;
+    const price = num(r.price);
+    if (price === undefined || price <= 0) return `${where}: needs a price above ₹0`;
   }
   const skus = rows.map((r) => r.sku.trim()).filter(Boolean);
   if (new Set(skus).size !== skus.length) return 'Each option needs a unique SKU';
+  const keys = rows.map((r) => `${r.optionType.trim()}|${r.optionValue.trim()}`.toLowerCase());
+  if (new Set(keys).size !== keys.length) return 'Two options have the same type and value';
   return null;
 };
 
@@ -104,14 +96,16 @@ interface Props {
   rows: VariantRow[];
   onChange: (rows: VariantRow[]) => void;
   disabled?: boolean;
+  /** Unit the product is sold in, shown against each option's price. */
+  unit?: string;
 }
 
 /**
  * Repeatable table of buyable options. When empty, the product is sold as a
- * single item using the pricing/stock on the main form; once a row is added,
- * every option carries its own prices, stock and image.
+ * single item at its own price and stock; once a row is added, every option
+ * carries its own price and its own quantity.
  */
-export const VariantEditor = ({ rows, onChange, disabled }: Props) => {
+export const VariantEditor = ({ rows, onChange, disabled, unit }: Props) => {
   const problem = useMemo(() => validateVariantRows(rows), [rows]);
 
   const patch = (index: number, next: Partial<VariantRow>) => {
@@ -126,20 +120,28 @@ export const VariantEditor = ({ rows, onChange, disabled }: Props) => {
     );
   };
 
-  const add = () => onChange([...rows, emptyVariantRow()]);
+  const add = () =>
+    onChange([
+      ...rows,
+      // A new row inherits the axis already in use — most products vary on one.
+      { ...emptyVariantRow(), optionType: rows[rows.length - 1]?.optionType ?? 'Weight' },
+    ]);
+
   const remove = (index: number) => onChange(rows.filter((_, i) => i !== index));
+
+  const totalStock = rows
+    .filter((r) => r.active)
+    .reduce((sum, r) => sum + (num(r.quantity) ?? 0), 0);
 
   return (
     <Stack spacing={2}>
       <Stack direction="row" alignItems="center" justifyContent="space-between">
         <Box>
-          <Typography variant="subtitle1">Options (sizes, colours…)</Typography>
+          <Typography variant="subtitle1">Options</Typography>
           <Typography variant="body2" sx={{ color: 'text.secondary' }}>
             {rows.length === 0
               ? 'Leave empty if this product is sold as a single item.'
-              : `${rows.filter((r) => r.active).length} option${
-                  rows.filter((r) => r.active).length === 1 ? '' : 's'
-                } · buyers pick one before adding to the cart`}
+              : `${rows.filter((r) => r.active).length} on sale · ${totalStock} in stock across options`}
           </Typography>
         </Box>
         <Button
@@ -170,11 +172,11 @@ export const VariantEditor = ({ rows, onChange, disabled }: Props) => {
             <Stack direction="row" alignItems="center" justifyContent="space-between">
               <Stack direction="row" spacing={1} alignItems="baseline" flexWrap="wrap">
                 <Typography variant="subtitle2">
-                  {row.label.trim() || `Option ${index + 1}`}
+                  {row.optionValue.trim() || `Option ${index + 1}`}
                 </Typography>
-                {row.standard.trim() && (
+                {row.price.trim() && (
                   <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                    ₹{row.standard} · stock {row.quantity || 0}
+                    ₹{row.price} · {row.quantity || 0} available
                   </Typography>
                 )}
                 {row.isDefault && (
@@ -192,6 +194,7 @@ export const VariantEditor = ({ rows, onChange, disabled }: Props) => {
               </IconButton>
             </Stack>
 
+            {/* The four fields that define an option: type, value, price, quantity. */}
             <Box
               sx={{
                 display: 'grid',
@@ -200,100 +203,73 @@ export const VariantEditor = ({ rows, onChange, disabled }: Props) => {
                 gridTemplateColumns: { xs: '1fr', sm: 'repeat(4, 1fr)' },
               }}
             >
+              <Autocomplete
+                freeSolo
+                options={OPTION_TYPES}
+                inputValue={row.optionType}
+                onInputChange={(_e, v) => patch(index, { optionType: v })}
+                disabled={disabled}
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    required
+                    label="Option type"
+                    placeholder="Weight"
+                    InputLabelProps={{ shrink: true }}
+                    inputProps={{ ...params.inputProps, required: false }}
+                  />
+                )}
+              />
               <TextField
                 fullWidth
                 required
-                label="Name"
-                placeholder="500g"
-                value={row.label}
-                onChange={(e) => patch(index, { label: e.target.value })}
+                label="Value"
+                placeholder="500 g"
+                value={row.optionValue}
+                onChange={(e) => patch(index, { optionValue: e.target.value })}
                 disabled={disabled}
                 InputLabelProps={{ shrink: true }}
+                inputProps={{ required: false }}
               />
+              <TextField
+                fullWidth
+                required
+                type="number"
+                label="Price"
+                value={row.price}
+                onChange={(e) => patch(index, { price: e.target.value })}
+                disabled={disabled}
+                InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }}
+                inputProps={{ min: 0, step: '0.5', required: false }}
+                InputLabelProps={{ shrink: true }}
+                helperText={unit ? `per ${unit}` : undefined}
+              />
+              <TextField
+                fullWidth
+                type="number"
+                label="Quantity available"
+                value={row.quantity}
+                onChange={(e) => patch(index, { quantity: e.target.value })}
+                disabled={disabled}
+                inputProps={{ min: 0 }}
+                InputLabelProps={{ shrink: true }}
+              />
+            </Box>
+
+            <Box
+              sx={{
+                display: 'grid',
+                gap: 2,
+                alignItems: 'start',
+                gridTemplateColumns: { xs: '1fr', sm: 'repeat(4, 1fr)' },
+              }}
+            >
               <TextField
                 fullWidth
                 label="SKU"
                 value={row.sku}
                 onChange={(e) => patch(index, { sku: e.target.value })}
                 disabled={disabled}
-                InputLabelProps={{ shrink: true }}
-              />
-              <TextField
-                fullWidth
-                label="Size"
-                value={row.size}
-                onChange={(e) => patch(index, { size: e.target.value })}
-                disabled={disabled}
-                InputLabelProps={{ shrink: true }}
-              />
-              <TextField
-                fullWidth
-                label="Colour"
-                value={row.colour}
-                onChange={(e) => patch(index, { colour: e.target.value })}
-                disabled={disabled}
-                InputLabelProps={{ shrink: true }}
-              />
-            </Box>
-
-            <Box
-              sx={{
-                display: 'grid',
-                gap: 2,
-                alignItems: 'start',
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
-              }}
-            >
-              <TextField
-                fullWidth
-                required
-                type="number"
-                label="Standard price ₹"
-                value={row.standard}
-                onChange={(e) => patch(index, { standard: e.target.value })}
-                disabled={disabled}
-                inputProps={{ min: 0 }}
-                InputLabelProps={{ shrink: true }}
-              />
-              <TextField
-                fullWidth
-                type="number"
-                label="Organic price ₹"
-                value={row.organic}
-                onChange={(e) => patch(index, { organic: e.target.value })}
-                disabled={disabled}
-                inputProps={{ min: 0 }}
-                InputLabelProps={{ shrink: true }}
-              />
-              <TextField
-                fullWidth
-                type="number"
-                label="Premium price ₹"
-                value={row.premium}
-                onChange={(e) => patch(index, { premium: e.target.value })}
-                disabled={disabled}
-                helperText="Verified premium buyers only"
-                inputProps={{ min: 0 }}
-                InputLabelProps={{ shrink: true }}
-              />
-            </Box>
-
-            <Box
-              sx={{
-                display: 'grid',
-                gap: 2,
-                alignItems: 'start',
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(4, 1fr)' },
-              }}
-            >
-              <TextField
-                fullWidth
-                type="number"
-                label="Stock"
-                value={row.quantity}
-                onChange={(e) => patch(index, { quantity: e.target.value })}
-                disabled={disabled}
-                inputProps={{ min: 0 }}
                 InputLabelProps={{ shrink: true }}
               />
               <TextField
@@ -371,7 +347,7 @@ export const VariantEditor = ({ rows, onChange, disabled }: Props) => {
 
       {rows.length === 0 && (
         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-          No options — this product is sold as a single item.
+          No options — this product is sold as a single item at the price above.
         </Typography>
       )}
     </Stack>

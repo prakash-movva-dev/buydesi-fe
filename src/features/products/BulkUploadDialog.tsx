@@ -38,7 +38,7 @@ interface BulkUploadSummary {
 }
 
 const CSV_HEADER_HINT =
-  'name,description,categorySlug,unit,standardPriceInr,stockQuantity,organicPriceInr,premiumPriceInr,stockThreshold,weightGrams,images';
+  'name,description,categorySlug,unit,priceInr,stockQuantity,kind,stockThreshold,weightGrams,images';
 
 export const BulkUploadDialog = ({ open, onClose, forSelf = false }: Props) => {
   const [sellerId, setSellerId] = useState<string | null>(null);
@@ -167,7 +167,7 @@ export const BulkUploadDialog = ({ open, onClose, forSelf = false }: Props) => {
               className="font-mono text-xs"
               placeholder={CSV_HEADER_HINT}
               InputLabelProps={{ shrink: true }}
-              helperText="Required columns: name, description, categorySlug, unit, standardPriceInr, stockQuantity. Optional: organicPriceInr, premiumPriceInr, stockThreshold, weightGrams, images (pipe-separated URLs)."
+              helperText="Required columns: name, description, categorySlug, unit, priceInr, stockQuantity. Optional: kind (standard / organic / premium — defaults to standard), stockThreshold, weightGrams, images (pipe-separated URLs)."
             />
           </Stack>
         )}

@@ -1,15 +1,10 @@
-// Mirrors backend `src/modules/wallet/wallet.types.ts` and `cash.types.ts`.
+// Mirrors backend `src/modules/wallet/wallet.types.ts`.
 
 export type WalletTxType = 'CREDIT' | 'DEBIT';
 export type WalletTxStatus = 'PENDING' | 'POSTED' | 'CANCELLED' | 'FAILED';
 export type WalletTxSource =
   | 'consumer_payout'
-  | 'trade_sale'
-  | 'trade_purchase'
-  | 'trade_refund'
   | 'withdrawal'
-  | 'cash_received'
-  | 'cash_paid'
   | 'platform_fee'
   | 'admin_adjustment';
 
@@ -21,7 +16,7 @@ export interface WalletTransaction {
   source: WalletTxSource;
   amountInr: number;
   status: WalletTxStatus;
-  referenceType: 'payout' | 'trade_order' | 'withdrawal' | 'cash_entry' | 'admin' | null;
+  referenceType: 'payout' | 'withdrawal' | 'admin' | null;
   referenceId: string | null;
   notes: string | null;
   approvedBy: string | null;
@@ -58,52 +53,19 @@ export interface WalletTxListMeta {
   clusterId?: string | null;
 }
 
-// ─── Cash entries ─────────────────────────────────────────────────────────
+// ─── Summary series (wallet charts) ───────────────────────────────────────
 
-export type CashEntryType = 'cash_received' | 'cash_paid';
-export type CashEntryStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
-
-export interface CashEntry {
-  id: string;
-  type: CashEntryType;
-  amountInr: number;
-  reason: string;
-  status: CashEntryStatus;
-  /** Seller's business/farm name, falling back to their account name. */
-  sellerName: string | null;
-  sellerMobile: string | null;
-  sellerEmail: string | null;
-  clusterName: string | null;
-  /** Short human label like "#a1b2" for a linked trade order, else null. */
-  tradeOrderLabel: string | null;
-  reviewedAt: string | null;
-  reviewNotes: string | null;
-  createdAt: string;
-  updatedAt: string;
+export interface WalletMonthlyPoint {
+  /** 'YYYY-MM'. */
+  month: string;
+  creditInr: number;
+  debitInr: number;
 }
 
-/**
- * A seller's own cash entry (from `/wallet/cash-entries`). Unlike the
- * admin-facing {@link CashEntry}, this is the raw document — the seller
- * already knows who they are, so no enrichment is applied server-side.
- */
-export interface MyCashEntry {
-  id: string;
-  type: CashEntryType;
-  amountInr: number;
-  reason: string;
-  status: CashEntryStatus;
-  tradeOrderId: string | null;
-  reviewedAt: string | null;
-  reviewNotes: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface CashListQuery {
-  status?: CashEntryStatus;
-  sellerId?: string;
-  type?: CashEntryType;
-  page: number;
-  limit: number;
+export interface WalletSummary {
+  months: WalletMonthlyPoint[];
+  totalCreditInr: number;
+  totalDebitInr: number;
+  creditChangePercent: number;
+  debitChangePercent: number;
 }

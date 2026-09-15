@@ -17,6 +17,9 @@ type Common = {
   placeholder?: string;
   error?: boolean;
   helperText?: ReactNode;
+  /** Floating field label, so the picker lines up with the TextFields beside it. */
+  label?: string;
+  required?: boolean;
   /** Notify the parent's data hook of the typed query for server-side search. */
   onSearch?: (q: string) => void;
 };
@@ -41,7 +44,8 @@ export type AutocompleteFieldProps = SingleProps | MultiProps;
  * after the async search list no longer contains it.
  */
 export function AutocompleteField(props: AutocompleteFieldProps) {
-  const { options, loading, disabled, placeholder, error, helperText, onSearch } = props;
+  const { options, loading, disabled, placeholder, error, helperText, label, required, onSearch } =
+    props;
 
   const cache = useRef(new Map<string, PickerOption>());
   options.forEach((o) => cache.current.set(o.id, o));
@@ -59,6 +63,8 @@ export function AutocompleteField(props: AutocompleteFieldProps) {
   const renderInput = (params: React.ComponentProps<typeof TextField>) => (
     <TextField
       {...params}
+      label={label}
+      required={required}
       placeholder={placeholder}
       error={error}
       helperText={helperText}

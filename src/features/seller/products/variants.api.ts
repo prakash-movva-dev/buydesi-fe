@@ -6,11 +6,10 @@ import type { ProductVariant } from '@/features/products/types';
 export interface VariantInput {
   /** Present when editing an existing row (bulk replace matches on it). */
   id?: string;
-  label: string;
+  optionType: string;
+  optionValue: string;
   sku?: string | null;
-  size?: string | null;
-  colour?: string | null;
-  pricing: { standard?: number; organic?: number; premium?: number };
+  price: number;
   mrp?: number | null;
   costPrice?: number | null;
   stock: { quantity: number; threshold: number };

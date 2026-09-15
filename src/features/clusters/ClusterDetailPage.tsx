@@ -105,7 +105,6 @@ export const ClusterDetailPage = () => {
             <Typography variant="body2" sx={{ color: 'text.secondary' }}>
               {c.state} · {c.district}
               {c.zone ? ` · ${c.zone}` : ''} · default transport{' '}
-              <span className="font-medium">{c.defaultTradeTransport}</span>
             </Typography>
           </Stack>
 
@@ -238,7 +237,6 @@ const DetailField = ({ label, value }: { label: string; value: string }) => (
 const ClusterDetailsCard = ({ cluster }: { cluster: SafeCluster }) => {
   const rows: Array<[string, string]> = [
     ['Cluster code', cluster.code || '—'],
-    ['Default transport', cluster.defaultTradeTransport || '—'],
     ['Launch date', cluster.launchDate ? formatDate(cluster.launchDate) : '—'],
     ['Cash on Delivery', cluster.codAllowed ? 'Allowed' : 'Disabled'],
     ['Contact phone', cluster.contactPhone || '—'],

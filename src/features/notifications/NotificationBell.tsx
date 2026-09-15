@@ -26,7 +26,6 @@ const resolveTarget = (n: AdminNotification): string | null => {
   if (type.startsWith('order')) {
     return orderId ? `/admin/orders/${orderId}` : '/admin/orders';
   }
-  if (type.startsWith('trade')) return '/admin/trade';
   if (type.startsWith('payout')) return '/admin/payouts';
   if (type.startsWith('seller')) return '/admin/sellers';
   if (type.startsWith('escalation')) return '/admin/escalation';

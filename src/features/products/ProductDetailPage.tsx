@@ -45,15 +45,12 @@ import {
   useProductQualityCheck,
   useSetProductStatus,
 } from './api';
+import { displayPrice } from './price';
 import { ProductStatusBadge } from './status-badge';
 import { StatusReviewDialog, type StatusAction } from './StatusReviewDialog';
-import type { DuplicateCandidate, ProductStatus } from './types';
+import { KIND_LABELS, type DuplicateCandidate, type ProductStatus } from './types';
 
-const tierLabels: Record<'standard' | 'organic' | 'premium', string> = {
-  standard: 'Standard',
-  organic: 'Organic',
-  premium: 'Premium',
-};
+
 
 export const ProductDetailPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -294,19 +291,19 @@ export const ProductDetailPage = () => {
         <Card>
           <CardHeader>
             <CardTitle>Pricing & stock</CardTitle>
-            <CardDescription>3-tier pricing per SOW. Premium hidden from public.</CardDescription>
+            <CardDescription>What this listing is, and what it sells for.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
-            {(['standard', 'organic', 'premium'] as const).map((tier) => (
-              <div key={tier} className="flex items-center justify-between">
-                <span className="text-muted-foreground">{tierLabels[tier]}</span>
-                <span className="font-medium">
-                  {typeof product.pricing[tier] === 'number'
-                    ? `${formatInr(product.pricing[tier])} / ${product.unit}`
-                    : '—'}
-                </span>
-              </div>
-            ))}
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Kind</span>
+              <span className="font-medium">{KIND_LABELS[product.kind]}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Price</span>
+              <span className="font-medium">
+                {displayPrice(product)} / {product.unit}
+              </span>
+            </div>
             <hr className="my-2 border-border" />
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Stock on hand</span>
@@ -354,9 +351,7 @@ export const ProductDetailPage = () => {
                           )}
                         </span>
                         <span>
-                          {typeof v.pricing.standard === 'number'
-                            ? formatInr(v.pricing.standard)
-                            : '—'}
+                          {formatInr(v.price)}
                           {v.mrp !== null && (
                             <span className="ml-1 text-muted-foreground line-through">
                               {formatInr(v.mrp)}
@@ -578,7 +573,7 @@ const ListingDetails = ({ product }: { product: import('./types').SafeProduct })
 const checklistLabels: Record<string, string> = {
   hasImage: 'At least one product image',
   descriptionOk: 'Description is detailed (30+ characters)',
-  pricingOk: 'A standard or organic price is set',
+  pricingOk: 'A price is set',
   nameOk: 'Name length is valid (3–120 characters)',
   inStock: 'Product is in stock',
 };

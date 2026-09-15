@@ -81,7 +81,6 @@ export const ClustersPage = () => {
     { id: 'status', label: 'Status' },
     { id: 'pins', label: 'Pin codes', align: 'right' as const },
     { id: 'cats', label: 'Active categories', align: 'right' as const },
-    { id: 'transport', label: 'Transport default' },
     { id: 'admin', label: 'Cluster admin' },
     { id: 'view', label: '' },
     ...(isSuper ? [{ id: 'edit', label: '' }] : []),
@@ -91,7 +90,7 @@ export const ClustersPage = () => {
     <Stack spacing={3}>
       <PageHeader
         title="Clusters"
-        description="Geographic operating units. Each cluster has its own Cluster Admin, pin codes served, and default trade-transport mode."
+        description="Geographic operating units. Each cluster has its own Cluster Admin and the pin codes it serves."
         action={
           isSuper ? (
             <Button
@@ -165,9 +164,6 @@ export const ClustersPage = () => {
                   </TableCell>
                   <TableCell align="right">{c.pinCodes.length}</TableCell>
                   <TableCell align="right">{c.activeCategories.length}</TableCell>
-                  <TableCell>
-                    <Badge variant="muted">{c.defaultTradeTransport}</Badge>
-                  </TableCell>
                   <TableCell sx={{ fontFamily: 'monospace', typography: 'caption' }}>
                     {c.adminId ? c.adminId.slice(-10) : '— unassigned'}
                   </TableCell>

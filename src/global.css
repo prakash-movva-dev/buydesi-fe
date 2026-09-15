@@ -13,6 +13,7 @@
 
 /* Plugins */
 @import './components/scrollbar/styles.css';
+@import './components/chart/styles.css';
 
 /* Baseline (required by the dashboard layout's flex chain) */
 html {

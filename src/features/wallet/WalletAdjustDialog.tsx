@@ -4,8 +4,14 @@ import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
 import MenuItem from '@mui/material/MenuItem';
 import TextField from '@mui/material/TextField';
-import { Button } from '@/components/ui/Button';
-import { Dialog } from '@/components/ui/Dialog';
+import Button from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import DialogTitle from '@mui/material/DialogTitle';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import InputAdornment from '@mui/material/InputAdornment';
+import LoadingButton from '@mui/lab/LoadingButton';
 import { ApiError } from '@/types/api';
 import { useAdjustWallet } from './api';
 
@@ -52,27 +58,16 @@ export const WalletAdjustDialog = ({ open, sellerId, onClose }: Props) => {
   };
 
   return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      title="Manual wallet adjustment"
-      description="SOW 4.17 — every adjustment is logged with a mandatory reason. Use only for genuine corrections, not for replacing missing payouts (those should go through the payouts queue)."
-      footer={
-        <>
-          <Button variant="outline" onClick={onClose} disabled={mut.isPending}>
-            Cancel
-          </Button>
-          <Button
-            variant={direction === 'debit' ? 'destructive' : 'primary'}
-            onClick={submit}
-            disabled={mut.isPending}
-          >
-            {mut.isPending ? 'Working…' : direction === 'credit' ? 'Credit wallet' : 'Debit wallet'}
-          </Button>
-        </>
-      }
-    >
-      <Stack spacing={2.5}>
+    <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
+      <DialogTitle>Manual wallet adjustment</DialogTitle>
+
+      <DialogContent>
+        <DialogContentText sx={{ mb: 3, typography: 'body2' }}>
+          Every adjustment is logged against your account with its reason. Use it for genuine
+          corrections only — a missing payout belongs in the payouts queue, not here.
+        </DialogContentText>
+
+        <Stack spacing={2.5}>
         {error && <Alert severity="error">{error}</Alert>}
         <Box sx={{ display: 'grid', gap: 2.5, gridTemplateColumns: 'repeat(2, 1fr)' }}>
           <TextField
@@ -89,9 +84,10 @@ export const WalletAdjustDialog = ({ open, sellerId, onClose }: Props) => {
           <TextField
             fullWidth
             type="number"
-            label="Amount (₹)"
+            label="Amount"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
+            InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }}
             InputLabelProps={{ shrink: true }}
             inputProps={{ min: 1, step: '0.01' }}
           />
@@ -107,7 +103,22 @@ export const WalletAdjustDialog = ({ open, sellerId, onClose }: Props) => {
           placeholder="e.g. compensation for incorrect commission charge on order #ABC"
           InputLabelProps={{ shrink: true }}
         />
-      </Stack>
+        </Stack>
+      </DialogContent>
+
+      <DialogActions>
+        <Button variant="outlined" onClick={onClose} disabled={mut.isPending}>
+          Cancel
+        </Button>
+        <LoadingButton
+          variant="contained"
+          color={direction === 'debit' ? 'error' : 'primary'}
+          loading={mut.isPending}
+          onClick={submit}
+        >
+          {direction === 'credit' ? 'Credit wallet' : 'Debit wallet'}
+        </LoadingButton>
+      </DialogActions>
     </Dialog>
   );
 };

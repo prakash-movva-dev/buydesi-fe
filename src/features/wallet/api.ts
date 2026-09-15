@@ -1,9 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, fetchEnvelope } from '@/lib/api';
 import type {
-  CashEntry,
-  CashListQuery,
   WalletSnapshot,
+  WalletSummary,
   WalletTransaction,
   WalletTxListMeta,
   WalletTxListQuery,
@@ -15,11 +14,6 @@ export const walletKeys = {
   all: ['wallet'] as const,
   txList: (q: WalletTxListQuery) => ['wallet', 'tx', q] as const,
   snapshot: (sellerId: string) => ['wallet', 'snapshot', sellerId] as const,
-};
-
-export const cashKeys = {
-  all: ['cash'] as const,
-  list: (q: CashListQuery) => ['cash', 'list', q] as const,
 };
 
 // ─── Transactions list ────────────────────────────────────────────────────
@@ -109,51 +103,10 @@ export const useCancelWithdrawal = () => {
   });
 };
 
-// ─── Cash entries ─────────────────────────────────────────────────────────
-
-interface CashListResult {
-  items: CashEntry[];
-  meta: { total: number; page: number; limit: number };
-}
-
-const fetchCashList = async (q: CashListQuery): Promise<CashListResult> => {
-  const params = new URLSearchParams();
-  if (q.status) params.set('status', q.status);
-  if (q.sellerId) params.set('sellerId', q.sellerId);
-  if (q.type) params.set('type', q.type);
-  params.set('page', String(q.page));
-  params.set('limit', String(q.limit));
-  const { data, meta } = await fetchEnvelope<CashEntry[]>(
-    `/admin/cash-transactions?${params.toString()}`,
-  );
-  return {
-    items: data,
-    meta:
-      (meta as { total: number; page: number; limit: number } | undefined) ?? {
-        total: data.length,
-        page: q.page,
-        limit: q.limit,
-      },
-  };
-};
-
-export const useCashList = (q: CashListQuery) =>
-  useQuery({ queryKey: cashKeys.list(q), queryFn: () => fetchCashList(q) });
-
-export const useApproveCash = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, notes }: { id: string; notes?: string }) =>
-      api.put<CashEntry>(`/admin/cash-transactions/${id}/approve`, { notes }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: cashKeys.all }),
+/** Same series as the seller sees, for whichever wallet the admin picked. */
+export const useSellerWalletSummary = (sellerId?: string) =>
+  useQuery({
+    queryKey: ['wallet', 'summary', sellerId ?? 'none'],
+    queryFn: () => api.get<WalletSummary>(`/admin/wallet/${sellerId}/summary`),
+    enabled: Boolean(sellerId),
   });
-};
-
-export const useRejectCash = () => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: ({ id, notes }: { id: string; notes?: string }) =>
-      api.put<CashEntry>(`/admin/cash-transactions/${id}/reject`, { notes }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: cashKeys.all }),
-  });
-};

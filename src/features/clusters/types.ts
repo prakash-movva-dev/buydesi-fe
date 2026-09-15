@@ -1,7 +1,6 @@
 // Mirrors backend `src/modules/clusters/clusters.types.ts`.
 
 export type ClusterStatus = 'active' | 'inactive' | 'pending';
-export type TradeTransportMode = 'DELHIVERY' | 'LOCAL';
 
 export interface SafeCluster {
   id: string;
@@ -23,7 +22,6 @@ export interface SafeCluster {
   launchDate: string | null;
   status: ClusterStatus;
   zone?: string;
-  defaultTradeTransport: TradeTransportMode;
   createdAt: string;
   updatedAt: string;
 }
@@ -91,7 +89,6 @@ export interface CreateClusterInput {
   launchDate?: string | null;
   status?: ClusterStatus;
   zone?: string;
-  defaultTradeTransport?: TradeTransportMode;
 }
 
 export type UpdateClusterInput = Partial<CreateClusterInput>;

@@ -52,7 +52,7 @@ export const MyAnalyticsPage = () => {
     <Stack spacing={3}>
       <PageHeader
         title="My analytics"
-        description="Your sales, earnings, inventory, customers, and trade activity for any date range."
+        description="Your sales, earnings, inventory and customers for any date range."
         action={
           <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
             <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
@@ -240,15 +240,6 @@ export const MyAnalyticsPage = () => {
             </CardContent>
           </Card>
 
-          <SectionTitle icon={Wallet} title="Trade activity" />
-          <MuiBox sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: 'repeat(3,1fr)', lg: 'repeat(6,1fr)' } }}>
-            <Metric label="Trades placed" value={String(data.trade.tradesPlaced)} />
-            <Metric label="Trades received" value={String(data.trade.tradesReceived)} />
-            <Metric label="Trade revenue" value={formatInr(data.trade.tradeRevenueInr)} />
-            <Metric label="Trade spend" value={formatInr(data.trade.tradeSpendInr)} />
-            <Metric label="Online tx" value={String(data.trade.onlineCount)} />
-            <Metric label="Cash tx" value={String(data.trade.cashCount)} />
-          </MuiBox>
 
           <Typography variant="caption" sx={{ color: 'text.secondary' }}>
             Range {formatDate(data.range.from)} → {formatDate(data.range.to)}
