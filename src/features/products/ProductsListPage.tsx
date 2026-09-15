@@ -147,6 +147,9 @@ export const ProductsListPage = () => {
 
   const rows = data?.items ?? [];
   const total = data?.meta.total ?? 0;
+  // Per-status totals for the whole filter, so every tab carries its number
+  // rather than only the one being viewed.
+  const counts = data?.meta.counts;
 
   const categoryName = useMemo(
     () => new Map((categories ?? []).map((c) => [c.id, c.name])),
@@ -243,21 +246,17 @@ export const ProductsListPage = () => {
               value={tab.value}
               label={tab.label}
               icon={
-                // Only the selected tab's count is known — the API answers one
-                // filter at a time, so a number on every tab would be a guess.
-                tab.value === status ? (
-                  <Label
-                    variant="filled"
-                    color={
-                      (tab.value === 'LIVE' && 'success') ||
-                      (tab.value === 'PENDING' && 'warning') ||
-                      (tab.value === 'REJECTED' && 'error') ||
-                      'default'
-                    }
-                  >
-                    {total}
-                  </Label>
-                ) : undefined
+                <Label
+                  variant={tab.value === status ? 'filled' : 'soft'}
+                  color={
+                    (tab.value === 'LIVE' && 'success') ||
+                    (tab.value === 'PENDING' && 'warning') ||
+                    (tab.value === 'REJECTED' && 'error') ||
+                    'default'
+                  }
+                >
+                  {counts ? (counts[tab.value || 'all'] ?? 0) : '-'}
+                </Label>
               }
             />
           ))}

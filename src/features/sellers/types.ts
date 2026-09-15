@@ -103,6 +103,11 @@ export interface SellersListMeta {
   page: number;
   limit: number;
   clusterId?: string | null;
+  /**
+   * Sellers per status for the current filter, ignoring the status filter —
+   * what the list's tabs show beside their labels. `all` is the sum.
+   */
+  counts?: Partial<Record<SellerStatus | 'all', number>>;
 }
 
 export type SellersSort =

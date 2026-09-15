@@ -133,6 +133,9 @@ export const SellersListPage = () => {
 
   const rows = data?.items ?? [];
   const total = data?.meta.total ?? 0;
+  // Per-status totals for the whole filter, so every tab carries its number
+  // rather than only the one being viewed.
+  const counts = data?.meta.counts;
 
   const clusterName = useMemo(
     () => new Map((clusters?.items ?? []).map((c) => [c.id, c.name])),
@@ -198,22 +201,18 @@ export const SellersListPage = () => {
               value={tab.value}
               label={tab.label}
               icon={
-                // Only the selected tab's count is known — the API answers one
-                // filter at a time, so a number on every tab would be a guess.
-                tab.value === status ? (
-                  <Label
-                    variant="filled"
-                    color={
-                      (tab.value === 'APPROVED' && 'success') ||
-                      (tab.value === 'PENDING' && 'warning') ||
-                      (tab.value === 'REJECTED' && 'error') ||
-                      (tab.value === 'INFO_REQUESTED' && 'info') ||
-                      'default'
-                    }
-                  >
-                    {total}
-                  </Label>
-                ) : undefined
+                <Label
+                  variant={tab.value === status ? 'filled' : 'soft'}
+                  color={
+                    (tab.value === 'APPROVED' && 'success') ||
+                    (tab.value === 'PENDING' && 'warning') ||
+                    (tab.value === 'REJECTED' && 'error') ||
+                    (tab.value === 'INFO_REQUESTED' && 'info') ||
+                    'default'
+                  }
+                >
+                  {counts ? (counts[tab.value || 'all'] ?? 0) : '-'}
+                </Label>
               }
             />
           ))}
