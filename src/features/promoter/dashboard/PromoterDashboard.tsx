@@ -1,41 +1,48 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  ArrowRight,
-  CheckCircle2,
-  Copy,
-  Gift,
-  RefreshCw,
-  Share2,
-  ShoppingBag,
-  Sparkles,
-  TrendingUp,
-  Users,
-} from 'lucide-react';
+
 import Box from '@mui/material/Box';
-import Stack from '@mui/material/Stack';
+import Card from '@mui/material/Card';
+import Grid from '@mui/material/Unstable_Grid2';
 import Table from '@mui/material/Table';
+import Stack from '@mui/material/Stack';
+import Alert from '@mui/material/Alert';
+import Button from '@mui/material/Button';
 import TableRow from '@mui/material/TableRow';
+import Skeleton from '@mui/material/Skeleton';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
 import Typography from '@mui/material/Typography';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { PageHeader } from '@/components/ui/PageHeader';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/Card';
-import { Skeleton } from '@/components/ui/Skeleton';
-import { Scrollbar } from '@/components/scrollbar';
-import { TableHeadCustom, TableNoData } from '@/components/table';
+import CardHeader from '@mui/material/CardHeader';
+import CardContent from '@mui/material/CardContent';
+import { alpha } from '@mui/material/styles';
+
 import { useAuth } from '@/lib/auth';
-import { formatDate, formatDateTime, formatInr } from '@/lib/format';
+import { formatInr } from '@/lib/format';
+import { fDate, fDateTime } from '@/utils/format-time';
+
+import { Label } from '@/components/label';
+import { Iconify } from '@/components/iconify';
+import { Scrollbar } from '@/components/scrollbar';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { LoadingScreen } from '@/components/loading-screen';
+import { TableHeadCustom, TableNoData } from '@/components/table';
+
+import { AnalyticsWidget } from '@/features/dashboard/AnalyticsWidget';
+import { NeedsAttentionCard, type AttentionItem } from '@/features/dashboard/NeedsAttentionCard';
+
 import { useMyPromoterDashboard, useMyPromoterUsage } from '../api';
 import { buildShareLink } from '../share/helpers';
+
+// ----------------------------------------------------------------------
+
+const USAGE_HEAD = [
+  { id: 'when', label: 'When' },
+  { id: 'buyer', label: 'Buyer' },
+  { id: 'order', label: 'Order' },
+  { id: 'total', label: 'Order total', align: 'right' as const },
+  { id: 'discount', label: 'Discount', align: 'right' as const },
+];
 
 export const PromoterDashboard = () => {
   const navigate = useNavigate();
@@ -43,290 +50,305 @@ export const PromoterDashboard = () => {
   const { data: d, isLoading, isError, error, refetch, isFetching } = useMyPromoterDashboard();
   const usage = useMyPromoterUsage(1, 10);
 
-  const [copiedCode, setCopiedCode] = useState(false);
-  const [copiedLink, setCopiedLink] = useState(false);
+  const [copied, setCopied] = useState<'code' | 'link' | null>(null);
 
   const copy = async (text: string, kind: 'code' | 'link') => {
     try {
       await navigator.clipboard.writeText(text);
-      if (kind === 'code') {
-        setCopiedCode(true);
-        setTimeout(() => setCopiedCode(false), 2000);
-      } else {
-        setCopiedLink(true);
-        setTimeout(() => setCopiedLink(false), 2000);
-      }
+      setCopied(kind);
+      setTimeout(() => setCopied(null), 2000);
     } catch {
-      // clipboard not available — UI will look like nothing happened
+      // Clipboard unavailable (insecure origin, denied permission) — the
+      // button simply does nothing rather than claiming success.
     }
   };
 
-  if (isLoading) {
-    return (
-      <div className="space-y-4">
-        <Skeleton className="h-8 w-72" />
-        <Skeleton className="h-32 w-full" />
-        <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-28" />
-          ))}
-        </div>
-      </div>
-    );
-  }
+  if (isLoading) return <LoadingScreen sx={{ py: 20 }} />;
 
   if (isError || !d) {
     return (
-      <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
-        {error instanceof Error
-          ? error.message
-          : 'No promoter record found for your account. Contact support if you think this is wrong.'}
-      </div>
+      <>
+        <PageHeader title="Promoter" />
+        <Alert severity="error" sx={{ mt: 3 }}>
+          {error instanceof Error
+            ? error.message
+            : 'No promoter record found for your account. Contact support if you think this is wrong.'}
+        </Alert>
+      </>
     );
   }
 
   const shareLink = buildShareLink(d.couponCode);
   const usageItems = usage.data?.items ?? [];
 
-  // Derived metrics
-  const avgDiscountPerOrder =
-    d.totalUses > 0 ? d.totalDiscountInr / d.totalUses : 0;
+  const avgDiscountPerOrder = d.totalUses > 0 ? d.totalDiscountInr / d.totalUses : 0;
   const avgOrderValue = d.totalUses > 0 ? d.totalOrderValueInr / d.totalUses : 0;
-  const gmvPerRupeeDiscount =
-    d.totalDiscountInr > 0 ? d.totalOrderValueInr / d.totalDiscountInr : null;
+  const gmvPerRupee = d.totalDiscountInr > 0 ? d.totalOrderValueInr / d.totalDiscountInr : null;
+
+  const quickLinks: AttentionItem[] = [
+    {
+      key: 'share',
+      icon: 'solar:share-bold',
+      label: 'Share kit',
+      hint: 'QR code, templates, WhatsApp',
+      onClick: () => navigate('/promoter/share'),
+    },
+    {
+      key: 'support',
+      icon: 'solar:headphones-round-bold',
+      label: 'My support tickets',
+      hint: 'Raise an issue',
+      onClick: () => navigate('/promoter/support'),
+    },
+    {
+      key: 'profile',
+      icon: 'solar:user-id-bold',
+      label: 'My profile',
+      hint: 'Name and language',
+      onClick: () => navigate('/promoter/profile'),
+    },
+  ];
 
   return (
-    <Stack spacing={3}>
+    <>
       <PageHeader
-        title={`Hi, ${user?.name.split(' ')[0] ?? d.name}`}
-        description="Your referral performance at a glance. Share your code to drive sign-ups and checkouts on Buy Desi."
+        title={`Hi, ${user?.name.split(' ')[0] ?? d.name} 👋`}
+        description="How your code is doing, and everything you need to share it."
         action={
-          <>
-            <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
-              <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
+          <Stack direction="row" spacing={1.5}>
+            <Button
+              variant="outlined"
+              onClick={() => refetch()}
+              disabled={isFetching}
+              startIcon={<Iconify icon="solar:refresh-bold" />}
+            >
               Refresh
             </Button>
-            <Button onClick={() => navigate('/promoter/share')}>
-              <Share2 className="h-4 w-4" />
+            <Button
+              variant="contained"
+              onClick={() => navigate('/promoter/share')}
+              startIcon={<Iconify icon="solar:share-bold" />}
+            >
               Share kit
             </Button>
-          </>
+          </Stack>
         }
       />
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <Gift className="h-4 w-4" />
-            Your referral code
-          </CardTitle>
-          <CardDescription>
-            Buyers can apply it at checkout for a discount, and new signups citing it are
-            attributed to you.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3 rounded-md border border-border bg-secondary/30 p-4">
-            <div>
-              <p className="font-mono text-3xl font-bold tracking-wider">{d.couponCode}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Active since {formatDate(d.since)}
-              </p>
-            </div>
-            <Badge variant={d.active ? 'success' : 'destructive'}>
-              {d.active ? 'Active' : 'Inactive'}
-            </Badge>
-          </div>
+      <Grid container spacing={3} sx={{ mt: 0 }}>
+        {/* The code is the whole job, so it leads. */}
+        <Grid xs={12}>
+          <Card
+            sx={{
+              p: 3,
+              color: 'common.white',
+              bgcolor: 'grey.900',
+              backgroundImage: (theme) =>
+                `linear-gradient(135deg, ${theme.palette.primary.darker}, ${theme.palette.grey[900]})`,
+            }}
+          >
+            <Stack
+              direction={{ xs: 'column', md: 'row' }}
+              spacing={3}
+              alignItems={{ xs: 'flex-start', md: 'center' }}
+              justifyContent="space-between"
+            >
+              <Box>
+                <Stack direction="row" spacing={1.5} alignItems="center" sx={{ mb: 1 }}>
+                  <Box sx={{ typography: 'subtitle2', opacity: 0.64 }}>Your code</Box>
+                  <Label variant="filled" color={d.active ? 'success' : 'error'}>
+                    {d.active ? 'Active' : 'Inactive'}
+                  </Label>
+                </Stack>
 
-          <div className="flex flex-wrap gap-2">
-            <Button variant="outline" onClick={() => copy(d.couponCode, 'code')}>
-              {copiedCode ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
-              {copiedCode ? 'Copied' : 'Copy code'}
-            </Button>
-            <Button variant="outline" onClick={() => copy(shareLink, 'link')}>
-              {copiedLink ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
-              {copiedLink ? 'Copied' : 'Copy share link'}
-            </Button>
-            <Button variant="outline" onClick={() => navigate('/promoter/share')}>
-              <Share2 className="h-4 w-4" />
-              QR code & templates
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+                <Typography
+                  variant="h3"
+                  sx={{ fontFamily: 'monospace', letterSpacing: '0.08em' }}
+                >
+                  {d.couponCode}
+                </Typography>
 
-      <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
-        <Metric label="Total uses" value={String(d.totalUses)} icon={Sparkles} />
-        <Metric label="Discount given" value={formatInr(d.totalDiscountInr)} icon={Gift} muted />
-        <Metric label="GMV driven" value={formatInr(d.totalOrderValueInr)} icon={ShoppingBag} highlight />
-        <Metric label="Unique buyers" value={String(d.uniqueBuyers)} icon={Users} />
-        <Metric label="Buyers referred" value={String(d.buyersReferred)} icon={Users} />
-        <Metric label="Sellers referred" value={String(d.sellersReferred)} icon={Users} />
-      </div>
+                <Box sx={{ mt: 1, typography: 'caption', opacity: 0.64 }}>
+                  Active since {fDate(d.since)}
+                </Box>
+              </Box>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-base">
-            <TrendingUp className="h-4 w-4" />
-            Computed signals
-          </CardTitle>
-          <CardDescription>
-            Quick ratios from the numbers above — useful for sharing your impact.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="grid gap-4 sm:grid-cols-3">
-          <SubMetric
-            label="Avg. discount per order"
-            value={d.totalUses > 0 ? formatInr(avgDiscountPerOrder) : '—'}
+              <Stack direction="row" spacing={1.5} flexWrap="wrap" useFlexGap>
+                <Button
+                  variant="contained"
+                  color="inherit"
+                  onClick={() => copy(d.couponCode, 'code')}
+                  startIcon={
+                    <Iconify
+                      icon={copied === 'code' ? 'solar:check-circle-bold' : 'solar:copy-bold'}
+                    />
+                  }
+                  sx={{ color: 'grey.800', bgcolor: 'common.white' }}
+                >
+                  {copied === 'code' ? 'Copied' : 'Copy code'}
+                </Button>
+
+                <Button
+                  variant="outlined"
+                  color="inherit"
+                  onClick={() => copy(shareLink, 'link')}
+                  startIcon={
+                    <Iconify
+                      icon={copied === 'link' ? 'solar:check-circle-bold' : 'solar:link-bold'}
+                    />
+                  }
+                  sx={{ borderColor: alpha('#fff', 0.32) }}
+                >
+                  {copied === 'link' ? 'Copied' : 'Copy link'}
+                </Button>
+              </Stack>
+            </Stack>
+          </Card>
+        </Grid>
+
+        <Grid xs={12} sm={6} md={3}>
+          <AnalyticsWidget
+            title="Total uses"
+            total={d.totalUses}
+            color="primary"
+            icon={<Iconify width={48} icon="solar:magic-stick-3-bold-duotone" />}
           />
-          <SubMetric
-            label="Avg. order value"
-            value={d.totalUses > 0 ? formatInr(avgOrderValue) : '—'}
-          />
-          <SubMetric
-            label="GMV per ₹1 discount"
-            value={
-              gmvPerRupeeDiscount === null
-                ? '—'
-                : `₹${gmvPerRupeeDiscount.toFixed(1)}`
-            }
-          />
-        </CardContent>
-      </Card>
+        </Grid>
 
-      <Card>
-        <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
-          <div>
-            <CardTitle className="text-base">Recent uses</CardTitle>
-            <CardDescription>
-              Latest checkouts that applied your code (most recent first).
-            </CardDescription>
-          </div>
-        </CardHeader>
-        <CardContent className="p-0">
-          {usage.isLoading && (
-            <div className="space-y-2 p-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-10 w-full" />
-              ))}
-            </div>
-          )}
-          {usage.isError && (
-            <Typography variant="body2" sx={{ p: 2, color: 'error.main' }}>
-              Couldn't load usage feed.
-            </Typography>
-          )}
-          {!usage.isLoading && !usage.isError && (
-            <Scrollbar>
-              <Table sx={{ minWidth: 800 }}>
-                <TableHeadCustom
-                  headLabel={[
-                    { id: 'when', label: 'When' },
-                    { id: 'buyer', label: 'Buyer' },
-                    { id: 'order', label: 'Order' },
-                    { id: 'total', label: 'Order total', align: 'right' as const },
-                    { id: 'discount', label: 'Discount', align: 'right' as const },
-                  ]}
+        <Grid xs={12} sm={6} md={3}>
+          <AnalyticsWidget
+            title="GMV driven"
+            total={d.totalOrderValueInr}
+            displayTotal={formatInr(d.totalOrderValueInr)}
+            color="success"
+            icon={<Iconify width={48} icon="solar:cart-large-4-bold-duotone" />}
+          />
+        </Grid>
+
+        <Grid xs={12} sm={6} md={3}>
+          <AnalyticsWidget
+            title="Discount given"
+            total={d.totalDiscountInr}
+            displayTotal={formatInr(d.totalDiscountInr)}
+            color="warning"
+            icon={<Iconify width={48} icon="solar:gift-bold-duotone" />}
+          />
+        </Grid>
+
+        <Grid xs={12} sm={6} md={3}>
+          <AnalyticsWidget
+            title="Unique buyers"
+            total={d.uniqueBuyers}
+            color="info"
+            icon={<Iconify width={48} icon="solar:users-group-rounded-bold-duotone" />}
+          />
+        </Grid>
+
+        <Grid xs={12} md={5}>
+          <Card sx={{ height: 1 }}>
+            <CardHeader
+              title="Effectiveness"
+              subheader="What each rupee of discount is buying."
+            />
+            <CardContent>
+              <Stack spacing={2}>
+                <Figure
+                  label="Avg. discount per order"
+                  value={d.totalUses > 0 ? formatInr(avgDiscountPerOrder) : '—'}
                 />
-                <TableBody>
-                  {usageItems.map((u) => (
-                    <TableRow key={u.id} hover>
-                      <TableCell sx={{ typography: 'caption' }}>{formatDateTime(u.usedAt)}</TableCell>
-                      <TableCell sx={{ fontFamily: 'monospace', typography: 'caption' }}>
-                        {u.buyerId.slice(-8)}
-                      </TableCell>
-                      <TableCell sx={{ typography: 'caption' }}>
-                        {u.orderNumber ?? (
-                          <Box component="span" sx={{ color: 'text.secondary' }}>
-                            validate-only
-                          </Box>
-                        )}
-                      </TableCell>
-                      <TableCell align="right">
-                        {u.orderTotalInr !== null ? formatInr(u.orderTotalInr) : '—'}
-                      </TableCell>
-                      <TableCell align="right" sx={{ color: 'text.secondary' }}>
-                        {u.discountInr !== null ? formatInr(u.discountInr) : '—'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  <TableNoData
-                    notFound={!usage.isLoading && !usage.isError && usageItems.length === 0}
-                  />
-                </TableBody>
-              </Table>
-            </Scrollbar>
-          )}
-        </CardContent>
-      </Card>
+                <Figure
+                  label="Avg. order value"
+                  value={d.totalUses > 0 ? formatInr(avgOrderValue) : '—'}
+                />
+                <Figure
+                  label="GMV per ₹1 discount"
+                  value={gmvPerRupee !== null ? `₹${gmvPerRupee.toFixed(1)}` : '—'}
+                />
+                <Figure label="Buyers referred" value={String(d.buyersReferred)} />
+                <Figure label="Sellers referred" value={String(d.sellersReferred)} />
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Quick links</CardTitle>
-        </CardHeader>
-        <CardContent className="grid gap-2 sm:grid-cols-2">
-          <NavTile
-            label="Share kit"
-            hint="QR code, message templates, WhatsApp"
-            onClick={() => navigate('/promoter/share')}
+        <Grid xs={12} md={7}>
+          <NeedsAttentionCard
+            title="Quick links"
+            subheader="Everything else you need."
+            items={quickLinks}
+            columns={2}
           />
-          <NavTile
-            label="My support tickets"
-            hint="Raise an issue"
-            onClick={() => navigate('/promoter/support')}
-          />
-          <NavTile
-            label="My profile"
-            hint="Name, language"
-            onClick={() => navigate('/promoter/profile')}
-          />
-        </CardContent>
-      </Card>
-    </Stack>
+        </Grid>
+
+        <Grid xs={12}>
+          <Card>
+            <CardHeader
+              title="Recent uses"
+              subheader="Checkouts that applied your code, newest first."
+            />
+
+            {usage.isLoading && (
+              <Stack spacing={1.5} sx={{ p: 3 }}>
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <Skeleton key={i} height={40} />
+                ))}
+              </Stack>
+            )}
+
+            {usage.isError && (
+              <Alert severity="error" sx={{ m: 3 }}>
+                Couldn&apos;t load the usage feed.
+              </Alert>
+            )}
+
+            {!usage.isLoading && !usage.isError && (
+              <Scrollbar>
+                <Table sx={{ minWidth: 800 }}>
+                  <TableHeadCustom headLabel={USAGE_HEAD} />
+                  <TableBody>
+                    {usageItems.map((u) => (
+                      <TableRow key={u.id} hover>
+                        <TableCell sx={{ whiteSpace: 'nowrap' }}>{fDateTime(u.usedAt)}</TableCell>
+                        <TableCell sx={{ fontFamily: 'monospace', typography: 'caption' }}>
+                          {u.buyerId.slice(-8)}
+                        </TableCell>
+                        <TableCell>
+                          {u.orderNumber ?? (
+                            <Box component="span" sx={{ color: 'text.disabled' }}>
+                              validate-only
+                            </Box>
+                          )}
+                        </TableCell>
+                        <TableCell align="right">
+                          {u.orderTotalInr !== null ? formatInr(u.orderTotalInr) : '—'}
+                        </TableCell>
+                        <TableCell align="right" sx={{ color: 'text.secondary' }}>
+                          {u.discountInr !== null ? formatInr(u.discountInr) : '—'}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+
+                    <TableNoData notFound={usageItems.length === 0} />
+                  </TableBody>
+                </Table>
+              </Scrollbar>
+            )}
+          </Card>
+        </Grid>
+      </Grid>
+    </>
   );
 };
 
-interface MetricProps {
-  label: string;
-  value: string;
-  icon: React.ComponentType<{ className?: string }>;
-  highlight?: boolean;
-  muted?: boolean;
-}
+// ----------------------------------------------------------------------
 
-const Metric = ({ label, value, icon: Icon, highlight, muted }: MetricProps) => (
-  <Card>
-    <CardHeader className="pb-2">
-      <CardDescription className="flex items-center gap-2">
-        <Icon className="h-3.5 w-3.5" />
-        {label}
-      </CardDescription>
-      <CardTitle
-        className={`text-2xl ${highlight ? 'text-emerald-700' : muted ? 'text-muted-foreground' : ''}`}
-      >
-        {value}
-      </CardTitle>
-    </CardHeader>
-  </Card>
-);
-
-const SubMetric = ({ label, value }: { label: string; value: string }) => (
-  <div>
-    <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
-    <p className="text-xl font-semibold">{value}</p>
-  </div>
-);
-
-const NavTile = ({ label, hint, onClick }: { label: string; hint: string; onClick: () => void }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className="flex items-center justify-between gap-3 rounded-md border border-border bg-secondary/20 px-3 py-3 text-left transition-colors hover:bg-secondary/40"
-  >
-    <div>
-      <div className="text-sm font-medium">{label}</div>
-      <div className="text-xs text-muted-foreground">{hint}</div>
-    </div>
-    <ArrowRight className="h-4 w-4 text-muted-foreground" />
-  </button>
+const Figure = ({ label, value }: { label: string; value: string }) => (
+  <Stack direction="row" alignItems="baseline" justifyContent="space-between" spacing={2}>
+    <Box component="span" sx={{ typography: 'body2', color: 'text.secondary' }}>
+      {label}
+    </Box>
+    <Box component="span" sx={{ typography: 'subtitle1' }}>
+      {value}
+    </Box>
+  </Stack>
 );

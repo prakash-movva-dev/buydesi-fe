@@ -2,17 +2,6 @@ import type { ReactNode } from 'react';
 
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  ArrowRight,
-  Box as BoxIcon,
-  CreditCard,
-  Headset,
-  Package,
-  ShoppingBag,
-  Star,
-  Wallet as WalletIcon,
-} from 'lucide-react';
-
 import Box from '@mui/material/Box';
 import Card from '@mui/material/Card';
 import Chip from '@mui/material/Chip';
@@ -26,6 +15,7 @@ import ButtonBase from '@mui/material/ButtonBase';
 import Grid from '@mui/material/Unstable_Grid2';
 import { alpha } from '@mui/material/styles';
 
+import { Iconify } from '@/components/iconify';
 import { useOrdersList } from '@/features/orders/api';
 import { useProductsList } from '@/features/products/api';
 import { useAuth } from '@/lib/auth';
@@ -103,7 +93,7 @@ export const SellerDashboard = () => {
             value={pendingOrders.data ? String(pendingOrders.data.meta.total) : null}
             caption="Waiting for you to start"
             color="info"
-            icon={<ShoppingBag size={22} />}
+            icon={<Iconify width={22} icon="solar:cart-large-4-bold-duotone" />}
             onClick={() => navigate('/seller/orders?status=PLACED')}
           />
         </Grid>
@@ -114,7 +104,7 @@ export const SellerDashboard = () => {
             value={packedOrders.data ? String(packedOrders.data.meta.total) : null}
             caption="Packed, awaiting pickup"
             color="warning"
-            icon={<Package size={22} />}
+            icon={<Iconify width={22} icon="solar:box-bold-duotone" />}
             onClick={() => navigate('/seller/orders?status=PACKED')}
           />
         </Grid>
@@ -125,7 +115,7 @@ export const SellerDashboard = () => {
             value={lowStock.isLoading ? null : String(lowStockCount)}
             caption={lowStockCount > 0 ? 'Restock before they sell out' : 'Nothing running low'}
             color={lowStockCount > 0 ? 'error' : 'success'}
-            icon={<BoxIcon size={22} />}
+            icon={<Iconify width={22} icon="solar:graph-down-bold-duotone" />}
             onClick={() => navigate('/seller/products?status=LIVE')}
           />
         </Grid>
@@ -136,7 +126,7 @@ export const SellerDashboard = () => {
             value={wallet.data ? formatInr(wallet.data.availableInr) : null}
             caption="Ready to withdraw"
             color="success"
-            icon={<WalletIcon size={22} />}
+            icon={<Iconify width={22} icon="solar:wallet-money-bold-duotone" />}
             onClick={() => navigate('/seller/wallet')}
           />
         </Grid>
@@ -166,7 +156,7 @@ export const SellerDashboard = () => {
                   value={
                     rating === undefined ? null : rating ? rating.toFixed(1) : 'No ratings yet'
                   }
-                  icon={rating ? <Star size={16} /> : undefined}
+                  icon={rating ? <Iconify width={16} icon="solar:star-bold" /> : undefined}
                 />
               </Stack>
             </CardContent>
@@ -179,7 +169,7 @@ export const SellerDashboard = () => {
             <CardContent>
               <Stack spacing={1}>
                 <ShortcutRow
-                  icon={<WalletIcon size={18} />}
+                  icon={<Iconify width={18} icon="solar:wallet-money-bold" />}
                   label="Wallet"
                   hint={
                     wallet.data ? `${formatInr(wallet.data.availableInr)} available` : 'Open wallet'
@@ -187,13 +177,13 @@ export const SellerDashboard = () => {
                   onClick={() => navigate('/seller/wallet')}
                 />
                 <ShortcutRow
-                  icon={<CreditCard size={18} />}
+                  icon={<Iconify width={18} icon="solar:card-transfer-bold" />}
                   label="Payouts"
                   hint="Schedule and line items"
                   onClick={() => navigate('/seller/payouts')}
                 />
                 <ShortcutRow
-                  icon={<Headset size={18} />}
+                  icon={<Iconify width={18} icon="solar:headphones-round-bold" />}
                   label="Support"
                   hint="Raise a ticket if anything's stuck"
                   onClick={() => navigate('/seller/support')}
@@ -295,6 +285,6 @@ const ShortcutRow = ({
       </Typography>
     </Box>
 
-    <ArrowRight size={16} />
+    <Iconify width={16} icon="eva:arrow-ios-forward-fill" />
   </ButtonBase>
 );

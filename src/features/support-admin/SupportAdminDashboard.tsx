@@ -1,26 +1,30 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  AlertCircle,
-  AlertTriangle,
-  ArrowRight,
-  CheckCircle2,
-  ClipboardList,
-  Headset,
-  Inbox,
-  Search,
-  Truck,
-  UserCheck,
-} from 'lucide-react';
+
 import Box from '@mui/material/Box';
+import Card from '@mui/material/Card';
+import Grid from '@mui/material/Unstable_Grid2';
 import Stack from '@mui/material/Stack';
+import Alert from '@mui/material/Alert';
+import Divider from '@mui/material/Divider';
+import Skeleton from '@mui/material/Skeleton';
+import TextField from '@mui/material/TextField';
+import ButtonBase from '@mui/material/ButtonBase';
 import Typography from '@mui/material/Typography';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
+import CardHeader from '@mui/material/CardHeader';
+import CardContent from '@mui/material/CardContent';
+import ListItemText from '@mui/material/ListItemText';
+import InputAdornment from '@mui/material/InputAdornment';
+import LoadingButton from '@mui/lab/LoadingButton';
+import { alpha } from '@mui/material/styles';
+
+import { useAuth } from '@/lib/auth';
+import { ApiError } from '@/types/api';
+import { Label } from '@/components/label';
+import { Iconify } from '@/components/iconify';
 import { PageHeader } from '@/components/ui/PageHeader';
-import { Skeleton } from '@/components/ui/Skeleton';
-import { StatCard } from '@/components/ui/StatCard';
+
+import { fDateTime } from '@/utils/format-time';
 import { useDashboardOverview } from '@/features/dashboard/api';
 import { resolveOrderId } from '@/features/orders/api';
 import {
@@ -29,10 +33,12 @@ import {
   useExposedSettingMap,
 } from '@/features/platform-settings/exposed';
 import { useTicketsList } from '@/features/support/api';
-import { useAuth } from '@/lib/auth';
-import { formatDateTime } from '@/lib/format';
-import { ApiError } from '@/types/api';
+import { AnalyticsWidget } from '@/features/dashboard/AnalyticsWidget';
+import { NeedsAttentionCard, type AttentionItem } from '@/features/dashboard/NeedsAttentionCard';
+
 import type { SupportTicket } from '@/features/support/types';
+
+// ----------------------------------------------------------------------
 
 const inrFromPaise = (paise: number): string => `₹${(paise / 100).toLocaleString('en-IN')}`;
 
@@ -42,24 +48,10 @@ export const SupportAdminDashboard = () => {
   const overview = useDashboardOverview();
   const { map: settings, isLoading: settingsLoading } = useExposedSettingMap();
 
-  // Tickets cohorts.
-  const myOpen = useTicketsList({
-    status: 'OPEN',
-    assignedTo: user?.id,
-    page: 1,
-    limit: 200,
-  });
-  const unassigned = useTicketsList({
-    status: 'OPEN',
-    assignedTo: 'none',
-    page: 1,
-    limit: 200,
-  });
-  const escalated = useTicketsList({
-    status: 'ESCALATED',
-    page: 1,
-    limit: 50,
-  });
+  // Ticket cohorts.
+  const myOpen = useTicketsList({ status: 'OPEN', assignedTo: user?.id, page: 1, limit: 200 });
+  const unassigned = useTicketsList({ status: 'OPEN', assignedTo: 'none', page: 1, limit: 200 });
+  const escalated = useTicketsList({ status: 'ESCALATED', page: 1, limit: 50 });
 
   const slaWarningHours = readNumber(settings, 'support.slaWarningHours', 4);
   const maxClaimed = readNumber(settings, 'support.maxClaimedTicketsPerAdmin', 25);
@@ -94,271 +86,222 @@ export const SupportAdminDashboard = () => {
   const unassignedCount = unassigned.data?.meta.total ?? 0;
   const escalatedCount = escalated.data?.meta.total ?? 0;
   const platformOpen = overview.data?.support.open ?? null;
+  const atRisk = slaCounts.warning + slaCounts.breached;
 
   const overCap = mineCount > maxClaimed;
 
+  const queues: AttentionItem[] = [
+    {
+      key: 'mine',
+      icon: 'solar:inbox-in-bold',
+      label: 'My open tickets',
+      count: myOpen.isLoading ? undefined : mineCount,
+      onClick: () => navigate(`/admin/support?status=OPEN${user?.id ? `&assignedTo=${user.id}` : ''}`),
+    },
+    {
+      key: 'unassigned',
+      icon: 'solar:inbox-bold',
+      label: 'Unassigned',
+      hint: 'Claim from here',
+      count: unassigned.isLoading ? undefined : unassignedCount,
+      onClick: () => navigate('/admin/support?assignedTo=none&status=OPEN'),
+    },
+    {
+      key: 'escalated',
+      icon: 'solar:danger-triangle-bold',
+      label: 'Escalated to me',
+      count: escalated.isLoading ? undefined : escalatedCount,
+      onClick: () => navigate('/admin/support?status=ESCALATED'),
+    },
+    {
+      key: 'delivery',
+      icon: 'solar:box-bold',
+      label: 'Delivery exceptions',
+      hint: 'Track, push, reverse pickup',
+      onClick: () => navigate('/admin/delivery'),
+    },
+    {
+      key: 'orders',
+      icon: 'solar:clipboard-list-bold',
+      label: 'All orders',
+      count: overview.data?.orders.total,
+      onClick: () => navigate('/admin/orders'),
+    },
+    {
+      key: 'sellers',
+      icon: 'solar:shop-bold',
+      label: 'Sellers',
+      hint: 'Look one up for context',
+      count: overview.data?.sellers.total,
+      onClick: () => navigate('/admin/sellers'),
+    },
+  ];
+
   return (
-    <Stack spacing={3}>
+    <>
       <PageHeader
-        title={`Hi, ${user?.name.split(' ')[0] ?? 'Support'}`}
-        description="Your triage cockpit. Claim from the unassigned queue, work your own list, escalate what you can't resolve."
+        title={`Hi, ${user?.name.split(' ')[0] ?? 'Admin'} 👋`}
+        description="Your desk — what is waiting on you, and what is running out of time."
       />
 
-      {/* Hero metrics */}
-      <Box
-        sx={{
-          display: 'grid',
-          gap: 2,
-          gridTemplateColumns: {
-            xs: '1fr',
-            sm: 'repeat(2,1fr)',
-            lg: 'repeat(4,1fr)',
-          },
-        }}
-      >
-        <Metric
-          label="My open tickets"
-          value={myOpen.isLoading ? null : mineCount}
-          secondary={overCap ? `Over soft cap of ${maxClaimed}` : `Soft cap ${maxClaimed}`}
-          tone={overCap ? 'warning' : 'info'}
-        />
-        <Metric
-          label="Unassigned in queue"
-          value={unassigned.isLoading ? null : unassignedCount}
-          secondary={canCrossCluster ? 'Any cluster claimable' : 'Cluster-restricted'}
-          tone="warning"
-        />
-        <Metric
-          label="SLA risk / breached"
-          value={
-            myOpen.isLoading || unassigned.isLoading
-              ? null
-              : slaCounts.warning + slaCounts.breached
-          }
-          secondary={
-            myOpen.isLoading
-              ? null
-              : `${slaCounts.warning} approaching · ${slaCounts.breached} breached`
-          }
-          tone={slaCounts.breached > 0 ? 'destructive' : 'warning'}
-        />
-        <Metric
-          label={canCrossCluster ? 'All open (platform)' : 'Open in my cluster'}
-          value={overview.isLoading ? null : platformOpen ?? 0}
-          secondary={`${escalatedCount} escalated open`}
-          tone="info"
-        />
-      </Box>
+      {overCap && (
+        <Alert severity="warning" sx={{ mt: 3 }}>
+          You are holding {mineCount} tickets, over the {maxClaimed} cap. Resolve some before
+          claiming more.
+        </Alert>
+      )}
 
-      {/* Authority & caps card */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Your authority</CardTitle>
-          <CardDescription>
-            Configured by platform admins. Above these, escalate to a super admin.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Box
-            sx={{
-              display: 'grid',
-              gap: 1.5,
-              gridTemplateColumns: { xs: '1fr', sm: 'repeat(3,1fr)' },
-            }}
-          >
-          <AuthorityCell
-            label="Per-refund cap"
-            value={settingsLoading ? '…' : inrFromPaise(refundCapPaise)}
+      <Grid container spacing={3} sx={{ mt: 0 }}>
+        <Grid xs={12} sm={6} md={3}>
+          <AnalyticsWidget
+            title="My open tickets"
+            total={myOpen.isLoading ? null : mineCount}
+            color={overCap ? 'error' : 'primary'}
+            icon={<Iconify width={48} icon="solar:inbox-in-bold-duotone" />}
           />
-          <AuthorityCell
-            label="Rolling 24h refund cap"
-            value={settingsLoading ? '…' : inrFromPaise(refundDailyCapPaise)}
-          />
-          <AuthorityCell
-            label="Cross-cluster claim"
-            value={settingsLoading ? '…' : canCrossCluster ? 'Allowed' : 'Restricted to your cluster'}
-          />
-          </Box>
-        </CardContent>
-      </Card>
+        </Grid>
 
-      {/* Work queues */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Needs attention</CardTitle>
-          <CardDescription>Pre-filtered queues. The number is the live count.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Box
-            sx={{
-              display: 'grid',
-              gap: 1.5,
-              gridTemplateColumns: {
-                xs: '1fr',
-                sm: 'repeat(2,1fr)',
-                lg: 'repeat(3,1fr)',
-              },
-            }}
-          >
-          <ActionTile
-            icon={Headset}
-            label="My open tickets"
-            count={mineCount}
+        <Grid xs={12} sm={6} md={3}>
+          <AnalyticsWidget
+            title="Unassigned in queue"
+            total={unassigned.isLoading ? null : unassignedCount}
+            color="warning"
+            icon={<Iconify width={48} icon="solar:inbox-bold-duotone" />}
+          />
+        </Grid>
+
+        <Grid xs={12} sm={6} md={3}>
+          <AnalyticsWidget
+            title="SLA at risk or breached"
+            total={myOpen.isLoading ? null : atRisk}
+            color={slaCounts.breached > 0 ? 'error' : atRisk > 0 ? 'warning' : 'success'}
+            icon={<Iconify width={48} icon="solar:alarm-bold-duotone" />}
+          />
+        </Grid>
+
+        <Grid xs={12} sm={6} md={3}>
+          <AnalyticsWidget
+            title={canCrossCluster ? 'All open (platform)' : 'Open in my cluster'}
+            total={platformOpen}
+            color="info"
+            icon={<Iconify width={48} icon="solar:headphones-round-bold-duotone" />}
+          />
+        </Grid>
+
+        <Grid xs={12} md={7}>
+          <NeedsAttentionCard
+            title="Needs attention"
+            subheader="Pre-filtered queues — the number is the live count."
+            items={queues}
             loading={myOpen.isLoading}
-            onClick={() =>
-              navigate(
-                user?.id
-                  ? `/admin/support?assignedTo=${user.id}&status=OPEN`
-                  : '/admin/support?status=OPEN',
-              )
-            }
+            columns={2}
           />
-          <ActionTile
-            icon={Inbox}
-            label="Unassigned (claim from here)"
-            count={unassignedCount}
-            loading={unassigned.isLoading}
-            onClick={() => navigate('/admin/support?assignedTo=none&status=OPEN')}
-          />
-          <ActionTile
-            icon={AlertTriangle}
-            label="Escalated to me"
-            count={escalatedCount}
-            loading={escalated.isLoading}
-            onClick={() => navigate('/admin/support?status=ESCALATED')}
-          />
-          <ActionTile
-            icon={Truck}
-            label="Delivery exceptions"
-            count={undefined}
-            loading={false}
-            hint="Track / push / reverse pickup"
-            onClick={() => navigate('/admin/delivery')}
-          />
-          <ActionTile
-            icon={ClipboardList}
-            label="All orders"
-            count={overview.data?.orders.total}
-            loading={overview.isLoading}
-            onClick={() => navigate('/admin/orders')}
-          />
-          <ActionTile
-            icon={UserCheck}
-            label="Sellers"
-            count={overview.data?.sellers.total}
-            loading={overview.isLoading}
-            hint="Look up seller for context"
-            onClick={() => navigate('/admin/sellers')}
-          />
-          </Box>
-        </CardContent>
-      </Card>
+        </Grid>
 
-      {/* Lookup shortcut */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Quick lookup</CardTitle>
-          <CardDescription>
-            Most tickets reference an order. Jump straight in.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <OrderLookup />
-        </CardContent>
-      </Card>
+        <Grid xs={12} md={5}>
+          <Stack spacing={3}>
+            <AuthorityCard
+              loading={settingsLoading}
+              maxClaimed={maxClaimed}
+              refundCap={inrFromPaise(refundCapPaise)}
+              dailyCap={inrFromPaise(refundDailyCapPaise)}
+              canCrossCluster={canCrossCluster}
+              slaWarningHours={slaWarningHours}
+            />
+            <OrderLookupCard />
+          </Stack>
+        </Grid>
 
-      {/* Recent activity from the platform overview, scoped to support actions */}
-      <RecentSupportActivity />
-    </Stack>
+        <Grid xs={12}>
+          <LatestEscalations />
+        </Grid>
+      </Grid>
+    </>
   );
 };
 
-interface MetricProps {
-  label: string;
-  value: number | null;
-  secondary: string | null;
-  tone: 'info' | 'warning' | 'success' | 'destructive';
-}
+// ----------------------------------------------------------------------
 
-const Metric = ({ label, value, secondary, tone }: MetricProps) => (
-  <StatCard
-    label={label}
-    value={value}
-    loading={value === null}
-    secondary={secondary}
-    tone={tone}
-  />
-);
-
-const AuthorityCell = ({ label, value }: { label: string; value: string }) => (
-  <Box
-    sx={{
-      borderRadius: 1,
-      border: 1,
-      borderColor: 'divider',
-      bgcolor: 'action.hover',
-      p: 1.5,
-    }}
-  >
-    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-      {label}
-    </Typography>
-    <Typography sx={{ mt: 0.5, fontWeight: 600 }}>{value}</Typography>
-  </Box>
-);
-
-interface ActionTileProps {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  count: number | undefined;
+/** What this admin is allowed to do without asking — read from platform settings. */
+function AuthorityCard({
+  loading,
+  maxClaimed,
+  refundCap,
+  dailyCap,
+  canCrossCluster,
+  slaWarningHours,
+}: {
   loading: boolean;
-  hint?: string;
-  onClick: () => void;
+  maxClaimed: number;
+  refundCap: string;
+  dailyCap: string;
+  canCrossCluster: boolean;
+  slaWarningHours: number;
+}) {
+  const cells = [
+    { label: 'Per-refund cap', value: refundCap },
+    { label: 'Rolling 24h refund cap', value: dailyCap },
+    { label: 'Ticket claim cap', value: String(maxClaimed) },
+    { label: 'Cross-cluster claim', value: canCrossCluster ? 'Allowed' : 'Blocked' },
+    { label: 'SLA warning at', value: `${slaWarningHours}h` },
+  ];
+
+  return (
+    <Card>
+      <CardHeader
+        title="Your authority"
+        subheader="Set by platform settings — refunds above these need a super admin."
+      />
+      <CardContent>
+        <Box sx={{ gap: 2, display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)' }}>
+          {cells.map((cell) => (
+            <Box
+              key={cell.label}
+              sx={{
+                p: 1.5,
+                borderRadius: 1.5,
+                border: (theme) => `1px solid ${alpha(theme.palette.grey[500], 0.16)}`,
+              }}
+            >
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                {cell.label}
+              </Typography>
+              <Typography variant="subtitle2" sx={{ mt: 0.5 }}>
+                {loading ? <Skeleton width={60} /> : cell.value}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      </CardContent>
+    </Card>
+  );
 }
 
-const ActionTile = ({ icon: Icon, label, count, loading, hint, onClick }: ActionTileProps) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className="flex items-center justify-between gap-3 rounded-md border border-border bg-secondary/20 px-3 py-3 text-left transition-colors hover:bg-secondary/40"
-  >
-    <div className="flex min-w-0 items-center gap-3">
-      <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-      <div className="min-w-0">
-        <div className="truncate text-sm font-medium">{label}</div>
-        {hint && <div className="text-xs text-muted-foreground">{hint}</div>}
-      </div>
-    </div>
-    {loading ? (
-      <Skeleton className="h-6 w-8" />
-    ) : count !== undefined ? (
-      <Badge variant={count > 0 ? 'warning' : 'muted'}>{count}</Badge>
-    ) : (
-      <ArrowRight className="h-4 w-4 text-muted-foreground" />
-    )}
-  </button>
-);
+// ----------------------------------------------------------------------
 
-const OrderLookup = () => {
+/**
+ * Most tickets reference an order, so the fastest route in is pasting its
+ * number. Order numbers are resolved to the real id server-side first — the
+ * detail route validates an ObjectId and would reject "BD-…" outright.
+ */
+function OrderLookupCard() {
   const navigate = useNavigate();
+  const [value, setValue] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const submit = async (raw: string) => {
-    const value = raw.trim();
-    if (!value) return;
+  const submit = async () => {
+    const raw = value.trim();
+    if (!raw) return;
     setError(null);
     setPending(true);
     try {
-      // Accepts either a Mongo id or a human order number (e.g. BD-...). The
-      // number is resolved server-side to the real id before we navigate, so
-      // pasting an order number no longer routes to the ObjectId param validator.
-      const id = await resolveOrderId(value);
+      const id = await resolveOrderId(raw);
       navigate(`/admin/orders/${id}`);
     } catch (err) {
       setError(
         err instanceof ApiError && err.status === 404
-          ? `No order found for "${value}".`
+          ? `No order found for "${raw}".`
           : err instanceof Error
             ? err.message
             : 'Lookup failed.',
@@ -369,88 +312,121 @@ const OrderLookup = () => {
   };
 
   return (
-    <Stack spacing={1}>
-      <Stack
-        direction="row"
-        spacing={1}
-        flexWrap="wrap"
-        alignItems="center"
-        component="form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          const v = (new FormData(e.currentTarget).get('orderId') as string) ?? '';
-          void submit(v);
-        }}
-      >
-        <Box sx={{ position: 'relative', flex: 1, minWidth: '16rem' }}>
-          <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <input
-            name="orderId"
-            placeholder="Paste an order id or order number"
-            className="w-full rounded-md border border-input bg-background py-2 pl-8 pr-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          />
-        </Box>
-        <Button type="submit" variant="outline" size="sm" disabled={pending}>
-          {pending ? 'Opening…' : 'Open'}
-          <ArrowRight className="h-4 w-4" />
-        </Button>
-      </Stack>
-      {error && (
-        <Typography variant="body2" sx={{ color: 'error.main' }}>
-          {error}
-        </Typography>
-      )}
-    </Stack>
-  );
-};
-
-const RecentSupportActivity = () => {
-  // Lightweight: use the latest escalated tickets as "recent significant
-  // activity". The activity-log API is super-only so we don't read it here.
-  const escalated = useTicketsList({ status: 'ESCALATED', page: 1, limit: 5 });
-  return (
     <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2 text-base">
-          <AlertCircle className="h-4 w-4" />
-          Latest escalations
-        </CardTitle>
-        <CardDescription>
-          Other admins escalated these — handle them or note them so they don't slip.
-        </CardDescription>
-      </CardHeader>
+      <CardHeader title="Quick lookup" subheader="Jump straight to the order a ticket mentions." />
       <CardContent>
-        {escalated.isLoading && (
-          <div className="space-y-2">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-8 w-full" />
-            ))}
-          </div>
-        )}
-        {!escalated.isLoading && (
-          <ul className="space-y-2">
-            {(escalated.data?.items ?? []).map((t) => (
-              <li
-                key={t.id}
-                className="flex flex-wrap items-center gap-2 rounded-md px-2 py-2 text-sm hover:bg-secondary/30"
-              >
-                <Badge variant="warning">ESCALATED</Badge>
-                <span className="font-medium">{t.ticketNumber}</span>
-                <span className="truncate text-muted-foreground">{t.subject}</span>
-                <span className="ml-auto text-xs text-muted-foreground">
-                  {formatDateTime(t.updatedAt)}
-                </span>
-              </li>
-            ))}
-            {(escalated.data?.items.length ?? 0) === 0 && !escalated.isLoading && (
-              <li className="flex items-center gap-2 py-4 text-sm text-muted-foreground">
-                <CheckCircle2 className="h-4 w-4" />
-                No escalations open.
-              </li>
-            )}
-          </ul>
-        )}
+        <Stack
+          component="form"
+          spacing={2}
+          onSubmit={(e) => {
+            e.preventDefault();
+            void submit();
+          }}
+        >
+          <TextField
+            fullWidth
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            placeholder="Order id or order number"
+            error={Boolean(error)}
+            helperText={error}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
+                </InputAdornment>
+              ),
+            }}
+          />
+
+          <LoadingButton
+            type="submit"
+            variant="contained"
+            loading={pending}
+            disabled={!value.trim()}
+            endIcon={<Iconify icon="eva:arrow-ios-forward-fill" />}
+          >
+            Open order
+          </LoadingButton>
+        </Stack>
       </CardContent>
     </Card>
   );
-};
+}
+
+// ----------------------------------------------------------------------
+
+/**
+ * The activity-log API is super-admin only, so the most recent escalations
+ * stand in as "what changed lately" for this desk.
+ */
+function LatestEscalations() {
+  const navigate = useNavigate();
+  const escalated = useTicketsList({ status: 'ESCALATED', page: 1, limit: 5 });
+  const items = escalated.data?.items ?? [];
+
+  return (
+    <Card>
+      <CardHeader
+        title="Latest escalations"
+        subheader="Raised by other admins — pick them up so they don't slip."
+      />
+
+      <Box sx={{ p: 3 }}>
+        {escalated.isLoading && (
+          <Stack spacing={1.5}>
+            {Array.from({ length: 3 }).map((_, i) => (
+              <Skeleton key={i} height={40} />
+            ))}
+          </Stack>
+        )}
+
+        {!escalated.isLoading && items.length === 0 && (
+          <Stack direction="row" spacing={1} alignItems="center" justifyContent="center" sx={{ py: 3 }}>
+            <Iconify icon="solar:check-circle-bold" sx={{ color: 'success.main' }} />
+            <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+              No escalations open.
+            </Typography>
+          </Stack>
+        )}
+
+        {!escalated.isLoading && items.length > 0 && (
+          <Stack divider={<Divider sx={{ borderStyle: 'dashed' }} />}>
+            {items.map((ticket) => (
+              <ButtonBase
+                key={ticket.id}
+                onClick={() => navigate(`/admin/support/${ticket.id}`)}
+                sx={{
+                  py: 1.5,
+                  width: 1,
+                  borderRadius: 1,
+                  justifyContent: 'flex-start',
+                  '&:hover': { bgcolor: (theme) => alpha(theme.palette.grey[500], 0.08) },
+                }}
+              >
+                <Stack direction="row" spacing={2} alignItems="center" sx={{ width: 1, px: 1 }}>
+                  <Label variant="soft" color="warning">
+                    Escalated
+                  </Label>
+                  <ListItemText
+                    primary={ticket.subject}
+                    secondary={ticket.ticketNumber}
+                    primaryTypographyProps={{ typography: 'subtitle2', noWrap: true }}
+                    secondaryTypographyProps={{ typography: 'caption' }}
+                    sx={{ textAlign: 'left', minWidth: 0 }}
+                  />
+                  <Box
+                    component="span"
+                    sx={{ ml: 'auto', flexShrink: 0, typography: 'caption', color: 'text.disabled' }}
+                  >
+                    {fDateTime(ticket.updatedAt)}
+                  </Box>
+                </Stack>
+              </ButtonBase>
+            ))}
+          </Stack>
+        )}
+      </Box>
+    </Card>
+  );
+}
