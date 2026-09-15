@@ -17,6 +17,9 @@ interface MultiProps {
 
 type ClusterPickerProps = (SingleProps | MultiProps) & {
   placeholder?: string;
+  /** Floating label, so the picker lines up with the fields beside it. */
+  label?: string;
+  required?: boolean;
   disabled?: boolean;
   className?: string;
 };
@@ -51,6 +54,8 @@ export const ClusterPicker = (props: ClusterPickerProps) => {
         onChange={props.onChange}
         loading={isLoading}
         disabled={props.disabled}
+        label={props.label}
+        required={props.required}
         placeholder={props.placeholder ?? 'Pick one or more clusters…'}
         onSearch={setSearch}
       />
@@ -64,6 +69,8 @@ export const ClusterPicker = (props: ClusterPickerProps) => {
       onChange={props.onChange}
       loading={isLoading}
       disabled={props.disabled}
+      label={props.label}
+      required={props.required}
       placeholder={props.placeholder ?? 'Select a cluster…'}
       onSearch={setSearch}
     />
