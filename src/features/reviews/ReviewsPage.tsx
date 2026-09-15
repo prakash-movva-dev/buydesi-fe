@@ -1,397 +1,554 @@
-import { useEffect, useMemo, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import {
-  CheckCircle2,
-  EyeOff,
-  RotateCcw,
-  Star,
-  Trash2,
-} from 'lucide-react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+
 import Box from '@mui/material/Box';
+import Tab from '@mui/material/Tab';
 import Card from '@mui/material/Card';
-import Stack from '@mui/material/Stack';
+import Tabs from '@mui/material/Tabs';
+import Grid from '@mui/material/Unstable_Grid2';
 import Table from '@mui/material/Table';
-import MenuItem from '@mui/material/MenuItem';
-import TableRow from '@mui/material/TableRow';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TextField from '@mui/material/TextField';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Dialog } from '@/components/ui/Dialog';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { Skeleton } from '@/components/ui/Skeleton';
+import Chip from '@mui/material/Chip';
+import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
-import { Scrollbar } from '@/components/scrollbar';
-import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
-import { ScopedAdminBanner } from '@/features/scoped-admin/ScopedAdminBanner';
+import Button from '@mui/material/Button';
+import Tooltip from '@mui/material/Tooltip';
+import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
+import TableBody from '@mui/material/TableBody';
+import IconButton from '@mui/material/IconButton';
+import InputAdornment from '@mui/material/InputAdornment';
+import LinearProgress from '@mui/material/LinearProgress';
+
+import { useBoolean } from '@/hooks/use-boolean';
+import { useDebounce } from '@/hooks/use-debounce';
+
+import { varAlpha } from '@/theme/styles';
 import { useAuth } from '@/lib/auth';
-import { formatDateTime } from '@/lib/format';
 import { ApiError, UserRole } from '@/types/api';
-import { useDeleteReview, useModerateReview, useReviewsList } from './api';
-import type { ReviewStatus, ReviewTargetType, ReviewsListQuery } from './types';
 
-const STATUS_OPTIONS: Array<{ value: '' | ReviewStatus; label: string }> = [
-  { value: '', label: 'All statuses' },
-  { value: 'pending', label: 'Pending review' },
-  { value: 'approved', label: 'Approved' },
-  { value: 'hidden', label: 'Hidden' },
+import { Label } from '@/components/label';
+import { toast } from '@/components/snackbar';
+import { Iconify } from '@/components/iconify';
+import { Scrollbar } from '@/components/scrollbar';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { ConfirmDialog } from '@/components/custom-dialog';
+import { CategoryPicker } from '@/components/pickers/CategoryPicker';
+import { chipProps, FiltersBlock, FiltersResult } from '@/components/filters-result';
+import {
+  useTable,
+  emptyRows,
+  TableNoData,
+  TableEmptyRows,
+  TableHeadCustom,
+  TableSelectedAction,
+  TablePaginationCustom,
+} from '@/components/table';
+
+import { AnalyticsWidget } from '@/features/dashboard/AnalyticsWidget';
+import { ScopedAdminBanner } from '@/features/scoped-admin/ScopedAdminBanner';
+
+import {
+  useDeleteReview,
+  useModerateReview,
+  useReviewsList,
+  useSetReviewHandled,
+} from './api';
+import { ReviewTableRow } from './review-table-row';
+import type { Review, ReviewsListQuery } from './types';
+
+// ----------------------------------------------------------------------
+
+/**
+ * The queue's views.
+ *
+ * "Needs reading" is the one that matters — flagged and not yet dealt with.
+ * Everything else is browsing.
+ */
+type QueueView = 'queue' | 'pending' | 'approved' | 'hidden' | 'all';
+
+const TAB_OPTIONS: Array<{
+  value: QueueView;
+  label: string;
+  color: 'error' | 'warning' | 'success' | 'default' | 'info';
+}> = [
+  { value: 'queue', label: 'Needs reading', color: 'error' },
+  { value: 'pending', label: 'Pending', color: 'warning' },
+  { value: 'approved', label: 'Visible', color: 'success' },
+  { value: 'hidden', label: 'Hidden', color: 'default' },
+  { value: 'all', label: 'All', color: 'info' },
 ];
 
-const TARGET_OPTIONS: Array<{ value: '' | ReviewTargetType; label: string }> = [
-  { value: '', label: 'Any target' },
-  { value: 'product', label: 'Product reviews' },
-  { value: 'seller', label: 'Seller reviews' },
-];
-
-const RATING_OPTIONS = [
-  { value: '', label: 'Any rating' },
-  { value: '1', label: '1 star' },
-  { value: '2', label: '2 stars' },
-  { value: '3', label: '3 stars' },
-  { value: '4', label: '4 stars' },
-  { value: '5', label: '5 stars' },
-];
-
-const statusVariant: Record<ReviewStatus, 'warning' | 'success' | 'muted'> = {
-  pending: 'warning',
-  approved: 'success',
-  hidden: 'muted',
+/** Each view is just a different slice of the same list query. */
+const sliceFor = (view: QueueView): Partial<ReviewsListQuery> => {
+  switch (view) {
+    case 'queue':
+      return { flagged: true, handled: false };
+    case 'pending':
+      return { status: 'pending' };
+    case 'approved':
+      return { status: 'approved' };
+    case 'hidden':
+      return { status: 'hidden' };
+    default:
+      return {};
+  }
 };
 
-const PAGE_SIZE = 25;
+const TABLE_HEAD = [
+  { id: 'rating', label: 'Rating', width: 160 },
+  { id: 'text', label: 'What they wrote' },
+  { id: 'flags', label: 'Why it is here', width: 200 },
+  { id: 'created', label: 'Left', width: 130 },
+  { id: 'status', label: 'Status', width: 130 },
+  { id: '', width: 150 },
+];
+
+const DEFAULT_LIMIT = 20;
+
+/** The API sends `_id`; `id` is only sometimes present. */
+const idOf = (r: Review): string => r.id ?? r._id;
+
+// ----------------------------------------------------------------------
 
 export const ReviewsPage = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const isCategoryAdmin = user?.role === UserRole.CATEGORY_ADMIN;
   const [searchParams, setSearchParams] = useSearchParams();
-  const status = (searchParams.get('status') as ReviewStatus | null) ?? '';
-  const targetType = (searchParams.get('targetType') as ReviewTargetType | null) ?? '';
+
+  const table = useTable({ defaultRowsPerPage: DEFAULT_LIMIT });
+  const confirmDelete = useBoolean();
+  const confirmHide = useBoolean();
+
+  const isCategoryAdmin = user?.role === UserRole.CATEGORY_ADMIN;
+
+  const view = (searchParams.get('view') as QueueView | null) ?? 'queue';
+  const targetType = searchParams.get('targetType') ?? '';
   const rating = searchParams.get('rating') ?? '';
+  const categoryId = searchParams.get('categoryId') ?? '';
+  const q = searchParams.get('q') ?? '';
   const page = Math.max(1, Number(searchParams.get('page') ?? 1));
-  const urlCategoryId = searchParams.get('categoryId') ?? '';
+  const limit = Math.max(1, Number(searchParams.get('limit') ?? DEFAULT_LIMIT));
 
-  // For a category-scoped admin, the backend will already filter by their own
-  // branch. We still forward categoryId from the URL so super admins can use
-  // deep links from the Category dashboard, and we don't fight the backend by
-  // sending the admin's own category — it would be redundant.
-  const categoryId = isCategoryAdmin ? undefined : urlCategoryId || undefined;
-
-  const query = useMemo<ReviewsListQuery>(() => {
-    const r = rating ? Number(rating) : undefined;
-    return {
-      status: status || undefined,
-      targetType: targetType || undefined,
-      categoryId,
-      minRating: r,
-      maxRating: r,
-      page,
-      limit: PAGE_SIZE,
-    };
-  }, [status, targetType, rating, page, categoryId]);
-
-  // Default the pending queue when a category admin lands on the page, since
-  // their primary job is approving new reviews in their branch.
-  useEffect(() => {
-    if (isCategoryAdmin && !searchParams.has('status')) {
+  const setParams = useCallback(
+    (next: Record<string, string | null>) => {
       const params = new URLSearchParams(searchParams);
-      params.set('status', 'pending');
+      for (const [key, value] of Object.entries(next)) {
+        if (value === null || value === '') params.delete(key);
+        else params.set(key, value);
+      }
+      if (!('page' in next)) params.delete('page');
       setSearchParams(params, { replace: true });
-    }
-  }, [isCategoryAdmin, searchParams, setSearchParams]);
+      table.setSelected([]);
+    },
+    [searchParams, setSearchParams, table],
+  );
 
-  const { data, isLoading, isError, error } = useReviewsList(query);
+  const [search, setSearch] = useState(q);
+  const debounced = useDebounce(search, 400);
+  useEffect(() => {
+    if (debounced !== q) setParams({ q: debounced });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debounced]);
+  useEffect(() => {
+    if (q !== search) setSearch(q);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
+
+  const common = useMemo(
+    () => ({
+      targetType: (targetType || undefined) as ReviewsListQuery['targetType'],
+      rating: rating ? Number(rating) : undefined,
+      categoryId: categoryId || undefined,
+      q: q || undefined,
+    }),
+    [targetType, rating, categoryId, q],
+  );
+
+  const query = useMemo<ReviewsListQuery>(
+    () => ({ ...common, ...sliceFor(view), page, limit }),
+    [common, view, page, limit],
+  );
+
+  const { data, isLoading, isFetching, isError, error } = useReviewsList(query);
+
+  // Tab counts, under the same filters so the numbers match the table. Each
+  // hook is called directly rather than through a helper — a hook behind a
+  // function call is a rule violation waiting to bite when the list changes.
+  const queueCount = useReviewsList({ ...common, ...sliceFor('queue'), page: 1, limit: 1 });
+  const pendingCount = useReviewsList({ ...common, ...sliceFor('pending'), page: 1, limit: 1 });
+  const approvedCount = useReviewsList({ ...common, ...sliceFor('approved'), page: 1, limit: 1 });
+  const hiddenCount = useReviewsList({ ...common, ...sliceFor('hidden'), page: 1, limit: 1 });
+  const allCount = useReviewsList({ ...common, ...sliceFor('all'), page: 1, limit: 1 });
+
+  const countFor = (v: QueueView) =>
+    ({
+      queue: queueCount,
+      pending: pendingCount,
+      approved: approvedCount,
+      hidden: hiddenCount,
+      all: allCount,
+    })[v].data?.meta.total ?? 0;
+
   const moderate = useModerateReview();
   const remove = useDeleteReview();
+  const setHandled = useSetReviewHandled();
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+
+  const rows = data?.items ?? [];
   const total = data?.meta.total ?? 0;
+  const canReset = Boolean(targetType || rating || categoryId || q);
 
-  const setParam = (next: Record<string, string | null>) => {
-    const params = new URLSearchParams(searchParams);
-    for (const [k, v] of Object.entries(next)) {
-      if (v === null || v === '') params.delete(k);
-      else params.set(k, v);
+  const act = async (id: string, run: () => Promise<unknown>, done: string) => {
+    setBusyId(id);
+    try {
+      await run();
+      toast.success(done);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'That did not work');
+    } finally {
+      setBusyId(null);
     }
-    if (!('page' in next)) params.set('page', '1');
-    setSearchParams(params);
   };
 
-  const [moderating, setModerating] = useState<{
-    id: string;
-    action: 'approve' | 'hide';
-  } | null>(null);
-
-  const onDelete = (id: string) => {
-    if (!window.confirm('Permanently delete this review? Cannot be undone.')) return;
-    remove.mutate(id);
+  const hideSelected = async () => {
+    const ids = [...table.selected];
+    let ok = 0;
+    for (const id of ids) {
+      try {
+        await moderate.mutateAsync({ id, status: 'hidden' });
+        ok += 1;
+      } catch {
+        // Keep going — one failure shouldn't strand the rest.
+      }
+    }
+    table.setSelected([]);
+    if (ok === ids.length) toast.success(`Hid ${ok} review${ok === 1 ? '' : 's'}`);
+    else toast.error(`Hid ${ok} of ${ids.length} — retry the rest`);
   };
-
-  const head = [
-    { id: 'status', label: 'Status' },
-    { id: 'target', label: 'Target' },
-    { id: 'rating', label: 'Rating' },
-    { id: 'text', label: 'Text' },
-    { id: 'rater', label: 'Rater' },
-    { id: 'posted', label: 'Posted' },
-    { id: 'actions', label: '' },
-  ];
 
   return (
-    <Stack spacing={3}>
+    <>
       <PageHeader
-        title="Reviews moderation"
-        description="Buyer reviews on products and sellers. Hide inappropriate content or permanently remove spam. Pending reviews are auto-approved by default — flagged ones land in pending status for review."
+        title="Reviews"
+        description="Buyer reviews on products and sellers. Reviews go live immediately and are flagged here when they need reading — a low rating, a flagged word, or a report. Flagging never hides a review; only you can do that."
       />
 
-      <ScopedAdminBanner />
+      <Box sx={{ mt: 3 }}>
+        <ScopedAdminBanner />
+      </Box>
 
-      {isLoading && (
-        <div className="space-y-2">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton key={i} className="h-16 w-full" />
-          ))}
-        </div>
-      )}
       {isError && (
-        <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
+        <Alert severity="error" sx={{ mt: 3 }}>
           {error instanceof Error ? error.message : 'Failed to load reviews'}
-        </div>
+        </Alert>
       )}
 
-      {!isLoading && !isError && (
-        <Card>
-          <Stack
-            direction="row"
-            spacing={2}
-            flexWrap="wrap"
-            alignItems="center"
-            sx={{ p: 2.5 }}
+      <Grid container spacing={3} sx={{ mt: 0 }}>
+        <Grid xs={12} sm={4}>
+          <AnalyticsWidget
+            title="Needs reading"
+            total={queueCount.isLoading ? null : countFor('queue')}
+            color={countFor('queue') > 0 ? 'error' : 'success'}
+            icon={<Iconify width={48} icon="solar:danger-triangle-bold-duotone" />}
+          />
+        </Grid>
+        <Grid xs={12} sm={4}>
+          <AnalyticsWidget
+            title="Hidden from buyers"
+            total={hiddenCount.isLoading ? null : countFor('hidden')}
+            color="warning"
+            icon={<Iconify width={48} icon="solar:eye-closed-bold-duotone" />}
+          />
+        </Grid>
+        <Grid xs={12} sm={4}>
+          <AnalyticsWidget
+            title="Live reviews"
+            total={approvedCount.isLoading ? null : countFor('approved')}
+            color="success"
+            icon={<Iconify width={48} icon="solar:star-bold-duotone" />}
+          />
+        </Grid>
+      </Grid>
+
+      <Card sx={{ mt: 3 }}>
+        <Tabs
+          value={view}
+          onChange={(_e, value) => setParams({ view: value })}
+          sx={{
+            px: 2.5,
+            boxShadow: (theme) =>
+              `inset 0 -2px 0 0 ${varAlpha(theme.vars.palette.grey['500Channel'], 0.08)}`,
+          }}
+        >
+          {TAB_OPTIONS.map((tab) => (
+            <Tab
+              key={tab.value}
+              iconPosition="end"
+              value={tab.value}
+              label={tab.label}
+              icon={
+                <Label variant={tab.value === view ? 'filled' : 'soft'} color={tab.color}>
+                  {countFor(tab.value)}
+                </Label>
+              }
+            />
+          ))}
+        </Tabs>
+
+        <Stack
+          spacing={2}
+          direction={{ xs: 'column', md: 'row' }}
+          alignItems={{ xs: 'stretch', md: 'center' }}
+          sx={{ p: 2.5 }}
+        >
+          <TextField
+            select
+            label="About"
+            value={targetType}
+            onChange={(e) => setParams({ targetType: e.target.value })}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: { xs: 1, md: 160 } }}
           >
-            <TextField
-              select
-              label="Status"
-              value={status}
-              onChange={(e) => setParam({ status: e.target.value })}
-              InputLabelProps={{ shrink: true }}
-              sx={{ width: 200 }}
-            >
-              {STATUS_OPTIONS.map((opt) => (
-                <MenuItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
-              label="Target"
-              value={targetType}
-              onChange={(e) => setParam({ targetType: e.target.value })}
-              InputLabelProps={{ shrink: true }}
-              sx={{ width: 200 }}
-            >
-              {TARGET_OPTIONS.map((opt) => (
-                <MenuItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
-              label="Rating"
-              value={rating}
-              onChange={(e) => setParam({ rating: e.target.value })}
-              InputLabelProps={{ shrink: true }}
-              sx={{ width: 160 }}
-            >
-              {RATING_OPTIONS.map((opt) => (
-                <MenuItem key={opt.value} value={opt.value}>
-                  {opt.label}
-                </MenuItem>
-              ))}
-            </TextField>
-          </Stack>
+            <MenuItem value="">Anything</MenuItem>
+            <MenuItem value="product">Products</MenuItem>
+            <MenuItem value="seller">Sellers</MenuItem>
+          </TextField>
+
+          <TextField
+            select
+            label="Stars"
+            value={rating}
+            onChange={(e) => setParams({ rating: e.target.value })}
+            InputLabelProps={{ shrink: true }}
+            sx={{ width: { xs: 1, md: 140 } }}
+          >
+            <MenuItem value="">Any rating</MenuItem>
+            {[1, 2, 3, 4, 5].map((n) => (
+              <MenuItem key={n} value={String(n)}>
+                {n} star{n === 1 ? '' : 's'}
+              </MenuItem>
+            ))}
+          </TextField>
+
+          {!isCategoryAdmin && (
+            <Box sx={{ width: { xs: 1, md: 220 } }}>
+              <CategoryPicker
+                label="Category"
+                value={categoryId || null}
+                onChange={(id) => setParams({ categoryId: id ?? '' })}
+                placeholder="Any category"
+              />
+            </Box>
+          )}
+
+          <TextField
+            fullWidth
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search the review text..."
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <Iconify icon="eva:search-fill" sx={{ color: 'text.disabled' }} />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Stack>
+
+        {canReset && (
+          <FiltersResult
+            totalResults={total}
+            onReset={() =>
+              setParams({ targetType: null, rating: null, categoryId: null, q: null })
+            }
+            sx={{ p: 2.5, pt: 0 }}
+          >
+            <FiltersBlock label="About:" isShow={!!targetType}>
+              <Chip
+                {...chipProps}
+                label={targetType === 'product' ? 'Products' : 'Sellers'}
+                onDelete={() => setParams({ targetType: null })}
+              />
+            </FiltersBlock>
+
+            <FiltersBlock label="Stars:" isShow={!!rating}>
+              <Chip {...chipProps} label={`${rating}★`} onDelete={() => setParams({ rating: null })} />
+            </FiltersBlock>
+
+            <FiltersBlock label="Category:" isShow={!!categoryId}>
+              <Chip
+                {...chipProps}
+                label="Selected category"
+                onDelete={() => setParams({ categoryId: null })}
+              />
+            </FiltersBlock>
+
+            <FiltersBlock label="Keyword:" isShow={!!q}>
+              <Chip {...chipProps} label={q} onDelete={() => setParams({ q: null })} />
+            </FiltersBlock>
+          </FiltersResult>
+        )}
+
+        <Box sx={{ position: 'relative' }}>
+          <TableSelectedAction
+            dense={table.dense}
+            numSelected={table.selected.length}
+            rowCount={rows.length}
+            onSelectAllRows={(checked) =>
+              table.onSelectAllRows(
+                checked,
+                rows.map(idOf),
+              )
+            }
+            action={
+              <Tooltip title="Hide from buyers">
+                <IconButton color="primary" onClick={confirmHide.onTrue}>
+                  <Iconify icon="solar:eye-closed-bold" />
+                </IconButton>
+              </Tooltip>
+            }
+          />
+
+          {isFetching && !isLoading && (
+            <LinearProgress sx={{ position: 'absolute', top: 0, left: 0, right: 0, zIndex: 9 }} />
+          )}
 
           <Scrollbar>
-            <Table sx={{ minWidth: 800 }}>
-              <TableHeadCustom headLabel={head} />
+            <Table size={table.dense ? 'small' : 'medium'} sx={{ minWidth: 1100 }}>
+              <TableHeadCustom
+                headLabel={TABLE_HEAD}
+                rowCount={rows.length}
+                numSelected={table.selected.length}
+                onSelectAllRows={(checked) =>
+                  table.onSelectAllRows(
+                    checked,
+                    rows.map(idOf),
+                  )
+                }
+              />
+
               <TableBody>
-                {(data?.items ?? []).map((r) => {
-                  const id = r.id ?? r._id;
-                  return (
-                    <TableRow key={id} hover>
-                      <TableCell>
-                        <Badge variant={statusVariant[r.status]}>{r.status}</Badge>
-                      </TableCell>
-                      <TableCell sx={{ typography: 'caption' }}>
-                        <Badge variant="muted">{r.targetType}</Badge>
-                        <Box sx={{ mt: 0.25, fontWeight: 500 }}>
-                          {r.targetName ?? '—'}
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.25 }}>
-                          {Array.from({ length: 5 }).map((_, i) => (
-                            <Star
-                              key={i}
-                              className={`h-3.5 w-3.5 ${i < r.rating ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'}`}
-                            />
-                          ))}
-                        </Box>
-                      </TableCell>
-                      <TableCell className="max-w-md truncate text-xs" title={r.text ?? ''}>
-                        {r.text ?? <span className="text-muted-foreground">— rating only —</span>}
-                      </TableCell>
-                      <TableCell className="text-xs">{r.raterName ?? 'Anonymous'}</TableCell>
-                      <TableCell className="text-xs">{formatDateTime(r.createdAt)}</TableCell>
-                      <TableCell className="space-x-1 whitespace-nowrap">
-                        {r.status !== 'approved' && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setModerating({ id, action: 'approve' })}
-                            title="Approve"
-                            disabled={moderate.isPending}
-                          >
-                            <CheckCircle2 className="h-4 w-4 text-emerald-600" />
-                          </Button>
-                        )}
-                        {r.status !== 'hidden' && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setModerating({ id, action: 'hide' })}
-                            title="Hide"
-                            disabled={moderate.isPending}
-                          >
-                            <EyeOff className="h-4 w-4 text-amber-700" />
-                          </Button>
-                        )}
-                        {r.status === 'hidden' && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setModerating({ id, action: 'approve' })}
-                            title="Restore"
-                            disabled={moderate.isPending}
-                          >
-                            <RotateCcw className="h-4 w-4" />
-                          </Button>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => onDelete(id)}
-                          title="Delete permanently"
-                          disabled={remove.isPending}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-                <TableNoData notFound={!isLoading && (data?.items.length ?? 0) === 0} />
+                {rows.map((row) => (
+                  <ReviewTableRow
+                    key={idOf(row)}
+                    row={row}
+                    selected={table.selected.includes(idOf(row))}
+                    busy={busyId === idOf(row)}
+                    onSelectRow={() => table.onSelectRow(idOf(row))}
+                    onApprove={() =>
+                      void act(
+                        idOf(row),
+                        () => moderate.mutateAsync({ id: idOf(row), status: 'approved' }),
+                        'Review is visible again',
+                      )
+                    }
+                    onHide={() =>
+                      void act(
+                        idOf(row),
+                        () => moderate.mutateAsync({ id: idOf(row), status: 'hidden' }),
+                        'Review hidden from buyers',
+                      )
+                    }
+                    onToggleHandled={() =>
+                      void act(
+                        idOf(row),
+                        () =>
+                          setHandled.mutateAsync({
+                            id: idOf(row),
+                            handled: !row.handledAt,
+                          }),
+                        row.handledAt ? 'Reopened' : 'Marked as dealt with',
+                      )
+                    }
+                    onDelete={() => {
+                      setPendingDeleteId(idOf(row));
+                      confirmDelete.onTrue();
+                    }}
+                    onViewTarget={() =>
+                      navigate(
+                        row.targetType === 'product'
+                          ? `/admin/products/${row.targetId}`
+                          : `/admin/sellers?q=${row.targetId}`,
+                      )
+                    }
+                  />
+                ))}
+
+                <TableEmptyRows
+                  height={table.dense ? 56 : 88}
+                  emptyRows={emptyRows(page - 1, limit, total)}
+                />
+
+                <TableNoData notFound={!isLoading && rows.length === 0} />
               </TableBody>
             </Table>
           </Scrollbar>
+        </Box>
 
-          <TablePaginationCustom
-            count={total}
-            page={page - 1}
-            rowsPerPage={PAGE_SIZE}
-            rowsPerPageOptions={[10, 25, 50]}
-            onPageChange={(_e, newPage) => setParam({ page: String(newPage + 1) })}
-            onRowsPerPageChange={(e) => setParam({ limit: e.target.value, page: '1' })}
-          />
-        </Card>
-      )}
-
-      <ModerateDialog
-        open={moderating !== null}
-        action={moderating?.action ?? null}
-        onClose={() => setModerating(null)}
-        onSubmit={async (notes) => {
-          if (!moderating) return;
-          await moderate.mutateAsync({
-            id: moderating.id,
-            status: moderating.action === 'approve' ? 'approved' : 'hidden',
-            notes,
-          });
-        }}
-      />
-    </Stack>
-  );
-};
-
-interface ModerateDialogProps {
-  open: boolean;
-  action: 'approve' | 'hide' | null;
-  onClose: () => void;
-  onSubmit: (notes: string | undefined) => Promise<unknown>;
-}
-
-const ModerateDialog = ({ open, action, onClose, onSubmit }: ModerateDialogProps) => {
-  const [notes, setNotes] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-
-  if (!action) return null;
-
-  const submit = async () => {
-    if (action === 'hide' && !notes.trim()) {
-      setError('Reason is required when hiding a review.');
-      return;
-    }
-    setError(null);
-    setSubmitting(true);
-    try {
-      await onSubmit(notes.trim() || undefined);
-      setNotes('');
-      onClose();
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Action failed');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <Dialog
-      open={open}
-      onClose={onClose}
-      title={action === 'approve' ? 'Approve / restore review' : 'Hide review'}
-      description={
-        action === 'approve'
-          ? 'The review will be visible to buyers.'
-          : 'The review will be hidden from buyers but remains in the database. Reason is recorded on the audit log.'
-      }
-      footer={
-        <>
-          <Button variant="outline" onClick={onClose} disabled={submitting}>
-            Cancel
-          </Button>
-          <Button
-            variant={action === 'hide' ? 'destructive' : 'primary'}
-            onClick={submit}
-            disabled={submitting}
-          >
-            {submitting ? 'Working…' : action === 'approve' ? 'Approve' : 'Hide'}
-          </Button>
-        </>
-      }
-    >
-      <Stack spacing={2}>
-        <TextField
-          fullWidth
-          label={action === 'hide' ? 'Notes' : 'Notes (optional)'}
-          required={action === 'hide'}
-          multiline
-          minRows={3}
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          InputLabelProps={{ shrink: true }}
+        <TablePaginationCustom
+          page={page - 1}
+          dense={table.dense}
+          count={total}
+          rowsPerPage={limit}
+          rowsPerPageOptions={[10, 20, 50]}
+          onPageChange={(_e, next) => setParams({ page: String(next + 1) })}
+          onChangeDense={table.onChangeDense}
+          onRowsPerPageChange={(e) => setParams({ limit: e.target.value, page: '1' })}
         />
-        {error && <Alert severity="error">{error}</Alert>}
-      </Stack>
-    </Dialog>
+      </Card>
+
+      <ConfirmDialog
+        open={confirmHide.value}
+        onClose={confirmHide.onFalse}
+        title="Hide from buyers"
+        content={
+          <>
+            Hide <strong>{table.selected.length}</strong> review
+            {table.selected.length === 1 ? '' : 's'}? They stop showing on the storefront and no
+            longer count towards the seller&apos;s rating. You can put them back at any time.
+          </>
+        }
+        action={
+          <Button
+            variant="contained"
+            color="warning"
+            onClick={() => {
+              void hideSelected();
+              confirmHide.onFalse();
+            }}
+          >
+            Hide
+          </Button>
+        }
+      />
+
+      <ConfirmDialog
+        open={confirmDelete.value}
+        onClose={confirmDelete.onFalse}
+        title="Delete permanently"
+        content="This removes the review and its record for good. If you only want it off the storefront, hide it instead."
+        action={
+          <Button
+            variant="contained"
+            color="error"
+            onClick={() => {
+              if (pendingDeleteId) {
+                void act(
+                  pendingDeleteId,
+                  () => remove.mutateAsync(pendingDeleteId),
+                  'Review deleted',
+                );
+              }
+              setPendingDeleteId(null);
+              confirmDelete.onFalse();
+            }}
+          >
+            Delete
+          </Button>
+        }
+      />
+    </>
   );
 };

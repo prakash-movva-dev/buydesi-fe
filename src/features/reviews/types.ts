@@ -1,4 +1,7 @@
 export type ReviewTargetType = 'product' | 'seller';
+/** Why a review was pulled into the moderation queue. */
+export type ReviewFlagReason = 'low_rating' | 'restricted_term' | 'reported';
+
 export type ReviewStatus = 'pending' | 'approved' | 'hidden';
 
 export interface Review {
@@ -33,6 +36,10 @@ export interface Review {
   handledBy: string | null;
   handledNotes: string | null;
   handledTicketId: string | null;
+  /** Set when a review was pulled in for a moderator to read. */
+  flaggedAt: string | null;
+  flagReasons: ReviewFlagReason[];
+  reports: Array<{ reporterId: string; reason: string; at: string }>;
   createdAt: string;
   updatedAt: string;
 }
@@ -50,6 +57,7 @@ export interface ReviewsListQuery {
   rating?: number;
   /** Triage state. Omit for both. */
   handled?: boolean;
+  flagged?: boolean;
   /** Matches the review text. */
   q?: string;
   sort?: ReviewsSort;

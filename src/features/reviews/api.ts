@@ -22,6 +22,7 @@ const fetchList = async (q: ReviewsListQuery): Promise<ListResult> => {
   if (q.maxRating !== undefined) params.set('maxRating', String(q.maxRating));
   if (q.rating !== undefined) params.set('rating', String(q.rating));
   if (q.handled !== undefined) params.set('handled', String(q.handled));
+  if (q.flagged !== undefined) params.set('flagged', String(q.flagged));
   if (q.q) params.set('q', q.q);
   if (q.sort) params.set('sort', q.sort);
   params.set('page', String(q.page));
@@ -53,6 +54,16 @@ export const useModerateReview = () => {
       status: Exclude<ReviewStatus, 'pending'>;
       notes?: string;
     }) => api.put<Review>(`/reviews/${id}/moderate`, { status, notes }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: reviewKeys.all }),
+  });
+};
+
+/** Report a review — flags it for a moderator without hiding it. */
+export const useReportReview = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, reason }: { id: string; reason: string }) =>
+      api.post<Review>(`/reviews/${id}/report`, { reason }),
     onSuccess: () => qc.invalidateQueries({ queryKey: reviewKeys.all }),
   });
 };
