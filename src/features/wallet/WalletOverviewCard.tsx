@@ -218,7 +218,10 @@ export function WalletOverviewCard({
   );
 
   return (
-    <Card sx={{ p: 3, ...sx }} {...other}>
+    <Card
+      sx={{ p: 3, height: 1, display: 'flex', flexDirection: 'column', ...sx }}
+      {...other}
+    >
       <Box
         sx={{
           gap: 2,
@@ -237,7 +240,8 @@ export function WalletOverviewCard({
         type="line"
         series={[{ name: active.label, data: active.series }]}
         options={chartOptions}
-        height={270}
+        height="100%"
+        sx={{ flex: '1 1 auto', flexShrink: 1, minHeight: 320 }}
       />
     </Card>
   );
