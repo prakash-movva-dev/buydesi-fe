@@ -1,297 +1,345 @@
-import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { ExternalLink, ShieldAlert, Star, TicketPlus } from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+
 import Box from '@mui/material/Box';
-import Card from '@mui/material/Card';
-import Stack from '@mui/material/Stack';
-import Table from '@mui/material/Table';
+import Tab from '@mui/material/Tab';
 import TableRow from '@mui/material/TableRow';
-import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
-import Typography from '@mui/material/Typography';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { Dialog } from '@/components/ui/Dialog';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { Skeleton } from '@/components/ui/Skeleton';
-import TextField from '@mui/material/TextField';
+import Tabs from '@mui/material/Tabs';
+import Card from '@mui/material/Card';
+import Table from '@mui/material/Table';
+import Alert from '@mui/material/Alert';
+import TableBody from '@mui/material/TableBody';
+
+import { varAlpha } from '@/theme/styles';
+
+import { Label } from '@/components/label';
 import { Scrollbar } from '@/components/scrollbar';
-import { TableHeadCustom, TableNoData } from '@/components/table';
-import { useCreateTicket } from '@/features/support/api';
-import type { Review } from '@/features/reviews/types';
-import { useReviewsList } from '@/features/reviews/api';
-import { formatDateTime } from '@/lib/format';
-import { ApiError } from '@/types/api';
+import { EmptyContent } from '@/components/empty-content';
+import { PageHeader } from '@/components/ui/PageHeader';
+import {
+  useTable,
+  emptyRows,
+  TableSkeleton,
+  TableEmptyRows,
+  TableHeadCustom,
+  TablePaginationCustom,
+} from '@/components/table';
 
-const PAGE_SIZE = 25;
+import { ScopedAdminBanner } from '@/features/scoped-admin/ScopedAdminBanner';
 
-const StarRating = ({ rating }: { rating: number }) => (
-  <div className="flex items-center gap-0.5" aria-label={`${rating} out of 5 stars`}>
-    {Array.from({ length: 5 }).map((_, i) => (
-      <Star
-        key={i}
-        className={`h-3.5 w-3.5 ${
-          i < rating ? 'fill-amber-400 text-amber-400' : 'text-muted-foreground'
-        }`}
-      />
-    ))}
-  </div>
-);
+import { useReviewsList, useSetReviewHandled } from '@/features/reviews/api';
+import type { Review, ReviewsListQuery, ReviewsSort } from '@/features/reviews/types';
 
+import { ReviewTableRow } from './review-table-row';
+import { QualityTicketDialog } from './QualityTicketDialog';
+import { ReviewTableToolbar, type ReviewFilters } from './review-table-toolbar';
+import { ReviewTableFiltersResult } from './review-table-filters-result';
+
+// ----------------------------------------------------------------------
+
+/**
+ * 'flagged' is the queue this page is for — one and two stars together. The
+ * single-star tabs are there for when someone wants to look wider, and 'all'
+ * for the whole review stream.
+ */
+type RatingTab = 'flagged' | '1' | '2' | '3' | '4' | '5' | 'all';
+
+const RATING_TABS: Array<{ value: RatingTab; label: string }> = [
+  { value: 'flagged', label: 'Flagged' },
+  { value: '1', label: '1 star' },
+  { value: '2', label: '2 stars' },
+  { value: '3', label: '3 stars' },
+  { value: '4', label: '4 stars' },
+  { value: '5', label: '5 stars' },
+  { value: 'all', label: 'All' },
+];
+
+const TABLE_HEAD = [
+  { id: 'target', label: 'Review of' },
+  { id: 'rating', label: 'Rating', width: 140 },
+  { id: 'comment', label: 'What the buyer wrote' },
+  { id: 'order', label: 'Order', width: 140 },
+  { id: 'created', label: 'Left', width: 140 },
+  { id: 'triage', label: 'Triage', width: 130 },
+  { id: '', width: 108 },
+];
+
+/** Only these columns can be ordered by the API. */
+const SORTABLE = new Set(['rating', 'created']);
+
+const toSortParam = (orderBy: string, order: 'asc' | 'desc'): ReviewsSort => {
+  if (orderBy === 'rating') return order === 'asc' ? 'rating_asc' : 'rating_desc';
+  return order === 'asc' ? 'oldest' : 'newest';
+};
+
+const fromSortParam = (sort: string | null): { orderBy: string; order: 'asc' | 'desc' } => {
+  if (sort === 'oldest') return { orderBy: 'created', order: 'asc' };
+  if (sort === 'rating_asc') return { orderBy: 'rating', order: 'asc' };
+  if (sort === 'rating_desc') return { orderBy: 'rating', order: 'desc' };
+  return { orderBy: 'created', order: 'desc' };
+};
+
+/** Turns a tab into the rating part of the API query. */
+const ratingQuery = (tab: RatingTab): Pick<ReviewsListQuery, 'rating' | 'maxRating'> => {
+  if (tab === 'flagged') return { maxRating: 2 };
+  if (tab === 'all') return {};
+  return { rating: Number(tab) };
+};
+
+/** The tab's own number, read off the per-star counts the API returns. */
+const tabCount = (tab: RatingTab, counts?: Record<string, number>): string => {
+  if (!counts) return '-';
+  if (tab === 'all') return String(counts.all ?? 0);
+  if (tab === 'flagged') return String((counts['1'] ?? 0) + (counts['2'] ?? 0));
+  return String(counts[tab] ?? 0);
+};
+
+const DEFAULT_LIMIT = 10;
+
+// ----------------------------------------------------------------------
+
+/**
+ * The quality queue: low-rated reviews, and what was done about them.
+ *
+ * A bad review is a complaint nobody has answered yet, so the page defaults to
+ * one and two stars that are still open. Raising a ticket — or marking a review
+ * as dealt with — takes it out of the queue, which is what keeps the list
+ * meaningful instead of an ever-growing wall of old grievances.
+ *
+ * Every filter, the sort and the page live in the URL and are answered by the
+ * API; nothing is narrowed or ordered in the browser.
+ */
 export const QualityMonitorPage = () => {
-  // Only reviews rated 2 stars or below — the backend admin list returns
-  // newest-first, so no client sort is needed.
-  const query = useMemo(
-    () => ({ maxRating: 2 as const, page: 1, limit: PAGE_SIZE }),
-    [],
-  );
-  const { data, isLoading, isError, error } = useReviewsList(query);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  const table = useTable({ defaultRowsPerPage: DEFAULT_LIMIT });
 
   const [ticketFor, setTicketFor] = useState<Review | null>(null);
 
-  const reviews = data?.items ?? [];
-
-  const head = [
-    { id: 'target', label: 'Product / seller' },
-    { id: 'reviewer', label: 'Reviewer' },
-    { id: 'rating', label: 'Rating' },
-    { id: 'comment', label: 'Comment' },
-    { id: 'order', label: 'Order' },
-    { id: 'date', label: 'Date' },
-    { id: 'actions', label: '' },
-  ];
-
-  return (
-    <Stack spacing={3}>
-      <PageHeader
-        title={
-          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
-            <ShieldAlert className="h-6 w-6 text-amber-600" />
-            Quality Monitor
-          </Box>
-        }
-        description="Recent low-rated reviews (2 stars or below) on products and sellers. Raise a product-quality support ticket directly from a flagged review."
-      />
-
-      <Stack component="section" spacing={1.5}>
-        <Typography variant="h6">Low ratings</Typography>
-
-        {isLoading && (
-          <div className="space-y-2">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-16 w-full" />
-            ))}
-          </div>
-        )}
-
-        {isError && (
-          <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
-            {error instanceof Error ? error.message : 'Failed to load reviews'}
-          </div>
-        )}
-
-        {!isLoading && !isError && (
-          <Card>
-            <Scrollbar>
-              <Table sx={{ minWidth: 800 }}>
-                <TableHeadCustom headLabel={head} />
-                <TableBody>
-                  {reviews.map((r) => {
-                    const id = r.id ?? r._id;
-                    return (
-                      <TableRow key={id} hover>
-                        <TableCell sx={{ typography: 'caption' }}>
-                          <Badge variant="muted">{r.targetType}</Badge>
-                          <Box sx={{ mt: 0.25, fontWeight: 500 }}>
-                            {r.targetName ?? '—'}
-                          </Box>
-                        </TableCell>
-                        <TableCell className="text-xs font-medium">
-                          {r.raterName ?? 'Anonymous'}
-                        </TableCell>
-                        <TableCell>
-                          <StarRating rating={r.rating} />
-                        </TableCell>
-                        <TableCell
-                          className="max-w-md truncate text-xs"
-                          title={r.text ?? ''}
-                        >
-                          {r.text ?? (
-                            <span className="text-muted-foreground">— rating only —</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          {r.orderNumber ? (
-                            <span className="font-mono">{r.orderNumber}</span>
-                          ) : (
-                            <span className="text-muted-foreground">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-xs">
-                          {formatDateTime(r.createdAt)}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => setTicketFor(r)}
-                          >
-                            <TicketPlus className="h-4 w-4" />
-                            Create ticket
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                  <TableNoData notFound={!isLoading && reviews.length === 0} />
-                </TableBody>
-              </Table>
-            </Scrollbar>
-          </Card>
-        )}
-      </Stack>
-
-      <CreateTicketDialog
-        review={ticketFor}
-        onClose={() => setTicketFor(null)}
-      />
-    </Stack>
-  );
-};
-
-interface CreateTicketDialogProps {
-  review: Review | null;
-  onClose: () => void;
-}
-
-const CreateTicketDialog = ({ review, onClose }: CreateTicketDialogProps) => {
-  const create = useCreateTicket();
-
-  const targetName = review?.targetName ?? 'product';
-  const defaultSubject = review ? `Quality issue: ${targetName}` : '';
-  const defaultDescription = review
-    ? [
-        `${review.raterName ?? 'A buyer'} left a ${review.rating}-star review on ${targetName}.`,
-        review.orderNumber ? `Order: ${review.orderNumber}.` : null,
-        review.text ? `\nReview: "${review.text}"` : null,
-      ]
-        .filter(Boolean)
-        .join('\n')
-    : '';
-
-  const [subject, setSubject] = useState(defaultSubject);
-  const [description, setDescription] = useState(defaultDescription);
-  const [error, setError] = useState<string | null>(null);
-  // The id of the ticket created in this dialog session, used for the
-  // confirmation link.
-  const [createdTicketId, setCreatedTicketId] = useState<string | null>(null);
-  // Track which review the form was last initialised for so we reset fields
-  // when a different row opens the dialog.
-  const [initialisedFor, setInitialisedFor] = useState<string | null>(null);
-
-  const reviewKey = review ? review.id ?? review._id : null;
-  if (review && reviewKey !== initialisedFor) {
-    setInitialisedFor(reviewKey);
-    setSubject(defaultSubject);
-    setDescription(defaultDescription);
-    setError(null);
-    setCreatedTicketId(null);
-  }
-
-  if (!review) return null;
-
-  const submit = async () => {
-    if (!subject.trim() || !description.trim()) {
-      setError('Subject and description are required.');
-      return;
-    }
-    setError(null);
-    try {
-      const ticket = await create.mutateAsync({
-        category: 'product_quality',
-        subject: subject.trim(),
-        description: description.trim(),
-        orderId: review.orderId || undefined,
-      });
-      setCreatedTicketId(ticket.id);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Failed to create ticket');
-    }
+  const ratingTab = (searchParams.get('rating') as RatingTab | null) ?? 'flagged';
+  const filters: ReviewFilters = {
+    q: searchParams.get('q') ?? '',
+    targetType: (searchParams.get('targetType') as ReviewFilters['targetType'] | null) ?? '',
+    triage: (searchParams.get('triage') as ReviewFilters['triage'] | null) ?? 'open',
   };
+  const page = Math.max(1, Number(searchParams.get('page') ?? 1));
+  const limit = Math.max(1, Number(searchParams.get('limit') ?? DEFAULT_LIMIT));
+  const { orderBy, order } = fromSortParam(searchParams.get('sort'));
+
+  /** Writes params, resetting to page 1 for anything that changes the result set. */
+  const setParams = useCallback(
+    (next: Record<string, string | null>) => {
+      const params = new URLSearchParams(searchParams);
+      for (const [key, value] of Object.entries(next)) {
+        if (value === null || value === '') params.delete(key);
+        else params.set(key, value);
+      }
+      if (!('page' in next)) params.delete('page');
+      setSearchParams(params, { replace: true });
+    },
+    [searchParams, setSearchParams],
+  );
+
+  const query = useMemo<ReviewsListQuery>(
+    () => ({
+      ...ratingQuery(ratingTab),
+      targetType: filters.targetType || undefined,
+      handled: filters.triage === 'any' ? undefined : filters.triage === 'handled',
+      q: filters.q || undefined,
+      sort: toSortParam(orderBy, order),
+      page,
+      limit,
+    }),
+    [ratingTab, filters.targetType, filters.triage, filters.q, orderBy, order, page, limit],
+  );
+
+  const { data, isLoading, isError, error } = useReviewsList(query);
+  const setHandled = useSetReviewHandled();
+
+  const rows = data?.items ?? [];
+  const total = data?.meta.total ?? 0;
+  // Per-star totals for the whole filter, so every tab carries its number
+  // rather than only the one being viewed.
+  const counts = data?.meta.counts;
+
+  const handleFilters = useCallback(
+    (patch: Partial<ReviewFilters>) => {
+      setParams(
+        Object.fromEntries(Object.entries(patch).map(([key, value]) => [key, value ?? null])),
+      );
+    },
+    [setParams],
+  );
+
+  const handleResetFilters = useCallback(() => {
+    setParams({ q: null, targetType: null, triage: null });
+  }, [setParams]);
+
+  const handleSort = useCallback(
+    (id: string) => {
+      if (!SORTABLE.has(id)) return;
+      const next = orderBy === id && order === 'desc' ? 'asc' : 'desc';
+      setParams({ sort: toSortParam(id, next) });
+    },
+    [order, orderBy, setParams],
+  );
+
+  const toggleHandled = useCallback(
+    (row: Review) => {
+      setHandled.mutate({ id: row.id ?? row._id, handled: !row.handledAt });
+    },
+    [setHandled],
+  );
+
+  const canReset = !!filters.q || !!filters.targetType || filters.triage !== 'open';
+  const notFound = !isLoading && rows.length === 0;
 
   return (
-    <Dialog
-      open={review !== null}
-      onClose={onClose}
-      title="Create quality ticket"
-      description={
-        createdTicketId
-          ? undefined
-          : 'Raises a product-quality support ticket linked to this review.'
-      }
-      footer={
-        createdTicketId ? (
-          <Button variant="primary" onClick={onClose}>
-            Done
-          </Button>
-        ) : (
-          <>
-            <Button variant="outline" onClick={onClose} disabled={create.isPending}>
-              Cancel
-            </Button>
-            <Button variant="primary" onClick={submit} disabled={create.isPending}>
-              {create.isPending ? 'Creating…' : 'Create ticket'}
-            </Button>
-          </>
-        )
-      }
-    >
-      {createdTicketId ? (
-        <div className="space-y-3 text-sm">
-          <p className="text-emerald-600">Ticket created successfully.</p>
-          <Link
-            to={`/admin/support/${createdTicketId}`}
-            className="inline-flex items-center gap-1 font-medium text-primary hover:underline"
-            onClick={onClose}
-          >
-            View ticket
-            <ExternalLink className="h-4 w-4" />
-          </Link>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          <TextField
-            fullWidth
-            label="Subject"
-            multiline
-            minRows={1}
-            value={subject}
-            onChange={(e) => setSubject(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-          />
-          <TextField
-            fullWidth
-            label="Description"
-            multiline
-            minRows={5}
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            InputLabelProps={{ shrink: true }}
-          />
-          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <Badge variant="muted">category: product_quality</Badge>
-            {review.raterName && (
-              <Badge variant="muted">reviewer: {review.raterName}</Badge>
-            )}
-            {review.orderNumber && (
-              <Badge variant="muted">
-                order: <span className="font-mono">{review.orderNumber}</span>
-              </Badge>
-            )}
-          </div>
-          {error && <p className="text-sm text-destructive">{error}</p>}
-        </div>
+    <>
+      <PageHeader
+        title="Quality Monitor"
+        description="Low-rated reviews on products and sellers, newest first. Raise a product-quality ticket from a review, or mark it as dealt with once it has been answered."
+      />
+
+      <Box sx={{ mt: 3 }}>
+        <ScopedAdminBanner />
+      </Box>
+
+      {isError && (
+        <Alert severity="error" sx={{ mt: 3 }}>
+          {error instanceof Error ? error.message : 'Could not load reviews'}
+        </Alert>
       )}
-    </Dialog>
+
+      {setHandled.isError && (
+        <Alert severity="error" sx={{ mt: 3 }}>
+          {setHandled.error instanceof Error
+            ? setHandled.error.message
+            : 'Could not update the review'}
+        </Alert>
+      )}
+
+      <Card sx={{ mt: 3 }}>
+        <Tabs
+          value={ratingTab}
+          onChange={(_e, value) => setParams({ rating: value })}
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
+          sx={{
+            px: 2.5,
+            boxShadow: (theme) =>
+              `inset 0 -2px 0 0 ${varAlpha(theme.vars.palette.grey['500Channel'], 0.08)}`,
+          }}
+        >
+          {RATING_TABS.map((tab) => (
+            <Tab
+              key={tab.value}
+              iconPosition="end"
+              value={tab.value}
+              label={tab.label}
+              icon={
+                <Label
+                  variant={tab.value === ratingTab ? 'filled' : 'soft'}
+                  color={
+                    (tab.value === 'flagged' && 'error') ||
+                    (tab.value === '1' && 'error') ||
+                    (tab.value === '2' && 'warning') ||
+                    (tab.value === '3' && 'info') ||
+                    ((tab.value === '4' || tab.value === '5') && 'success') ||
+                    'default'
+                  }
+                >
+                  {tabCount(tab.value, counts)}
+                </Label>
+              }
+            />
+          ))}
+        </Tabs>
+
+        <ReviewTableToolbar filters={filters} onFilters={handleFilters} />
+
+        {canReset && (
+          <ReviewTableFiltersResult
+            filters={filters}
+            totalResults={total}
+            onFilters={handleFilters}
+            onReset={handleResetFilters}
+            sx={{ p: 2.5, pt: 0 }}
+          />
+        )}
+
+        <Box sx={{ position: 'relative' }}>
+          <Scrollbar>
+            <Table size={table.dense ? 'small' : 'medium'} sx={{ minWidth: 1080 }}>
+              <TableHeadCustom
+                order={order}
+                orderBy={orderBy}
+                headLabel={TABLE_HEAD}
+                rowCount={rows.length}
+                onSort={handleSort}
+              />
+
+              <TableBody>
+                {isLoading
+                  ? Array.from({ length: Math.min(limit, 5) }).map((_, index) => (
+                      <TableSkeleton key={index} sx={{ height: table.dense ? 56 : 76 }} />
+                    ))
+                  : rows.map((row) => {
+                      const id = row.id ?? row._id;
+                      return (
+                        <ReviewTableRow
+                          key={id}
+                          row={row}
+                          busy={setHandled.isPending && setHandled.variables?.id === id}
+                          onRaiseTicket={() => setTicketFor(row)}
+                          onToggleHandled={() => toggleHandled(row)}
+                        />
+                      );
+                    })}
+
+                <TableEmptyRows
+                  height={table.dense ? 56 : 76}
+                  emptyRows={emptyRows(page - 1, limit, total)}
+                />
+
+                {/* An empty queue is the goal, so it reads as good news rather
+                    than as a missing list. */}
+                {notFound && (
+                  <TableRow>
+                    <TableCell colSpan={TABLE_HEAD.length}>
+                      <EmptyContent
+                        filled
+                        sx={{ py: 10 }}
+                        title={canReset ? 'Nothing matches' : 'Nothing waiting'}
+                        description={
+                          canReset
+                            ? 'Try another rating tab, or clear the filters.'
+                            : 'No low-rated review is sitting unanswered right now.'
+                        }
+                      />
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </Scrollbar>
+        </Box>
+
+        <TablePaginationCustom
+          page={page - 1}
+          dense={table.dense}
+          count={total}
+          rowsPerPage={limit}
+          rowsPerPageOptions={[5, 10, 25, 50]}
+          onPageChange={(_e, next) => setParams({ page: String(next + 1) })}
+          onChangeDense={table.onChangeDense}
+          onRowsPerPageChange={(e) => setParams({ limit: e.target.value, page: '1' })}
+        />
+      </Card>
+
+      <QualityTicketDialog review={ticketFor} onClose={() => setTicketFor(null)} />
+    </>
   );
 };

@@ -79,6 +79,25 @@ export const useCreateTicket = () => {
   });
 };
 
+export interface CreateTicketOnBehalfPayload extends CreateTicketPayload {
+  /** The buyer or seller whose complaint this is — the ticket is filed to them. */
+  raisedBy: string;
+}
+
+/**
+ * Staff opening a ticket for whoever complained. The plain create endpoint only
+ * accepts buyers and sellers, so an admin acting on a bad review has to go
+ * through this one — the ticket still belongs to the person who complained.
+ */
+export const useCreateTicketOnBehalf = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (payload: CreateTicketOnBehalfPayload) =>
+      api.post<SupportTicket>('/support/tickets/on-behalf', payload),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ticketKeys.all }),
+  });
+};
+
 export const useClaimTicket = () => {
   const qc = useQueryClient();
   return useMutation({
