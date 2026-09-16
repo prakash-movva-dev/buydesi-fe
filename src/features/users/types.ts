@@ -13,6 +13,8 @@ export interface SafeUser {
   preferredLanguage: string;
   status: UserStatus;
   clusterId?: string;
+  /** The region a REGIONAL_ADMIN oversees. */
+  regionId?: string;
   zone?: string;
   category?: string;
   emailVerifiedAt: string | null;
@@ -48,4 +50,8 @@ export interface UsersListMeta {
   total: number;
   page: number;
   limit: number;
+  /** Accounts per status, ignoring the status filter. */
+  counts?: Record<string, number>;
+  /** Accounts per role, ignoring the role filter. */
+  roleCounts?: Record<string, number>;
 }

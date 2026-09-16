@@ -36,6 +36,8 @@ export interface SafeUser {
   preferredLanguage: string;
   status: UserStatus;
   clusterId?: string;
+  /** The region a REGIONAL_ADMIN oversees. */
+  regionId?: string;
   zone?: string;
   category?: string;
   emailVerifiedAt: string | null;

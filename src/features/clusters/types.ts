@@ -68,6 +68,8 @@ export interface ClustersListMeta {
   total: number;
   page: number;
   limit: number;
+  /** Clusters per status for the current filter, ignoring the status filter. */
+  counts?: Record<string, number>;
 }
 
 export interface CreateClusterInput {

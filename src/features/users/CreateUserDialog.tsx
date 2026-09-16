@@ -22,16 +22,20 @@ interface Props {
 }
 
 const FieldError = ({ show, message }: { show: boolean; message: string | null }) =>
-  show && message ? <p className="text-xs text-destructive">{message}</p> : null;
+  show && message ? (
+    <Typography variant="caption" sx={{ color: 'error.main' }}>
+      {message}
+    </Typography>
+  ) : null;
 
 const ROLE_OPTIONS: Array<{ value: UserRole; label: string; description: string }> = [
   { value: UserRole.SUB_SUPER_ADMIN, label: 'Sub-Super Admin', description: 'Near-super powers, no destructive actions.' },
   { value: UserRole.REGIONAL_ADMIN, label: 'Regional Admin', description: 'Supply & operations across a region (multiple clusters).' },
-  { value: UserRole.CLUSTER_ADMIN, label: 'Cluster Admin', description: 'Operations for one cluster.' },
-  { value: UserRole.CATEGORY_ADMIN, label: 'Category Admin', description: 'Catalog quality for one category branch.' },
-  { value: UserRole.SUPPORT_ADMIN, label: 'Support Admin', description: 'Tickets, returns, refunds.' },
+  { value: UserRole.CLUSTER_ADMIN, label: 'Cluster Admin', description: 'Runs one cluster — and a cluster has only one.' },
+  { value: UserRole.CATEGORY_ADMIN, label: 'Category Admin', description: 'Catalogue quality for one category, across every cluster.' },
+  { value: UserRole.SUPPORT_ADMIN, label: 'Support Admin', description: 'Tickets, returns and refunds for one cluster — one per cluster.' },
   { value: UserRole.SELLER, label: 'Seller', description: 'Onboarded farmer / vendor.' },
-  { value: UserRole.PROMOTER, label: 'Promoter', description: 'Referral runner with a DESI coupon.' },
+  { value: UserRole.PROMOTER, label: 'Affiliate', description: 'Earns a share of the sales they bring in through their own links.' },
   { value: UserRole.BUYER, label: 'Buyer', description: 'End consumer (rare for admin-create).' },
 ];
 
@@ -121,22 +125,22 @@ export const CreateUserDialog = ({ open, onClose }: Props) => {
     if (!isSuperTier && user?.clusterId) setClusterId(user.clusterId);
   }, [open, isSuperTier, user?.clusterId]);
 
+  // A category admin owns their category across every cluster, so they are the
+  // one scoped role with no cluster at all.
   const needsCluster =
     role === UserRole.CLUSTER_ADMIN ||
     role === UserRole.SUPPORT_ADMIN ||
-    role === UserRole.CATEGORY_ADMIN ||
     role === UserRole.SELLER ||
     role === UserRole.PROMOTER;
   const needsRegion = role === UserRole.REGIONAL_ADMIN;
   const needsCategory = role === UserRole.CATEGORY_ADMIN;
 
   // Mirrors the backend's required-scope rules:
-  //   CLUSTER_ADMIN → clusterId, REGIONAL_ADMIN → regionId,
-  //   CATEGORY_ADMIN → cluster + category, SUPPORT_ADMIN → clusterId.
+  //   CLUSTER_ADMIN → clusterId, SUPPORT_ADMIN → clusterId,
+  //   REGIONAL_ADMIN → regionId, CATEGORY_ADMIN → category only.
   const clusterRequired =
     role === UserRole.CLUSTER_ADMIN ||
     role === UserRole.SUPPORT_ADMIN ||
-    role === UserRole.CATEGORY_ADMIN ||
     role === UserRole.SELLER;
 
   // ── Field-level validation (issue US-CA.1 / US-CA.23) ────────────────────
@@ -146,7 +150,9 @@ export const CreateUserDialog = ({ open, onClose }: Props) => {
   const contactError =
     !email.trim() && !mobile.trim() ? 'Provide an email or mobile.' : null;
   const passwordError = password.length < 8 ? 'Password must be at least 8 characters.' : null;
-  const categoryError = needsCategory && !categoryId ? 'Pick the category this admin will own.' : null;
+  const categoryError = needsCategory && !categoryId
+    ? 'Pick the category this admin will own across the platform.'
+    : null;
   const clusterError = clusterRequired && !clusterId ? 'Pick the cluster this user belongs to.' : null;
   const regionError = needsRegion && !regionId ? 'Pick the region this admin will oversee.' : null;
 
@@ -212,7 +218,6 @@ export const CreateUserDialog = ({ open, onClose }: Props) => {
           </Button>
         </>
       }
-      className="max-w-2xl"
     >
       <Stack spacing={2.5}>
         {error && <Alert severity="error">{error}</Alert>}

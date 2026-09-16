@@ -127,3 +127,31 @@ export const useAttachClusterAdmin = (id: string) => {
     },
   });
 };
+
+// ─── Staffing a cluster ───────────────────────────────────────────────────
+
+/**
+ * Moves a scoped admin onto a cluster, or off it with `clusterId: null`.
+ *
+ * A cluster has one Cluster Admin and one Support Admin, so assigning onto an
+ * occupied slot is refused by the API with the holder's name — freeing them
+ * first is a deliberate act.
+ */
+export const useAssignAdmin = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      userId,
+      ...body
+    }: {
+      userId: string;
+      clusterId?: string | null;
+      regionId?: string | null;
+      category?: string | null;
+    }) => api.put<{ id: string }>(`/users/${userId}/assignment`, body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: clusterKeys.all });
+      qc.invalidateQueries({ queryKey: ['users'] });
+    },
+  });
+};

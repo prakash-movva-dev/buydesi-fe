@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { MapPin } from 'lucide-react';
 import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Button from '@mui/material/Button';
+import LoadingButton from '@mui/lab/LoadingButton';
 import Chip from '@mui/material/Chip';
 import Alert from '@mui/material/Alert';
 import FormControlLabel from '@mui/material/FormControlLabel';
@@ -12,9 +14,9 @@ import Switch from '@mui/material/Switch';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import Autocomplete from '@mui/material/Autocomplete';
+import { Iconify } from '@/components/iconify';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 import { PhoneInput } from '@/components/phone-input';
-import { Button } from '@/components/ui/Button';
 import { DateField } from '@/components/ui/DateField';
 import { Dialog } from '@/components/ui/Dialog';
 import { useRegionsList } from '@/features/regions/api';
@@ -175,34 +177,40 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
       title={isEdit ? `Edit cluster — ${editing!.name}` : 'New cluster'}
       description="A cluster is a geographic operating area defined by its PIN codes. Admins are assigned from the cluster's detail page."
       footer={
-        <div className="flex w-full items-center justify-between gap-2">
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+          spacing={1}
+          sx={{ width: 1 }}
+        >
           <Button
-            variant="ghost"
+            color="inherit"
             onClick={() => setStep((s) => Math.max(0, s - 1))}
             disabled={step === 0 || submitting}
           >
             Back
           </Button>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={onClose} disabled={submitting}>
+          <Stack direction="row" spacing={1.5}>
+            <Button color="inherit" variant="outlined" onClick={onClose} disabled={submitting}>
               Cancel
             </Button>
             {isLast ? (
-              <Button onClick={submit} disabled={submitting || !canSubmit}>
-                {submitting ? 'Saving…' : isEdit ? 'Save changes' : 'Create cluster'}
-              </Button>
+              <LoadingButton variant="contained" loading={submitting} disabled={!canSubmit} onClick={submit}>
+                {isEdit ? 'Save changes' : 'Create cluster'}
+              </LoadingButton>
             ) : (
               <Button
+                variant="contained"
                 onClick={() => setStep((s) => Math.min(STEPS.length - 1, s + 1))}
                 disabled={step === 0 && !locationValid}
               >
                 Next
               </Button>
             )}
-          </div>
-        </div>
+          </Stack>
+        </Stack>
       }
-      className="max-w-2xl"
     >
       {/* Stepper header */}
       <Stepper activeStep={step} alternativeLabel nonLinear sx={{ mb: 3 }}>
@@ -214,10 +222,22 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
       </Stepper>
 
       {/* Step body — bounded height so the modal never runs off-screen. */}
-      <div className="max-h-[55vh] min-h-[280px] space-y-4 overflow-y-auto pr-1">
+      <Box
+        sx={{
+          maxHeight: '55vh',
+          minHeight: 280,
+          overflowY: 'auto',
+          pr: 1,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 2,
+        }}
+      >
         {step === 0 && (
           <>
-            <p className="text-xs text-muted-foreground">{STEPS[0].hint}</p>
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+              {STEPS[0].hint}
+            </Typography>
             <Box
               sx={{
                 display: 'grid',
@@ -281,7 +301,9 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
 
         {step === 1 && (
           <>
-            <p className="text-xs text-muted-foreground">{STEPS[1].hint}</p>
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+              {STEPS[1].hint}
+            </Typography>
             <Box
               sx={{
                 display: 'grid',
@@ -325,17 +347,19 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
                 onChange={setActiveCategories}
                 placeholder="Which categories this cluster serves…"
               />
-              <p className="text-xs text-muted-foreground">
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                 Reflect the cluster's local produce (e.g. a Coorg cluster carries Coffee &amp;
                 Spices).
-              </p>
+              </Typography>
             </Box>
           </>
         )}
 
         {step === 2 && (
           <>
-            <p className="text-xs text-muted-foreground">{STEPS[2].hint}</p>
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+              {STEPS[2].hint}
+            </Typography>
             <Box
               sx={{
                 display: 'grid',
@@ -402,7 +426,9 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
 
         {step === 3 && (
           <>
-            <p className="text-xs text-muted-foreground">{STEPS[3].hint}</p>
+            <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+              {STEPS[3].hint}
+            </Typography>
             <TextField
               fullWidth
               multiline
@@ -465,16 +491,25 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
             </Box>
 
             {isEdit && (
-              <p className="rounded-md border border-border bg-secondary/30 p-3 text-xs text-muted-foreground">
+              <Typography
+                variant="caption"
+                sx={{
+                  display: 'block',
+                  p: 1.5,
+                  borderRadius: 1,
+                  bgcolor: 'background.neutral',
+                  color: 'text.secondary',
+                }}
+              >
                 Assign the Cluster Admin and appoint Category / Support admins from this
                 cluster's detail page.
-              </p>
+              </Typography>
             )}
           </>
         )}
 
         {error && <Alert severity="error">{error}</Alert>}
-      </div>
+      </Box>
     </Dialog>
   );
 };
@@ -537,7 +572,7 @@ const PincodeInput = ({
               size="small"
               variant="soft"
               color="default"
-              icon={<MapPin size={14} />}
+              icon={<Iconify icon="solar:map-point-bold" width={14} />}
               label={pin}
             />
           );

@@ -79,7 +79,6 @@ export const RegionFormDialog = ({ open, editing, onClose }: Props) => {
           </Button>
         </>
       }
-      className="max-w-2xl"
     >
       <Stack spacing={2.5}>
         {error && <Alert severity="error">{error}</Alert>}
