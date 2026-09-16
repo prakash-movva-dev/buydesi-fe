@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   Map,
   Megaphone,
+  PenLine,
   PackageSearch,
   Receipt,
   ReceiptText,
@@ -97,6 +98,7 @@ export const navSections: NavSection[] = [
       { label: 'Products', path: '/seller/products', icon: Box, roles: [UserRole.SELLER] },
       { label: 'Orders', path: '/seller/orders', icon: ShoppingBag, roles: [UserRole.SELLER] },
       { label: 'Storefront', path: '/seller/storefront', icon: Store, roles: [UserRole.SELLER] },
+      { label: 'My stories', path: '/seller/stories', icon: PenLine, roles: [UserRole.SELLER] },
     ],
   },
   {

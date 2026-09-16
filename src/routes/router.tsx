@@ -37,6 +37,7 @@ import { MyPayoutsPage } from '@/features/seller/payouts/MyPayoutsPage';
 import { MyProductsPage } from '@/features/seller/products/MyProductsPage';
 import { SellerProductFormPage } from '@/features/seller/products/ProductFormPage';
 import { SellerProductViewPage } from '@/features/seller/products/ProductViewPage';
+import { MyStoriesPage } from '@/features/seller/stories/MyStoriesPage';
 import { MyCommissionPage } from '@/features/seller/profile/MyCommissionPage';
 import { ProfilePage as SellerProfilePage } from '@/features/seller/profile/ProfilePage';
 import { SellerGate } from '@/features/seller/SellerGate';
@@ -247,6 +248,7 @@ const router = createBrowserRouter([
                   { path: '/seller/orders/:id', element: <SellerOrderDetailPage /> },
                   { path: '/seller/wallet', element: <MyWalletPage /> },
                   { path: '/seller/payouts', element: <MyPayoutsPage /> },
+                  { path: '/seller/stories', element: <MyStoriesPage /> },
                   { path: '/seller/commission', element: <MyCommissionPage /> },
                   { path: '/seller/storefront', element: <SellerStorefrontPage /> },
                   { path: '/seller/analytics', element: <MyAnalyticsPage /> },
