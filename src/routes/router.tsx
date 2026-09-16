@@ -16,14 +16,17 @@ import { PayoutsPage } from '@/features/payouts/PayoutsPage';
 import { ProductDetailPage } from '@/features/products/ProductDetailPage';
 import { ProductsListPage } from '@/features/products/ProductsListPage';
 import { StockMonitorPage } from '@/features/products/StockMonitorPage';
-import { PromotersPage } from '@/features/promoters/PromotersPage';
+import { AffiliatesListPage } from '@/features/affiliates/AffiliatesListPage';
+import { AffiliateDetailPage } from '@/features/affiliates/AffiliateDetailPage';
+import { ConversionsListPage } from '@/features/affiliates/ConversionsListPage';
 import { PromotionsPage } from '@/features/promotions/PromotionsPage';
 import { QualityMonitorPage } from '@/features/quality-monitor/QualityMonitorPage';
 import { RegionsPage } from '@/features/regions/RegionsPage';
 import { ReportsPage } from '@/features/reports/ReportsPage';
 import { PromoterDashboard } from '@/features/promoter/dashboard/PromoterDashboard';
 import { PromoterProfilePage } from '@/features/promoter/profile/PromoterProfilePage';
-import { PromoterSharePage } from '@/features/promoter/share/SharePage';
+import { MyLinksPage } from '@/features/promoter/links/MyLinksPage';
+import { MyEarningsPage } from '@/features/promoter/earnings/MyEarningsPage';
 import { PromoterTicketsPage } from '@/features/promoter/support/PromoterTicketsPage';
 import { ReviewsPage } from '@/features/reviews/ReviewsPage';
 import { MyAnalyticsPage } from '@/features/seller/analytics/MyAnalyticsPage';
@@ -180,7 +183,10 @@ const router = createBrowserRouter([
               { path: '/admin/commission', element: <CommissionPage /> },
               { path: '/admin/wallet', element: <WalletPage /> },
               { path: '/admin/payouts', element: <PayoutsPage /> },
-              { path: '/admin/promoters', element: <PromotersPage /> },
+              { path: '/admin/affiliates', element: <AffiliatesListPage /> },
+              // Before ':id' so it is not read as an affiliate id.
+              { path: '/admin/affiliates/conversions', element: <ConversionsListPage /> },
+              { path: '/admin/affiliates/:id', element: <AffiliateDetailPage /> },
               { path: '/admin/promotions', element: <PromotionsPage /> },
               { path: '/admin/clusters', element: <ClustersPage /> },
               { path: '/admin/clusters/:id', element: <ClusterDetailPage /> },
@@ -219,7 +225,8 @@ const router = createBrowserRouter([
             element: <ProtectedRoute roles={[UserRole.PROMOTER]} />,
             children: [
               { path: '/promoter/dashboard', element: <PromoterDashboard /> },
-              { path: '/promoter/share', element: <PromoterSharePage /> },
+              { path: '/promoter/links', element: <MyLinksPage /> },
+              { path: '/promoter/earnings', element: <MyEarningsPage /> },
               { path: '/promoter/support', element: <PromoterTicketsPage /> },
               { path: '/promoter/support/:id', element: <TicketDetailPage /> },
               { path: '/promoter/profile', element: <PromoterProfilePage /> },

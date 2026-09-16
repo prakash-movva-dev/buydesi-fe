@@ -26,6 +26,7 @@ import {
   TrendingUp,
   UserCheck,
   Users,
+  Link2,
   Wallet,
   type LucideIcon,
 } from 'lucide-react';
@@ -148,9 +149,15 @@ export const navSections: NavSection[] = [
     label: 'Promote',
     items: [
       {
-        label: 'Share kit',
-        path: '/promoter/share',
-        icon: Gift,
+        label: 'Share links',
+        path: '/promoter/links',
+        icon: Link2,
+        roles: [UserRole.PROMOTER],
+      },
+      {
+        label: 'Earnings',
+        path: '/promoter/earnings',
+        icon: Wallet,
         roles: [UserRole.PROMOTER],
       },
     ],
@@ -270,7 +277,7 @@ export const navSections: NavSection[] = [
   {
     label: 'Growth',
     items: [
-      { label: 'Promoters', path: '/admin/promoters', icon: Gift, roles: OPS_ADMINS },
+      { label: 'Affiliates', path: '/admin/affiliates', icon: Gift, roles: OPS_ADMINS },
       { label: 'Promotions', path: '/admin/promotions', icon: Megaphone, roles: OPS_ADMINS },
       {
         label: 'Clusters',
