@@ -89,7 +89,7 @@ function AdminOverview() {
       key: 'products',
       icon: 'solar:box-bold',
       label: 'Products awaiting review',
-      hint: 'Open the review queue',
+      count: o?.products.pendingReview,
       onClick: () => navigate('/admin/products?status=PENDING'),
     },
     {
@@ -233,7 +233,9 @@ function AdminOverview() {
           </Grid>
 
           <Grid xs={12} md={isSuperTier ? 7 : 12}>
-            <NeedsAttentionCard items={attention} loading={loading} />
+            {/* Two columns, not three: this card sits in a 7-of-12 slot, and
+                the grid's breakpoints can only see the viewport. */}
+            <NeedsAttentionCard items={attention} loading={loading} columns={2} />
           </Grid>
 
           {isSuperTier && (

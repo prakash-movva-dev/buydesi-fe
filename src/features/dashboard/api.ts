@@ -7,6 +7,8 @@ export interface DashboardOverview {
   period: DashboardPeriod;
   range: { from: string; to: string };
   sellers: { total: number; pendingApproval: number; approved: number };
+  /** Catalogue queue — products submitted and not yet reviewed. */
+  products: { pendingReview: number };
   buyers: number;
   orders: { total: number; placed: number; cancelled: number; revenueInr: number };
   payouts: { pending: number; paid: number };

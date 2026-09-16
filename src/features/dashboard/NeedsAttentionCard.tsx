@@ -53,10 +53,17 @@ export function NeedsAttentionCard({
           p: 3,
           gap: 2,
           display: 'grid',
+          // `minmax(0, …)` rather than a bare `1fr`: a bare `1fr` carries an
+          // automatic min-content floor, so a tile whose label is wider than
+          // its share refuses to shrink and the whole grid bursts out of the
+          // card. These breakpoints watch the viewport, but the card is only
+          // as wide as its column — on a 1440px screen this card sits in a
+          // 7-of-12 slot at ~600px, which is how three "equal" columns came
+          // out as 216 / 255 / 240 and overflowed by 160px.
           gridTemplateColumns: {
             xs: '1fr',
-            sm: 'repeat(2, 1fr)',
-            lg: `repeat(${columns}, 1fr)`,
+            sm: 'repeat(2, minmax(0, 1fr))',
+            lg: `repeat(${columns}, minmax(0, 1fr))`,
           },
         }}
       >
@@ -78,7 +85,12 @@ export function NeedsAttentionCard({
               },
             }}
           >
-            <Stack direction="row" spacing={2} alignItems="center" sx={{ minWidth: 0 }}>
+            <Stack
+              direction="row"
+              spacing={2}
+              alignItems="center"
+              sx={{ minWidth: 0, flexGrow: 1 }}
+            >
               <Iconify icon={item.icon} width={22} sx={{ flexShrink: 0, color: 'text.disabled' }} />
               <ListItemText
                 primary={item.label}
@@ -89,13 +101,20 @@ export function NeedsAttentionCard({
               />
             </Stack>
 
-            {loading ? (
-              <Skeleton width={28} height={22} />
-            ) : item.count !== undefined ? (
-              <Label color={item.count > 0 ? 'warning' : 'default'}>{item.count}</Label>
-            ) : (
-              <Iconify icon="eva:arrow-ios-forward-fill" width={18} sx={{ color: 'text.disabled' }} />
-            )}
+            {/* Never squeezed: the label truncates, the count stays readable. */}
+            <Box sx={{ flexShrink: 0, ml: 1, display: 'flex', alignItems: 'center' }}>
+              {loading ? (
+                <Skeleton width={28} height={22} />
+              ) : item.count !== undefined ? (
+                <Label color={item.count > 0 ? 'warning' : 'default'}>{item.count}</Label>
+              ) : (
+                <Iconify
+                  icon="eva:arrow-ios-forward-fill"
+                  width={18}
+                  sx={{ color: 'text.disabled' }}
+                />
+              )}
+            </Box>
           </ButtonBase>
         ))}
       </Box>
