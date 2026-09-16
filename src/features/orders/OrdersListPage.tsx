@@ -1,249 +1,304 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search } from 'lucide-react';
+
 import Box from '@mui/material/Box';
+import Tab from '@mui/material/Tab';
+import Tabs from '@mui/material/Tabs';
 import Card from '@mui/material/Card';
-import Stack from '@mui/material/Stack';
 import Table from '@mui/material/Table';
-import MenuItem from '@mui/material/MenuItem';
+import Alert from '@mui/material/Alert';
+import Button from '@mui/material/Button';
 import TableRow from '@mui/material/TableRow';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
-import TextField from '@mui/material/TextField';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { Skeleton } from '@/components/ui/Skeleton';
+
+import { varAlpha } from '@/theme/styles';
+
+import { useAuth } from '@/lib/auth';
+import { UserRole } from '@/types/api';
+import { Label } from '@/components/label';
+import { Iconify } from '@/components/iconify';
 import { Scrollbar } from '@/components/scrollbar';
-import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { EmptyContent } from '@/components/empty-content';
+import {
+  useTable,
+  emptyRows,
+  TableSkeleton,
+  TableEmptyRows,
+  TableHeadCustom,
+  TablePaginationCustom,
+} from '@/components/table';
+
+import { useClustersList } from '@/features/clusters/api';
 import { ScopedAdminBanner } from '@/features/scoped-admin/ScopedAdminBanner';
-import { formatDate, formatInr } from '@/lib/format';
+
 import { useOrdersList } from './api';
-import { OrderStatusBadge, PaymentStatusBadge } from './status-badge';
-import type { OrderStatus, OrdersListQuery, PaymentMode } from './types';
+import { ORDER_LABEL } from './status-badge';
+import { OrderTableRow } from './order-table-row';
+import { OrderTableToolbar, type OrderFilters } from './order-table-toolbar';
+import { OrderTableFiltersResult } from './order-table-filters-result';
+import type { OrderStatus, OrdersListQuery } from './types';
 
-const STATUS_OPTIONS: Array<{ value: '' | OrderStatus; label: string }> = [
-  { value: '', label: 'All statuses' },
-  { value: 'PLACED', label: 'Placed' },
-  { value: 'PACKED', label: 'Packed' },
-  { value: 'DISPATCHED', label: 'Dispatched' },
-  { value: 'DELIVERED', label: 'Delivered' },
-  { value: 'CANCELLED', label: 'Cancelled' },
-  { value: 'RETURNED', label: 'Returned' },
+// ----------------------------------------------------------------------
+
+const STATUS_TABS: Array<{ value: '' | OrderStatus; label: string }> = [
+  { value: '', label: 'All' },
+  { value: 'PLACED', label: ORDER_LABEL.PLACED },
+  { value: 'PACKED', label: ORDER_LABEL.PACKED },
+  { value: 'DISPATCHED', label: ORDER_LABEL.DISPATCHED },
+  { value: 'DELIVERED', label: ORDER_LABEL.DELIVERED },
+  { value: 'CANCELLED', label: ORDER_LABEL.CANCELLED },
+  { value: 'RETURNED', label: ORDER_LABEL.RETURNED },
 ];
 
-const PAGE_SIZE = 20;
-
-const HEAD = [
+const TABLE_HEAD = [
   { id: 'order', label: 'Order' },
-  { id: 'status', label: 'Status' },
-  { id: 'payment', label: 'Payment' },
-  { id: 'total', label: 'Total' },
-  { id: 'items', label: 'Items' },
-  { id: 'placed', label: 'Placed' },
-  { id: 'actions', label: '' },
+  { id: 'status', label: 'Status', width: 150 },
+  { id: 'payment', label: 'Payment', width: 140 },
+  { id: 'total', label: 'Total', align: 'right' as const, width: 140 },
+  { id: 'items', label: 'Items', align: 'right' as const, width: 100 },
+  { id: 'where', label: 'Going to', width: 140 },
+  { id: 'placed', label: 'Placed', width: 140 },
+  { id: '', width: 60 },
 ];
 
+const DEFAULT_LIMIT = 10;
+
+// ----------------------------------------------------------------------
+
+/**
+ * Every order in the viewer's scope.
+ *
+ * "Needs attention" is a first-class view rather than a filter buried in a
+ * dropdown: cancelled, returned, or carrying an open ticket is the set someone
+ * actually has to work, and it does not line up with any single status.
+ */
 export const OrdersListPage = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
+
   const [searchParams, setSearchParams] = useSearchParams();
+  const table = useTable({ defaultRowsPerPage: DEFAULT_LIMIT });
+
+  const canScopeCluster =
+    user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.SUB_SUPER_ADMIN;
 
   const status = (searchParams.get('status') as OrderStatus | null) ?? '';
-  const problem = searchParams.get('problem') === '1';
+  const problem = searchParams.get('problem') === 'true';
+  const filters: OrderFilters = {
+    q: searchParams.get('q') ?? '',
+    cluster: searchParams.get('cluster') ?? '',
+  };
   const page = Math.max(1, Number(searchParams.get('page') ?? 1));
+  const limit = Math.max(1, Number(searchParams.get('limit') ?? DEFAULT_LIMIT));
+
+  const setParams = useCallback(
+    (next: Record<string, string | null>) => {
+      const params = new URLSearchParams(searchParams);
+      for (const [key, value] of Object.entries(next)) {
+        if (value === null || value === '') params.delete(key);
+        else params.set(key, value);
+      }
+      if (!('page' in next)) params.delete('page');
+      setSearchParams(params, { replace: true });
+    },
+    [searchParams, setSearchParams],
+  );
 
   const query = useMemo<OrdersListQuery>(
     () => ({
+      // The problem view rewrites status server-side, so sending both would be
+      // a contradiction — the narrower ask wins.
       status: problem ? undefined : status || undefined,
-      problem: problem || undefined,
+      problem: problem ? true : undefined,
+      clusterId: filters.cluster || undefined,
+      q: filters.q || undefined,
       page,
-      limit: PAGE_SIZE,
+      limit,
     }),
-    [status, problem, page],
+    [status, problem, filters.cluster, filters.q, page, limit],
   );
 
   const { data, isLoading, isError, error } = useOrdersList(query);
+  const { data: clusters } = useClustersList({ page: 1, limit: 100 });
+
+  const rows = data?.items ?? [];
   const total = data?.meta.total ?? 0;
+  const counts = data?.meta.counts;
 
-  // Page-local scrubber — backend doesn't support order-number search yet.
-  const [scrub, setScrub] = useState('');
-  const [paymentFilter, setPaymentFilter] = useState<'' | PaymentMode>('');
-  const [kindFilter, setKindFilter] = useState<'' | 'regular' | 'bulk'>('');
+  const clusterName = useMemo(
+    () => new Map((clusters?.items ?? []).map((c) => [c.id, c.name])),
+    [clusters],
+  );
 
-  const visible = useMemo(() => {
-    if (!data) return [];
-    const s = scrub.trim().toLowerCase();
-    return data.items.filter((o) => {
-      if (s && !(o.orderNumber.toLowerCase().includes(s) || o.id.includes(s) || o.buyerId.includes(s)))
-        return false;
-      if (paymentFilter && o.payment.mode !== paymentFilter) return false;
-      if (kindFilter && o.kind !== kindFilter) return false;
-      return true;
-    });
-  }, [data, scrub, paymentFilter, kindFilter]);
+  const handleFilters = useCallback(
+    (patch: Partial<OrderFilters>) => {
+      setParams(
+        Object.fromEntries(Object.entries(patch).map(([key, value]) => [key, value ?? null])),
+      );
+    },
+    [setParams],
+  );
 
-  const setParam = (next: Record<string, string | null>) => {
-    const params = new URLSearchParams(searchParams);
-    for (const [k, v] of Object.entries(next)) {
-      if (v === null || v === '') params.delete(k);
-      else params.set(k, v);
-    }
-    if (!('page' in next)) params.set('page', '1');
-    setSearchParams(params);
-  };
+  const canReset = !!filters.q || !!filters.cluster;
+  const notFound = !isLoading && rows.length === 0;
 
   return (
-    <Stack spacing={3}>
+    <>
       <PageHeader
         title="Orders"
-        description="Every order on the platform. Cluster admins see their cluster's sellers' orders only."
+        description="Everything bought on the platform, newest first."
+        action={
+          <Button
+            variant={problem ? 'contained' : 'outlined'}
+            color={problem ? 'warning' : 'inherit'}
+            onClick={() =>
+              setParams({ problem: problem ? null : 'true', status: null })
+            }
+            startIcon={<Iconify icon="solar:danger-triangle-bold" />}
+          >
+            Needs attention
+          </Button>
+        }
       />
 
-      <ScopedAdminBanner />
+      <Box sx={{ mt: 3 }}>
+        <ScopedAdminBanner />
+      </Box>
 
-      <Card>
-        <Stack
-          direction="row"
-          spacing={2}
-          flexWrap="wrap"
-          alignItems="center"
-          sx={{ p: 2.5 }}
+      {isError && (
+        <Alert severity="error" sx={{ mt: 3 }}>
+          {error instanceof Error ? error.message : 'Could not load orders'}
+        </Alert>
+      )}
+
+      {problem && (
+        <Alert severity="warning" sx={{ mt: 3 }}>
+          Showing orders that were cancelled or returned, or that have an open support ticket —
+          the status tabs do not apply to this view.
+        </Alert>
+      )}
+
+      <Card sx={{ mt: 3 }}>
+        <Tabs
+          value={problem ? '' : status}
+          onChange={(_e, value) => setParams({ status: value, problem: null })}
+          variant="scrollable"
+          scrollButtons="auto"
+          allowScrollButtonsMobile
+          sx={{
+            px: 2.5,
+            boxShadow: (theme) =>
+              `inset 0 -2px 0 0 ${varAlpha(theme.vars.palette.grey['500Channel'], 0.08)}`,
+          }}
         >
-          <Button
-            variant={problem ? 'primary' : 'outline'}
-            size="sm"
-            onClick={() => setParam({ problem: problem ? null : '1', status: null })}
-            title="Cancelled / returned orders, or orders with an open support ticket"
-          >
-            {problem ? 'Problem orders ✓' : 'Problem orders'}
-          </Button>
-          <TextField
-            select
-            label="Status"
-            value={status}
-            onChange={(e) => setParam({ status: e.target.value })}
-            disabled={problem}
-            InputLabelProps={{ shrink: true }}
-            sx={{ width: 200 }}
-          >
-            {STATUS_OPTIONS.map((opt) => (
-              <MenuItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            label="Payment"
-            value={paymentFilter}
-            onChange={(e) => setPaymentFilter(e.target.value as '' | PaymentMode)}
-            InputLabelProps={{ shrink: true }}
-            sx={{ width: 180 }}
-          >
-            <MenuItem value="">Any payment</MenuItem>
-            <MenuItem value="PREPAID">Prepaid</MenuItem>
-            <MenuItem value="COD">Cash on delivery</MenuItem>
-          </TextField>
-          <TextField
-            select
-            label="Kind"
-            value={kindFilter}
-            onChange={(e) => setKindFilter(e.target.value as '' | 'regular' | 'bulk')}
-            InputLabelProps={{ shrink: true }}
-            sx={{ width: 140 }}
-          >
-            <MenuItem value="">Any kind</MenuItem>
-            <MenuItem value="regular">Regular</MenuItem>
-            <MenuItem value="bulk">Bulk</MenuItem>
-          </TextField>
-          <TextField
-            value={scrub}
-            onChange={(e) => setScrub(e.target.value)}
-            placeholder="Order number / id / buyer"
-            InputProps={{
-              startAdornment: (
-                <Search className="mr-2 h-4 w-4 text-muted-foreground" />
-              ),
-            }}
-            sx={{ width: 320 }}
+          {STATUS_TABS.map((tab) => (
+            <Tab
+              key={tab.value || 'all'}
+              iconPosition="end"
+              value={tab.value}
+              label={tab.label}
+              icon={
+                <Label
+                  variant={!problem && tab.value === status ? 'filled' : 'soft'}
+                  color={
+                    (tab.value === 'PLACED' && 'info') ||
+                    (tab.value === 'PACKED' && 'warning') ||
+                    (tab.value === 'DISPATCHED' && 'warning') ||
+                    (tab.value === 'DELIVERED' && 'success') ||
+                    ((tab.value === 'CANCELLED' || tab.value === 'RETURNED') && 'error') ||
+                    'default'
+                  }
+                >
+                  {counts ? (counts[tab.value || 'all'] ?? 0) : '-'}
+                </Label>
+              }
+            />
+          ))}
+        </Tabs>
+
+        <OrderTableToolbar
+          filters={filters}
+          clusters={clusters?.items ?? []}
+          showClusterFilter={canScopeCluster}
+          onFilters={handleFilters}
+        />
+
+        {canReset && (
+          <OrderTableFiltersResult
+            filters={filters}
+            clusterName={clusterName.get(filters.cluster)}
+            totalResults={total}
+            onFilters={handleFilters}
+            onReset={() => setParams({ q: null, cluster: null })}
+            sx={{ p: 2.5, pt: 0 }}
           />
-        </Stack>
-
-        {isError && (
-          <Box sx={{ px: 2.5, pb: 2, color: 'error.main', typography: 'body2' }}>
-            {error instanceof Error ? error.message : 'Failed to load orders'}
-          </Box>
         )}
 
-        {isLoading && (
-          <Box sx={{ px: 2.5, pb: 2.5 }}>
-            <Stack spacing={1}>
-              {Array.from({ length: 6 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </Stack>
-          </Box>
-        )}
-
-        {!isLoading && !isError && (
+        <Box sx={{ position: 'relative' }}>
           <Scrollbar>
-            <Table sx={{ minWidth: 800 }}>
-              <TableHeadCustom headLabel={HEAD} />
+            <Table size={table.dense ? 'small' : 'medium'} sx={{ minWidth: 1100 }}>
+              <TableHeadCustom headLabel={TABLE_HEAD} />
+
               <TableBody>
-                {visible.map((o) => (
-                  <TableRow
-                    key={o.id}
-                    hover
-                    sx={{ cursor: 'pointer' }}
-                    onClick={() => navigate(`/admin/orders/${o.id}`)}
-                  >
-                    <TableCell sx={{ fontWeight: 500 }}>
-                      <Box>{o.orderNumber}</Box>
-                      <Box sx={{ color: 'text.secondary', typography: 'caption' }}>
-                        buyer {o.buyerName ?? o.buyerId.slice(-6)} · {o.kind}
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <OrderStatusBadge status={o.status} />
-                    </TableCell>
-                    <TableCell>
-                      <Stack spacing={1} alignItems="flex-start">
-                        <Badge variant="muted">{o.payment.mode}</Badge>
-                        <PaymentStatusBadge status={o.payment.status} />
-                      </Stack>
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 500 }}>{formatInr(o.totalInr)}</TableCell>
-                    <TableCell>{o.items.length}</TableCell>
-                    <TableCell>{formatDate(o.createdAt)}</TableCell>
-                    <TableCell>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          navigate(`/admin/orders/${o.id}`);
-                        }}
-                      >
-                        Open
-                      </Button>
+                {isLoading
+                  ? Array.from({ length: Math.min(limit, 5) }).map((_, index) => (
+                      <TableSkeleton key={index} sx={{ height: table.dense ? 56 : 76 }} />
+                    ))
+                  : rows.map((row) => (
+                      <OrderTableRow
+                        key={row.id}
+                        row={row}
+                        onViewRow={() => navigate(`/admin/orders/${row.id}`)}
+                      />
+                    ))}
+
+                <TableEmptyRows
+                  height={table.dense ? 56 : 76}
+                  emptyRows={emptyRows(page - 1, limit, total)}
+                />
+
+                {notFound && (
+                  <TableRow>
+                    <TableCell colSpan={TABLE_HEAD.length}>
+                      <EmptyContent
+                        filled
+                        sx={{ py: 10 }}
+                        title={
+                          problem
+                            ? 'Nothing needs attention'
+                            : canReset || status
+                              ? 'Nothing matches'
+                              : 'No orders yet'
+                        }
+                        description={
+                          problem
+                            ? 'No order is cancelled, returned, or sitting on an open ticket.'
+                            : canReset || status
+                              ? 'Try another tab, or clear the filters.'
+                              : 'Orders appear here as buyers place them.'
+                        }
+                      />
                     </TableCell>
                   </TableRow>
-                ))}
-                <TableNoData notFound={!isLoading && visible.length === 0} />
+                )}
               </TableBody>
             </Table>
           </Scrollbar>
-        )}
+        </Box>
 
         <TablePaginationCustom
-          count={total}
           page={page - 1}
-          rowsPerPage={PAGE_SIZE}
-          rowsPerPageOptions={[PAGE_SIZE]}
-          onPageChange={(_e, newPage) => setParam({ page: String(newPage + 1) })}
-          onRowsPerPageChange={() => {}}
+          dense={table.dense}
+          count={total}
+          rowsPerPage={limit}
+          rowsPerPageOptions={[5, 10, 25, 50]}
+          onPageChange={(_e, next) => setParams({ page: String(next + 1) })}
+          onChangeDense={table.onChangeDense}
+          onRowsPerPageChange={(e) => setParams({ limit: e.target.value, page: '1' })}
         />
       </Card>
-    </Stack>
+    </>
   );
 };

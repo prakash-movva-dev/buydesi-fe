@@ -8,6 +8,8 @@ import {
 } from '@/features/platform-settings/exposed';
 import { Button } from '@/components/ui/Button';
 import { Dialog } from '@/components/ui/Dialog';
+import LoadingButton from '@mui/lab/LoadingButton';
+import { toast } from '@/components/snackbar';
 import { useAuth } from '@/lib/auth';
 import { ApiError, UserRole } from '@/types/api';
 import { useCancelOrder, useRefundOrder } from './api';
@@ -33,12 +35,13 @@ export const CancelOrderDialog = ({ open, orderId, onClose }: CancelDialogProps)
   const submit = async () => {
     if (!orderId) return;
     if (!reason.trim()) {
-      setError('Reason is required.');
+      setError('Say why — the buyer is told this');
       return;
     }
     setError(null);
     try {
       await cancelMut.mutateAsync({ id: orderId, reason: reason.trim() });
+      toast.success('Order cancelled');
       onClose();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Cancel failed');
@@ -49,16 +52,16 @@ export const CancelOrderDialog = ({ open, orderId, onClose }: CancelDialogProps)
     <Dialog
       open={open}
       onClose={onClose}
-      title="Cancel order"
-      description="The order moves to CANCELLED and the buyer is notified. Refund (if any) is separate — initiate from this page after."
+      title="Cancel this order?"
+      description="The buyer is told, stock goes back, and any affiliate commission on it is taken back. A refund is a separate step from this page."
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={cancelMut.isPending}>
-            Cancel
+            Keep it
           </Button>
-          <Button variant="destructive" onClick={submit} disabled={cancelMut.isPending}>
-            {cancelMut.isPending ? 'Cancelling…' : 'Cancel order'}
-          </Button>
+          <LoadingButton color="error" variant="contained" loading={cancelMut.isPending} onClick={submit}>
+            Cancel order
+          </LoadingButton>
         </>
       }
     >
@@ -68,10 +71,10 @@ export const CancelOrderDialog = ({ open, orderId, onClose }: CancelDialogProps)
           fullWidth
           multiline
           minRows={4}
-          label="Reason *"
+          label="Why"
           value={reason}
           onChange={(e) => setReason(e.target.value)}
-          placeholder="Visible internally and to the buyer."
+          placeholder="The buyer sees this, so write it for them"
           InputLabelProps={{ shrink: true }}
         />
       </Stack>
@@ -149,27 +152,27 @@ export const RefundOrderDialog = ({ open, orderId, maxAmount, onClose }: RefundD
     <Dialog
       open={open}
       onClose={onClose}
-      title="Initiate refund"
-      description="Triggers a Razorpay refund against the captured payment. Leave amount blank for a full refund of the remaining balance."
+      title="Refund this order"
+      description="Sends the money back through the original payment. Leave the amount blank to refund everything still outstanding."
       footer={
         <>
           <Button variant="outline" onClick={onClose} disabled={refundMut.isPending}>
             Cancel
           </Button>
-          <Button onClick={submit} disabled={refundMut.isPending}>
-            {refundMut.isPending ? 'Working…' : 'Initiate refund'}
-          </Button>
+          <LoadingButton variant="contained" loading={refundMut.isPending} onClick={submit}>
+            Refund
+          </LoadingButton>
         </>
       }
     >
       <Stack spacing={2.5}>
         {error && <Alert severity="error">{error}</Alert>}
         {isSupport && (
-          <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900">
-            Your refund authority: <span className="font-semibold">₹{perCapInr.toLocaleString('en-IN')}</span> per refund ·{' '}
-            <span className="font-semibold">₹{dailyCapInr.toLocaleString('en-IN')}</span> rolling 24h. Above
-            these, escalate to a super admin.
-          </div>
+          <Alert severity="info" variant="outlined">
+            You can refund up to <strong>₹{perCapInr.toLocaleString('en-IN')}</strong> at a time and{' '}
+            <strong>₹{dailyCapInr.toLocaleString('en-IN')}</strong> in any 24 hours. Anything larger has
+            to go to a super admin.
+          </Alert>
         )}
         <TextField
           fullWidth

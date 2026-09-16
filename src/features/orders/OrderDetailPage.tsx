@@ -1,61 +1,66 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import {
-  ArrowLeft,
-  CircleDollarSign,
-  ExternalLink,
-  Lock,
-  Package,
-  Truck,
-  XCircle,
-} from 'lucide-react';
+
 import Box from '@mui/material/Box';
-import Stack from '@mui/material/Stack';
 import Tab from '@mui/material/Tab';
 import Tabs from '@mui/material/Tabs';
+import Card from '@mui/material/Card';
+import Link from '@mui/material/Link';
 import Table from '@mui/material/Table';
+import Alert from '@mui/material/Alert';
+import Stack from '@mui/material/Stack';
+import Avatar from '@mui/material/Avatar';
+import Button from '@mui/material/Button';
+import Divider from '@mui/material/Divider';
 import TableRow from '@mui/material/TableRow';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
+import CardHeader from '@mui/material/CardHeader';
 import Typography from '@mui/material/Typography';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/Card';
-import { PageHeader } from '@/components/ui/PageHeader';
-import { Skeleton } from '@/components/ui/Skeleton';
-import { Scrollbar } from '@/components/scrollbar';
-import { TableHeadCustom } from '@/components/table';
+import Grid from '@mui/material/Unstable_Grid2';
+import Timeline from '@mui/lab/Timeline';
+import TimelineDot from '@mui/lab/TimelineDot';
+import TimelineContent from '@mui/lab/TimelineContent';
+import TimelineSeparator from '@mui/lab/TimelineSeparator';
+import TimelineConnector from '@mui/lab/TimelineConnector';
+import TimelineItem, { timelineItemClasses } from '@mui/lab/TimelineItem';
+
+import { varAlpha } from '@/theme/styles';
+
 import { useAuth } from '@/lib/auth';
-import { formatDateTime, formatInr } from '@/lib/format';
 import { UserRole } from '@/types/api';
+import { Label } from '@/components/label';
+import { Iconify } from '@/components/iconify';
+import { Scrollbar } from '@/components/scrollbar';
+import { PageHeader } from '@/components/ui/PageHeader';
+import { LoadingScreen } from '@/components/loading-screen';
+import { EmptyContent } from '@/components/empty-content';
+import { TableHeadCustom } from '@/components/table';
+
+import { fCurrency } from '@/utils/format-number';
+import { fDate, fDateTime, fTime } from '@/utils/format-time';
 import { useUser } from '@/features/users/api';
-import { useOrder } from './api';
-import { useEscrowAudit, type EscrowAuditEntry } from './escrow-api';
+
+import { useEscrowAudit, useOrder } from './api';
 import { CancelOrderDialog, RefundOrderDialog } from './OrderActionDialogs';
-import { EscrowStatusBadge, OrderStatusBadge, PaymentStatusBadge } from './status-badge';
+import {
+  ESCROW_LABEL,
+  EscrowStatusBadge,
+  ORDER_DOT_COLOR,
+  ORDER_ICON,
+  ORDER_LABEL,
+  OrderStatusBadge,
+  PaymentStatusBadge,
+} from './status-badge';
+
+// ----------------------------------------------------------------------
 
 const ESCROW_VIEWER_ROLES = new Set<string>([
   UserRole.SUPER_ADMIN,
   UserRole.SUB_SUPER_ADMIN,
+  UserRole.CLUSTER_ADMIN,
   UserRole.SUPPORT_ADMIN,
 ]);
-
-const triggerLabel: Record<EscrowAuditEntry['trigger'], string> = {
-  payment_captured: 'Payment captured',
-  payment_failed: 'Payment failed',
-  shipment_delivered: 'Shipment delivered',
-  shipment_returned: 'Shipment returned',
-  order_cancelled: 'Order cancelled',
-  admin_manual: 'Admin manual override',
-  cod_collected: 'COD collected',
-  system: 'System',
-};
 
 const REFUND_ROLES = new Set<string>([
   UserRole.SUPER_ADMIN,
@@ -64,50 +69,61 @@ const REFUND_ROLES = new Set<string>([
   UserRole.SUPPORT_ADMIN,
 ]);
 
+const ITEM_HEAD = [
+  { id: 'product', label: 'Product' },
+  { id: 'kind', label: 'Kind', width: 110 },
+  { id: 'price', label: 'Unit price', align: 'right' as const, width: 130 },
+  { id: 'qty', label: 'Qty', align: 'right' as const, width: 90 },
+  { id: 'subtotal', label: 'Subtotal', align: 'right' as const, width: 140 },
+];
+
+type TabValue = 'summary' | 'timeline' | 'escrow';
+
+// ----------------------------------------------------------------------
+
+/**
+ * One order, end to end.
+ *
+ * The header answers the three things anyone opening an order needs at once —
+ * where it is, whether it is paid, and whose money is being held — because those
+ * decide what can be done about it.
+ */
 export const OrderDetailPage = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { data: order, isLoading, isError, error } = useOrder(id);
 
+  const [tab, setTab] = useState<TabValue>('summary');
   const [cancelOpen, setCancelOpen] = useState(false);
   const [refundOpen, setRefundOpen] = useState(false);
-  const [tab, setTab] = useState<'summary' | 'timeline' | 'escrow'>('summary');
 
-  const canSeeEscrowAudit = user ? ESCROW_VIEWER_ROLES.has(user.role) : false;
-  const escrowAudit = useEscrowAudit(canSeeEscrowAudit ? id : undefined);
+  const { data: order, isLoading, isError, error } = useOrder(id);
 
+  const canSeeEscrow = user ? ESCROW_VIEWER_ROLES.has(user.role) : false;
+  const escrowAudit = useEscrowAudit(canSeeEscrow ? id : undefined);
   const buyer = useUser(order?.buyerId);
-  const buyerName = buyer.data?.name ?? 'buyer';
 
-  if (isLoading) {
-    return (
-      <Stack spacing={2}>
-        <Skeleton className="h-8 w-72" />
-        <Skeleton className="h-40 w-full" />
-        <Skeleton className="h-64 w-full" />
-      </Stack>
-    );
-  }
+  if (isLoading) return <LoadingScreen />;
 
   if (isError || !order) {
     return (
-      <div className="rounded-md border border-destructive/40 bg-destructive/5 p-4 text-sm text-destructive">
-        {error instanceof Error ? error.message : 'Order not found'}
-      </div>
+      <>
+        <PageHeader title="Order" />
+        <Alert severity="error" sx={{ mt: 3 }}>
+          {error instanceof Error ? error.message : 'Order not found'}
+        </Alert>
+      </>
     );
   }
 
-  // Optional/array fields are guarded so the page renders for every order state
-  // (placed, cancelled, etc.) even when older/partial records omit them.
   const items = order.items ?? [];
   const statusHistory = order.statusHistory ?? [];
+  const buyerName = buyer.data?.name ?? order.buyerName ?? 'Buyer';
 
   const canRefund =
     user && REFUND_ROLES.has(user.role) && order.payment?.status === 'CAPTURED';
-  // Admins do not cancel orders as routine operations — cancellation flows from
-  // the buyer/seller or a support resolution. Only the Super Admin keeps an
-  // emergency override.
+  // Cancelling is not routine admin work — it flows from the buyer, the seller
+  // or a support resolution. Only the super admin keeps an override.
   const canCancel =
     user &&
     user.role === UserRole.SUPER_ADMIN &&
@@ -115,338 +131,324 @@ export const OrderDetailPage = () => {
     order.status !== 'DELIVERED' &&
     order.status !== 'RETURNED';
 
-  const remainingRefund = order.totalInr; // backend tracks refundedAmountInr on Payment, not Order
-
   return (
-    <Stack spacing={3}>
-      <Box>
-        <Button variant="ghost" size="sm" onClick={() => navigate('/admin/orders')}>
-          <ArrowLeft className="h-4 w-4" />
-          Back to orders
-        </Button>
-      </Box>
-
-      <Stack spacing={2}>
-        <PageHeader
-          title={order.orderNumber}
-          description={`placed ${formatDateTime(order.createdAt)} · buyer ${buyerName} · ${order.kind}`}
-          action={
-            <>
-              {canRefund && (
-                <Button onClick={() => setRefundOpen(true)}>
-                  <CircleDollarSign className="h-4 w-4" />
-                  Refund
-                </Button>
-              )}
-              {canCancel && (
-                <Button variant="destructive" onClick={() => setCancelOpen(true)}>
-                  <XCircle className="h-4 w-4" />
-                  Cancel
-                </Button>
-              )}
-            </>
-          }
-        />
-        <Stack direction="row" spacing={1} flexWrap="wrap" alignItems="center">
-          <OrderStatusBadge status={order.status} />
-          {order.payment?.status && <PaymentStatusBadge status={order.payment.status} />}
-          <EscrowStatusBadge status={order.escrowStatus} />
-          {order.payment?.mode && <Badge variant="muted">{order.payment.mode}</Badge>}
-        </Stack>
-      </Stack>
-
-      <Tabs
-        value={tab}
-        onChange={(_e, v) => setTab(v)}
-        sx={{ borderBottom: 1, borderColor: 'divider' }}
-      >
-        <Tab value="summary" label="Summary" />
-        <Tab value="timeline" label="Timeline" />
-        {canSeeEscrowAudit && <Tab value="escrow" label="Escrow" />}
-      </Tabs>
-
-      {tab === 'summary' && (
-      <Stack spacing={3}>
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Items</CardTitle>
-            <CardDescription>
-              {items.length} item(s) · {order.totalWeightGrams} g total
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Scrollbar>
-              <Table sx={{ minWidth: 800 }}>
-                <TableHeadCustom
-                  headLabel={[
-                    { id: 'product', label: 'Product' },
-                    { id: 'tier', label: 'Tier' },
-                    { id: 'seller', label: 'Seller' },
-                    { id: 'qty', label: 'Qty', align: 'right' },
-                    { id: 'unit', label: 'Unit ₹', align: 'right' },
-                    { id: 'subtotal', label: 'Subtotal', align: 'right' },
-                  ]}
-                />
-                <TableBody>
-                  {items.map((it, idx) => (
-                    <TableRow key={it.id ?? `${it.productId}-${idx}`} hover>
-                      <TableCell sx={{ fontWeight: 500 }}>
-                        <Box>{it.name}</Box>
-                        <Box sx={{ color: 'text.secondary', typography: 'caption' }}>
-                          {it.unit}
-                        </Box>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="muted">{it.tier}</Badge>
-                      </TableCell>
-                      <TableCell sx={{ color: 'text.secondary', typography: 'caption' }}>
-                        {it.sellerId.slice(-6)}
-                      </TableCell>
-                      <TableCell align="right">{it.quantity}</TableCell>
-                      <TableCell align="right">{formatInr(it.unitPriceInr)}</TableCell>
-                      <TableCell align="right" sx={{ fontWeight: 500 }}>
-                        {formatInr(it.subtotalInr)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </Scrollbar>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Totals</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <Row label="Subtotal" value={formatInr(order.subtotalInr)} />
-            {order.discountInr > 0 && (
-              <Row
-                label={order.coupon ? `Coupon ${order.coupon.code}` : 'Discount'}
-                value={`− ${formatInr(order.discountInr)}`}
-              />
-            )}
-            <Row label="Delivery" value={formatInr(order.deliveryFeeInr)} />
-            <hr className="border-border" />
-            <Row label="Total" value={formatInr(order.totalInr)} bold />
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Shipping</CardTitle>
-            <CardDescription>Snapshot taken when the order was placed.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            {order.shippingAddress ? (
-              <>
-                <p className="font-medium">
-                  {order.shippingAddress.name} · {order.shippingAddress.phone}
-                </p>
-                <p>
-                  {order.shippingAddress.line1}
-                  {order.shippingAddress.line2 ? `, ${order.shippingAddress.line2}` : ''}
-                  <br />
-                  {order.shippingAddress.city}, {order.shippingAddress.state} —{' '}
-                  {order.shippingAddress.pincode}
-                </p>
-              </>
-            ) : (
-              <Typography variant="body2" color="text.secondary">
-                No shipping address on file.
-              </Typography>
-            )}
+    <>
+      <PageHeader
+        title={order.orderNumber}
+        links={[
+          { name: 'Dashboard', href: '/admin' },
+          { name: 'Orders', href: '/admin/orders' },
+          { name: order.orderNumber },
+        ]}
+        description={`Placed ${fDateTime(order.createdAt)} by ${buyerName}`}
+        action={
+          <Stack direction="row" spacing={1.5}>
             {order.delhiveryShipmentId && (
-              <p className="pt-2 text-xs text-muted-foreground">
-                Shipment {order.delhiveryShipmentId} · {order.deliveryProvider}
-              </p>
-            )}
-            {order.trackingUrl && (
-              <a
-                href={order.trackingUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-sm text-primary underline-offset-4 hover:underline"
+              <Button
+                variant="outlined"
+                onClick={() => navigate('/admin/delivery')}
+                startIcon={<Iconify icon="solar:delivery-bold" />}
               >
-                <Truck className="h-3.5 w-3.5" />
-                Track shipment
-                <ExternalLink className="h-3 w-3" />
-              </a>
+                Track parcel
+              </Button>
             )}
+            {canRefund && (
+              <Button
+                variant="contained"
+                color="warning"
+                onClick={() => setRefundOpen(true)}
+                startIcon={<Iconify icon="solar:hand-money-bold" />}
+              >
+                Refund
+              </Button>
+            )}
+            {canCancel && (
+              <Button
+                variant="contained"
+                color="error"
+                onClick={() => setCancelOpen(true)}
+                startIcon={<Iconify icon="solar:close-circle-bold" />}
+              >
+                Cancel order
+              </Button>
+            )}
+          </Stack>
+        }
+      />
+
+      <Card sx={{ mt: 3, p: 3 }}>
+        <Stack
+          direction={{ xs: 'column', md: 'row' }}
+          spacing={3}
+          divider={
+            <Divider flexItem orientation="vertical" sx={{ display: { xs: 'none', md: 'block' } }} />
+          }
+        >
+          <Stack spacing={1} sx={{ minWidth: 220 }}>
+            <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+              Where it is
+            </Typography>
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Avatar
+                variant="rounded"
+                sx={{ width: 40, height: 40, bgcolor: 'background.neutral', color: 'text.secondary' }}
+              >
+                <Iconify icon={ORDER_ICON[order.status] ?? 'solar:bag-4-bold'} width={20} />
+              </Avatar>
+              <OrderStatusBadge status={order.status} />
+            </Stack>
+          </Stack>
+
+          <Stack spacing={1} sx={{ minWidth: 220 }}>
+            <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+              Payment
+            </Typography>
+            <Stack direction="row" spacing={0.75} alignItems="center" flexWrap="wrap" useFlexGap>
+              {order.payment?.status && <PaymentStatusBadge status={order.payment.status} />}
+              <Label variant="soft" color="default">
+                {order.payment?.mode === 'COD' ? 'Cash on delivery' : 'Prepaid'}
+              </Label>
+            </Stack>
+          </Stack>
+
+          <Stack spacing={1} sx={{ minWidth: 240 }}>
+            <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+              Seller&apos;s money
+            </Typography>
+            <EscrowStatusBadge status={order.escrowStatus} />
             {order.returnWindowEndsAt && (
-              <p className="text-xs text-muted-foreground">
-                Return window ends {formatDateTime(order.returnWindowEndsAt)}
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Payment</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <Row label="Mode" value={order.payment?.mode ?? '—'} />
-            <Row label="Status" value={order.payment?.status ?? '—'} />
-            <Row label="Amount" value={formatInr(order.payment?.amountInr)} />
-            {order.payment?.razorpayOrderId && (
-              <Row label="Razorpay order" value={order.payment.razorpayOrderId} mono />
-            )}
-            {order.payment?.razorpayPaymentId && (
-              <Row label="Razorpay payment" value={order.payment.razorpayPaymentId} mono />
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {order.cancellation && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Cancellation</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <Row label="Reason" value={order.cancellation.reason ?? '—'} />
-            <Row
-              label="Cancelled at"
-              value={order.cancellation.at ? formatDateTime(order.cancellation.at) : '—'}
-            />
-            <Row
-              label="Refunded at"
-              value={
-                order.cancellation.refundedAt
-                  ? formatDateTime(order.cancellation.refundedAt)
-                  : 'Not yet'
-              }
-            />
-          </CardContent>
-        </Card>
-      )}
-
-      {items.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">
-              <Package className="mr-2 inline h-4 w-4" />
-              Sellers on this order
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-1 text-sm">
-              {Array.from(new Set(items.map((i) => i.sellerId))).map((sid) => (
-                <li key={sid} className="font-mono text-xs">
-                  {sid}
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      )}
-      </Stack>
-      )}
-
-      {tab === 'timeline' && (
-      <Stack spacing={3}>
-      <Card>
-        <CardHeader>
-          <CardTitle>Status history</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ol className="space-y-3">
-            {statusHistory.map((entry, i) => (
-              <li key={i} className="flex items-start gap-3">
-                <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
-                <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <OrderStatusBadge status={entry.status} />
-                    <span className="text-xs text-muted-foreground">
-                      {formatDateTime(entry.at)}
-                    </span>
-                  </div>
-                  {entry.notes && (
-                    <p className="mt-1 whitespace-pre-wrap text-sm">{entry.notes}</p>
-                  )}
-                  {entry.byUserId && (
-                    <p className="text-xs text-muted-foreground">by {entry.byUserId}</p>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ol>
-        </CardContent>
-      </Card>
-      </Stack>
-      )}
-
-      {tab === 'escrow' && canSeeEscrowAudit && (
-      <Stack spacing={3}>
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-base">
-              <Lock className="h-4 w-4" />
-              Escrow audit
-            </CardTitle>
-            <CardDescription>
-              Every state change to this order's escrow funds with the trigger and actor that
-              caused it. Restricted to super/sub-super and support admins.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {escrowAudit.isLoading && <Skeleton className="h-24 w-full" />}
-            {escrowAudit.isError && (
-              <Typography variant="body2" color="error.main">
-                {escrowAudit.error instanceof Error
-                  ? escrowAudit.error.message
-                  : 'Failed to load audit'}
+              <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                Return window closes {fDate(order.returnWindowEndsAt)}
               </Typography>
             )}
-            {!escrowAudit.isLoading && !escrowAudit.isError && (
-              <>
-                {(escrowAudit.data?.length ?? 0) === 0 ? (
-                  <Typography variant="body2" color="text.secondary">
-                    No escrow transitions recorded for this order.
-                  </Typography>
-                ) : (
-                  <ol className="space-y-3">
-                    {(escrowAudit.data ?? []).map((e) => (
-                      <li key={e.id ?? e._id} className="flex items-start gap-3">
-                        <div className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
-                        <div className="flex-1">
-                          <div className="flex flex-wrap items-center gap-2">
-                            <EscrowStatusBadge status={e.fromStatus} />
-                            <span className="text-xs text-muted-foreground">→</span>
-                            <EscrowStatusBadge status={e.toStatus} />
-                            <Badge variant="muted">{triggerLabel[e.trigger] ?? e.trigger}</Badge>
-                            <Badge variant="info">{e.actor}</Badge>
-                            <span className="text-xs text-muted-foreground">
-                              {formatDateTime(e.createdAt)}
-                            </span>
-                          </div>
-                          {e.reason && (
-                            <p className="mt-1 whitespace-pre-wrap text-sm">{e.reason}</p>
+          </Stack>
+
+          <Stack spacing={1} sx={{ flexGrow: 1, alignItems: { md: 'flex-end' } }}>
+            <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+              Order total
+            </Typography>
+            <Typography variant="h4">{fCurrency(order.totalInr)}</Typography>
+          </Stack>
+        </Stack>
+
+        {order.cancellation && (
+          <Alert severity="error" variant="outlined" sx={{ mt: 2.5 }}>
+            Cancelled {fDateTime(order.cancellation.at)} — {order.cancellation.reason}
+            {order.cancellation.refundedAt
+              ? ` · refunded ${fDate(order.cancellation.refundedAt)}`
+              : ''}
+          </Alert>
+        )}
+      </Card>
+
+      <Card sx={{ mt: 3 }}>
+        <Tabs
+          value={tab}
+          onChange={(_e, value) => setTab(value as TabValue)}
+          sx={{
+            px: 3,
+            boxShadow: (theme) =>
+              `inset 0 -2px 0 0 ${varAlpha(theme.vars.palette.grey['500Channel'], 0.08)}`,
+          }}
+        >
+          <Tab value="summary" label={`What was bought (${items.length})`} />
+          <Tab value="timeline" label={`History (${statusHistory.length})`} />
+          {canSeeEscrow && <Tab value="escrow" label="Money trail" />}
+        </Tabs>
+
+        {tab === 'summary' && (
+          <Grid container spacing={3} sx={{ p: 3 }}>
+            <Grid xs={12} lg={8}>
+              <Scrollbar>
+                <Table sx={{ minWidth: 700 }}>
+                  <TableHeadCustom headLabel={ITEM_HEAD} />
+                  <TableBody>
+                    {items.map((item, index) => (
+                      <TableRow key={`${item.productId}-${index}`} hover>
+                        <TableCell>
+                          <Typography variant="subtitle2">{item.name}</Typography>
+                          {item.variantLabel && (
+                            <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                              {item.variantLabel}
+                            </Typography>
                           )}
-                          {e.actorId && (
-                            <p className="text-xs text-muted-foreground">by {e.actorId}</p>
-                          )}
-                          {e.metadata && Object.keys(e.metadata).length > 0 && (
-                            <pre className="mt-1 whitespace-pre-wrap rounded-md bg-secondary/30 p-2 font-mono text-xs">
-                              {JSON.stringify(e.metadata, null, 2)}
-                            </pre>
-                          )}
-                        </div>
-                      </li>
+                        </TableCell>
+                        <TableCell sx={{ textTransform: 'capitalize' }}>
+                          <Label variant="soft">{item.kind ?? 'standard'}</Label>
+                        </TableCell>
+                        <TableCell align="right">{fCurrency(item.unitPriceInr)}</TableCell>
+                        <TableCell align="right">
+                          {item.quantity} {item.unit}
+                        </TableCell>
+                        <TableCell align="right" sx={{ typography: 'subtitle2' }}>
+                          {fCurrency(item.subtotalInr)}
+                        </TableCell>
+                      </TableRow>
                     ))}
-                  </ol>
+                  </TableBody>
+                </Table>
+              </Scrollbar>
+            </Grid>
+
+            <Grid xs={12} lg={4}>
+              <Stack spacing={3}>
+                <Card sx={{ p: 2.5, bgcolor: 'background.neutral', boxShadow: 'none' }}>
+                  <Typography variant="subtitle2" sx={{ mb: 1.5 }}>
+                    What it came to
+                  </Typography>
+                  <Stack spacing={1}>
+                    <Money label="Items" value={order.subtotalInr} />
+                    {order.discountInr > 0 && (
+                      <Money
+                        label={order.coupon ? `Discount (${order.coupon.code})` : 'Discount'}
+                        value={-order.discountInr}
+                        tone="success"
+                      />
+                    )}
+                    <Money label="Delivery" value={order.deliveryFeeInr} />
+                    <Divider sx={{ borderStyle: 'dashed' }} />
+                    <Money label="Total" value={order.totalInr} strong />
+                  </Stack>
+                </Card>
+
+                <Stack spacing={1}>
+                  <Typography variant="subtitle2">Going to</Typography>
+                  <Typography variant="body2">{order.shippingAddress.name}</Typography>
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    {[
+                      order.shippingAddress.line1,
+                      order.shippingAddress.line2,
+                      order.shippingAddress.city,
+                      order.shippingAddress.state,
+                      order.shippingAddress.pincode,
+                    ]
+                      .filter(Boolean)
+                      .join(', ')}
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    {order.shippingAddress.phone}
+                  </Typography>
+                </Stack>
+
+                {order.delhiveryShipmentId && (
+                  <Stack spacing={0.5}>
+                    <Typography variant="subtitle2">Parcel</Typography>
+                    <Typography
+                      variant="caption"
+                      sx={{ fontFamily: 'monospace', color: 'text.secondary' }}
+                    >
+                      {order.delhiveryShipmentId}
+                    </Typography>
+                    {order.trackingUrl && (
+                      <Link href={order.trackingUrl} target="_blank" rel="noreferrer" variant="caption">
+                        Carrier tracking page
+                      </Link>
+                    )}
+                  </Stack>
                 )}
-              </>
+
+                {order.affiliate && (
+                  <Stack spacing={0.5}>
+                    <Typography variant="subtitle2">Brought in by an affiliate</Typography>
+                    <Stack direction="row" spacing={0.75} alignItems="center">
+                      <Label variant="soft" color="info">
+                        {order.affiliate.code ?? 'affiliate link'}
+                      </Label>
+                      <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                        {order.affiliate.via === 'coupon' ? 'code typed' : 'link clicked'}
+                      </Typography>
+                    </Stack>
+                  </Stack>
+                )}
+              </Stack>
+            </Grid>
+          </Grid>
+        )}
+
+        {tab === 'timeline' && (
+          <Box sx={{ p: 3 }}>
+            {statusHistory.length === 0 ? (
+              <EmptyContent filled sx={{ py: 8 }} title="No history recorded" />
+            ) : (
+              <Timeline
+                sx={{ p: 0, m: 0, [`& .${timelineItemClasses.root}:before`]: { flex: 0, p: 0 } }}
+              >
+                {statusHistory.map((entry, index) => (
+                  <TimelineItem key={index}>
+                    <TimelineSeparator>
+                      <TimelineDot color={ORDER_DOT_COLOR[entry.status] ?? 'grey'}>
+                        <Iconify icon={ORDER_ICON[entry.status] ?? 'solar:bag-4-bold'} width={16} />
+                      </TimelineDot>
+                      {index !== statusHistory.length - 1 && <TimelineConnector />}
+                    </TimelineSeparator>
+                    <TimelineContent sx={{ pb: 3 }}>
+                      <Typography variant="subtitle2">
+                        {ORDER_LABEL[entry.status] ?? entry.status}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                        {fDate(entry.at)} · {fTime(entry.at)}
+                      </Typography>
+                      {entry.notes && (
+                        <Typography variant="body2" sx={{ mt: 0.5, color: 'text.secondary' }}>
+                          {entry.notes}
+                        </Typography>
+                      )}
+                    </TimelineContent>
+                  </TimelineItem>
+                ))}
+              </Timeline>
             )}
-          </CardContent>
-        </Card>
-      </Stack>
-      )}
+          </Box>
+        )}
+
+        {tab === 'escrow' && canSeeEscrow && (
+          <Box sx={{ p: 3 }}>
+            <CardHeader
+              title="Who holds the money"
+              subheader="Every escrow move on this order, and what triggered it."
+              sx={{ p: 0, mb: 2 }}
+            />
+            {(escrowAudit.data?.length ?? 0) === 0 ? (
+              <EmptyContent
+                filled
+                sx={{ py: 8 }}
+                title="No escrow moves yet"
+                description="Money is held when the order is placed and released once the return window closes."
+              />
+            ) : (
+              <Stack spacing={1.5}>
+                {(escrowAudit.data ?? []).map((entry) => (
+                  <Stack
+                    key={entry.id}
+                    direction={{ xs: 'column', sm: 'row' }}
+                    spacing={1.5}
+                    alignItems={{ sm: 'center' }}
+                    sx={{ p: 2, borderRadius: 1.5, bgcolor: 'background.neutral' }}
+                  >
+                    <Stack direction="row" spacing={0.75} alignItems="center" sx={{ minWidth: 300 }}>
+                      <Label variant="soft" color="default">
+                        {ESCROW_LABEL[entry.fromStatus] ?? entry.fromStatus}
+                      </Label>
+                      <Iconify icon="eva:arrow-ios-forward-fill" width={16} />
+                      <Label variant="soft" color="info">
+                        {ESCROW_LABEL[entry.toStatus] ?? entry.toStatus}
+                      </Label>
+                    </Stack>
+                    <Stack spacing={0.25} sx={{ flexGrow: 1 }}>
+                      <Typography variant="body2">
+                        {entry.reason ?? entry.trigger.replace(/_/g, ' ')}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                        {fDateTime(entry.createdAt)} · by {entry.actor}
+                      </Typography>
+                    </Stack>
+                  </Stack>
+                ))}
+              </Stack>
+            )}
+          </Box>
+        )}
+      </Card>
 
       <CancelOrderDialog
         open={cancelOpen}
@@ -456,28 +458,40 @@ export const OrderDetailPage = () => {
       <RefundOrderDialog
         open={refundOpen}
         orderId={order.id}
-        maxAmount={remainingRefund}
+        maxAmount={order.totalInr}
         onClose={() => setRefundOpen(false)}
       />
-    </Stack>
+    </>
   );
 };
 
-const Row = ({
+// ----------------------------------------------------------------------
+
+function Money({
   label,
   value,
-  bold,
-  mono,
+  strong,
+  tone,
 }: {
   label: string;
-  value: React.ReactNode;
-  bold?: boolean;
-  mono?: boolean;
-}) => (
-  <div className="flex items-center justify-between gap-4">
-    <span className="text-muted-foreground">{label}</span>
-    <span className={`${bold ? 'font-semibold' : ''} ${mono ? 'font-mono text-xs' : ''}`}>
-      {value}
-    </span>
-  </div>
-);
+  value: number;
+  strong?: boolean;
+  tone?: 'success';
+}) {
+  return (
+    <Stack direction="row" justifyContent="space-between" alignItems="center">
+      <Typography
+        variant={strong ? 'subtitle2' : 'body2'}
+        sx={{ color: strong ? 'text.primary' : 'text.secondary' }}
+      >
+        {label}
+      </Typography>
+      <Typography
+        variant={strong ? 'subtitle1' : 'body2'}
+        sx={{ color: tone === 'success' ? 'success.dark' : 'text.primary' }}
+      >
+        {value < 0 ? `−${fCurrency(Math.abs(value))}` : fCurrency(value)}
+      </Typography>
+    </Stack>
+  );
+}

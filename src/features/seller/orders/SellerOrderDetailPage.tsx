@@ -159,7 +159,7 @@ export const SellerOrderDetailPage = () => {
                         <Box sx={{ color: 'text.secondary', typography: 'caption' }}>{it.unit}</Box>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="muted">{it.tier}</Badge>
+                        <Badge variant="muted">{it.kind ?? 'standard'}</Badge>
                       </TableCell>
                       <TableCell align="right">{it.quantity}</TableCell>
                       <TableCell align="right">{formatInr(it.unitPriceInr)}</TableCell>

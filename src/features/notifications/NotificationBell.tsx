@@ -1,8 +1,21 @@
-import { useEffect, useRef, useState } from 'react';
+
 import { useNavigate } from 'react-router-dom';
-import { Bell, CheckCheck } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
-import { formatDateTime } from '@/lib/format';
+
+import Box from '@mui/material/Box';
+import Stack from '@mui/material/Stack';
+import Badge from '@mui/material/Badge';
+import Button from '@mui/material/Button';
+import Divider from '@mui/material/Divider';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
+import IconButton from '@mui/material/IconButton';
+import ListItemButton from '@mui/material/ListItemButton';
+
+import { Iconify } from '@/components/iconify';
+import { Scrollbar } from '@/components/scrollbar';
+import { usePopover, CustomPopover } from '@/components/custom-popover';
+
+import { fToNow } from '@/utils/format-time';
 import { useMarkAllRead, useMarkRead, useNotifications } from './api';
 import type { AdminNotification } from './types';
 
@@ -34,8 +47,7 @@ const resolveTarget = (n: AdminNotification): string | null => {
 
 export const NotificationBell = () => {
   const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
-  const wrapRef = useRef<HTMLDivElement>(null);
+  const popover = usePopover();
 
   const { data } = useNotifications({ limit: 10 });
   const markRead = useMarkRead();
@@ -44,98 +56,115 @@ export const NotificationBell = () => {
   const items = data?.items ?? [];
   const unread = data?.meta.unread ?? 0;
 
-  // Close on outside click / escape.
-  useEffect(() => {
-    if (!open) return;
-    const onClick = (e: MouseEvent) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
-    document.addEventListener('mousedown', onClick);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onClick);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
-
   const onItemClick = (n: AdminNotification) => {
     const id = idOf(n);
     if (id && !n.readAt) markRead.mutate(id);
     const target = resolveTarget(n);
-    setOpen(false);
+    popover.onClose();
     if (target) navigate(target);
   };
 
   return (
-    <div ref={wrapRef} className="relative">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => setOpen((v) => !v)}
-        aria-label={unread > 0 ? `Notifications (${unread} unread)` : 'Notifications'}
-        className="relative"
-      >
-        <Bell className="h-5 w-5" />
-        {unread > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold leading-none text-destructive-foreground">
-            {unread > 99 ? '99+' : unread}
-          </span>
-        )}
-      </Button>
+    <>
+      <Tooltip title={unread > 0 ? `${unread} unread` : 'Notifications'}>
+        <IconButton color={popover.open ? 'primary' : 'default'} onClick={popover.onOpen}>
+          <Badge badgeContent={unread} color="error" max={99}>
+            <Iconify icon="solar:bell-bing-bold-duotone" width={24} />
+          </Badge>
+        </IconButton>
+      </Tooltip>
 
-      {open && (
-        <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-md border border-border bg-card shadow-lg">
-          <div className="flex items-center justify-between border-b border-border px-3 py-2">
-            <p className="text-sm font-medium">Notifications</p>
+      <CustomPopover
+        open={popover.open}
+        anchorEl={popover.anchorEl}
+        onClose={popover.onClose}
+        slotProps={{ arrow: { placement: 'top-right' } }}
+      >
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+          sx={{ py: 1.5, pl: 2.5, pr: 1, minWidth: 320 }}
+        >
+          <Typography variant="subtitle1">Notifications</Typography>
+          {unread > 0 && (
             <Button
-              variant="ghost"
-              size="sm"
+              size="small"
+              color="inherit"
+              disabled={markAllRead.isPending}
               onClick={() => markAllRead.mutate()}
-              disabled={unread === 0 || markAllRead.isPending}
-              className="h-7 px-2 text-xs"
+              startIcon={<Iconify icon="solar:check-read-outline" width={16} />}
             >
-              <CheckCheck className="h-3.5 w-3.5" />
               Mark all read
             </Button>
-          </div>
+          )}
+        </Stack>
 
-          <div className="max-h-96 overflow-y-auto">
-            {items.length === 0 && (
-              <p className="px-3 py-8 text-center text-sm text-muted-foreground">
-                No notifications.
-              </p>
-            )}
-            {items.map((n) => {
+        <Divider sx={{ borderStyle: 'dashed' }} />
+
+        <Scrollbar sx={{ maxHeight: 400, width: 360 }}>
+          {items.length === 0 ? (
+            <Typography
+              variant="body2"
+              sx={{ px: 2.5, py: 5, textAlign: 'center', color: 'text.secondary' }}
+            >
+              Nothing to catch up on.
+            </Typography>
+          ) : (
+            items.map((n) => {
               const id = idOf(n);
               const isUnread = !n.readAt;
               return (
-                <button
+                <ListItemButton
                   key={id}
-                  type="button"
                   onClick={() => onItemClick(n)}
-                  className={`flex w-full flex-col gap-0.5 border-b border-border px-3 py-2.5 text-left transition-colors last:border-b-0 hover:bg-secondary/60 ${
-                    isUnread ? 'bg-primary/5' : ''
-                  }`}
+                  sx={{
+                    py: 1.5,
+                    px: 2.5,
+                    alignItems: 'flex-start',
+                    borderBottom: (theme) => `dashed 1px ${theme.vars.palette.divider}`,
+                    ...(isUnread && { bgcolor: 'action.selected' }),
+                  }}
                 >
-                  <div className="flex items-start gap-2">
-                    {isUnread && (
-                      <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
-                    )}
-                    <span className="flex-1 text-sm font-medium leading-snug">{n.title}</span>
-                  </div>
-                  <span className="line-clamp-2 text-xs text-muted-foreground">{n.body}</span>
-                  <span className="text-[10px] text-muted-foreground">
-                    {formatDateTime(n.createdAt)}
-                  </span>
-                </button>
+                  <Stack spacing={0.5} sx={{ flexGrow: 1, minWidth: 0 }}>
+                    <Stack direction="row" spacing={1} alignItems="center">
+                      {isUnread && (
+                        <Box
+                          sx={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            bgcolor: 'info.main',
+                            flexShrink: 0,
+                          }}
+                        />
+                      )}
+                      <Typography variant="subtitle2" noWrap sx={{ flexGrow: 1 }}>
+                        {n.title}
+                      </Typography>
+                    </Stack>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: 'text.secondary',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {n.body}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: 'text.disabled' }}>
+                      {fToNow(n.createdAt)}
+                    </Typography>
+                  </Stack>
+                </ListItemButton>
               );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
+            })
+          )}
+        </Scrollbar>
+      </CustomPopover>
+    </>
   );
 };

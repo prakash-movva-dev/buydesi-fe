@@ -1,16 +1,23 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { CheckCircle2, FileUp, Upload, XCircle } from 'lucide-react';
+
 import Box from '@mui/material/Box';
 import Stack from '@mui/material/Stack';
 import Alert from '@mui/material/Alert';
 import TextField from '@mui/material/TextField';
 import Typography from '@mui/material/Typography';
 import { UserPicker } from '@/components/pickers/UserPicker';
-import { Badge } from '@/components/ui/Badge';
-import { Button } from '@/components/ui/Button';
+import Button from '@mui/material/Button';
+import Table from '@mui/material/Table';
+import TableRow from '@mui/material/TableRow';
+import TableBody from '@mui/material/TableBody';
+import TableCell from '@mui/material/TableCell';
+import LoadingButton from '@mui/lab/LoadingButton';
+import { Label } from '@/components/label';
+import { Iconify } from '@/components/iconify';
+import { Scrollbar } from '@/components/scrollbar';
 import { Dialog } from '@/components/ui/Dialog';
-import { StatCard } from '@/components/ui/StatCard';
+import { TableHeadCustom } from '@/components/table';
 import { api } from '@/lib/api';
 import { ApiError, UserRole } from '@/types/api';
 
@@ -94,152 +101,179 @@ export const BulkUploadDialog = ({ open, onClose, forSelf = false }: Props) => {
 
   const summary = upload.data;
 
+  const RESULT_HEAD = [
+    { id: 'row', label: 'Row', width: 70 },
+    { id: 'status', label: 'What happened', width: 140 },
+    { id: 'name', label: 'Product' },
+    { id: 'reason', label: 'Why', width: 260 },
+  ];
+
   return (
     <Dialog
       open={open}
       onClose={onClose}
-      title="Bulk product upload"
-      description="Create products in bulk on a seller's behalf. The CSV must include a header row matching the columns below."
+      title="Upload products from a spreadsheet"
+      description="Creates products on a seller's behalf. The first row must name the columns."
       footer={
         <>
-          <Button variant="outline" onClick={onClose} disabled={upload.isPending}>
+          <Button color="inherit" variant="outlined" onClick={onClose} disabled={upload.isPending}>
             Close
           </Button>
           {!summary && (
-            <Button onClick={submit} disabled={upload.isPending}>
-              <Upload className="h-4 w-4" />
-              {upload.isPending ? 'Uploading…' : 'Upload'}
-            </Button>
+            <LoadingButton
+              variant="contained"
+              loading={upload.isPending}
+              onClick={submit}
+              startIcon={<Iconify icon="solar:upload-bold" />}
+            >
+              Upload
+            </LoadingButton>
           )}
         </>
       }
-      className="max-w-3xl"
     >
-      <div className="space-y-4">
-        {!summary && (
-          <Stack spacing={2.5}>
-            {error && <Alert severity="error">{error}</Alert>}
-            {!forSelf && (
-              <Stack spacing={1}>
-                <Typography variant="subtitle2">Seller *</Typography>
-                <UserPicker
-                  role={UserRole.SELLER}
-                  value={sellerId}
-                  onChange={setSellerId}
-                  placeholder="Pick the seller to upload for…"
+      {!summary ? (
+        <Stack spacing={2.5}>
+          {error && <Alert severity="error">{error}</Alert>}
+
+          {!forSelf && (
+            <UserPicker
+              label="Seller"
+              required
+              role={UserRole.SELLER}
+              value={sellerId}
+              onChange={setSellerId}
+              placeholder="Whose products are these…"
+            />
+          )}
+
+          <Stack spacing={1}>
+            <Typography variant="subtitle2">The file</Typography>
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Button
+                component="label"
+                variant="outlined"
+                startIcon={<Iconify icon="solar:file-text-bold" />}
+                sx={{ flexShrink: 0 }}
+              >
+                Choose a CSV
+                <Box
+                  component="input"
+                  id="bulk-file"
+                  type="file"
+                  accept=".csv,text/csv,text/plain"
+                  onChange={onFile}
+                  sx={{ display: 'none' }}
                 />
-                <Typography variant="caption" color="text.secondary">
-                  The seller must be approved (status=APPROVED).
+              </Button>
+              {fileName && (
+                <Typography variant="body2" noWrap sx={{ color: 'text.secondary' }}>
+                  {fileName}
                 </Typography>
-              </Stack>
-            )}
-
-            <Stack spacing={1}>
-              <Typography variant="subtitle2">CSV file</Typography>
-              <div className="flex items-center gap-3">
-                <label className="inline-flex h-10 cursor-pointer items-center gap-2 rounded-md border border-input bg-background px-3 text-sm font-medium hover:bg-accent">
-                  <FileUp className="h-4 w-4" />
-                  Choose file
-                  <input
-                    id="bulk-file"
-                    type="file"
-                    accept=".csv,text/csv,text/plain"
-                    onChange={onFile}
-                    className="hidden"
-                  />
-                </label>
-                {fileName && (
-                  <span className="truncate text-sm text-muted-foreground">{fileName}</span>
-                )}
-              </div>
+              )}
             </Stack>
+          </Stack>
 
-            <TextField
-              fullWidth
-              multiline
-              minRows={8}
-              label="Or paste CSV content"
-              value={csv}
-              onChange={(e) => {
-                setCsv(e.target.value);
+          <TextField
+            fullWidth
+            multiline
+            minRows={8}
+            label="Or paste it here"
+            value={csv}
+            onChange={(e) => {
+              setCsv(e.target.value);
+              setFileName(null);
+            }}
+            placeholder={CSV_HEADER_HINT}
+            InputLabelProps={{ shrink: true }}
+            InputProps={{ sx: { typography: 'caption', fontFamily: 'monospace' } }}
+            helperText="Needs name, description, categorySlug, unit, priceInr and stockQuantity. Optional: kind (standard / organic / premium, standard if left out), stockThreshold, weightGrams, images separated by pipes."
+          />
+        </Stack>
+      ) : (
+        <Stack spacing={2.5}>
+          <Box
+            sx={{
+              display: 'grid',
+              gap: 2,
+              gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+            }}
+          >
+            <Tally label="Created" value={summary.created} color="success" />
+            <Tally label="Skipped" value={summary.skipped} color="default" />
+            <Tally label="Failed" value={summary.failed} color="error" />
+          </Box>
+
+          <Alert severity={summary.failed > 0 ? 'warning' : 'success'}>
+            {summary.totalRows} row{summary.totalRows === 1 ? '' : 's'} read. Anything created
+            starts as pending — approve it from the products queue.
+          </Alert>
+
+          <Scrollbar sx={{ maxHeight: 320 }}>
+            <Table size="small" sx={{ minWidth: 620 }}>
+              <TableHeadCustom headLabel={RESULT_HEAD} />
+              <TableBody>
+                {summary.results.map((r) => (
+                  <TableRow key={r.row}>
+                    <TableCell sx={{ color: 'text.disabled' }}>{r.row}</TableCell>
+                    <TableCell>
+                      <Label
+                        variant="soft"
+                        color={
+                          (r.status === 'created' && 'success') ||
+                          (r.status === 'error' && 'error') ||
+                          'default'
+                        }
+                      >
+                        {r.status}
+                      </Label>
+                    </TableCell>
+                    <TableCell sx={{ typography: 'body2' }}>{r.name ?? '—'}</TableCell>
+                    <TableCell sx={{ typography: 'caption', color: 'text.secondary' }}>
+                      {r.reason ?? ''}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Scrollbar>
+
+          <Box>
+            <Button
+              variant="outlined"
+              onClick={() => {
+                upload.reset();
+                setCsv('');
                 setFileName(null);
               }}
-              className="font-mono text-xs"
-              placeholder={CSV_HEADER_HINT}
-              InputLabelProps={{ shrink: true }}
-              helperText="Required columns: name, description, categorySlug, unit, priceInr, stockQuantity. Optional: kind (standard / organic / premium — defaults to standard), stockThreshold, weightGrams, images (pipe-separated URLs)."
-            />
-          </Stack>
-        )}
-
-        {summary && (
-          <div className="space-y-3">
-            <Box
-              sx={{
-                display: 'grid',
-                gap: 2,
-                gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
-              }}
+              startIcon={<Iconify icon="solar:restart-bold" />}
             >
-              <StatCard label="Created" value={summary.created} tone="success" />
-              <StatCard label="Skipped" value={summary.skipped} tone="default" />
-              <StatCard label="Failed" value={summary.failed} tone="destructive" />
-            </Box>
-            <p className="text-sm text-muted-foreground">
-              Processed {summary.totalRows} row(s). Created products land in PENDING — review
-              them from the Products approval queue.
-            </p>
-            <div className="max-h-72 overflow-y-auto rounded-md border border-border">
-              <table className="w-full text-sm">
-                <thead className="bg-secondary/40 text-xs uppercase">
-                  <tr>
-                    <th className="p-2 text-left">Row</th>
-                    <th className="p-2 text-left">Status</th>
-                    <th className="p-2 text-left">Name</th>
-                    <th className="p-2 text-left">Reason</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {summary.results.map((r) => (
-                    <tr key={r.row} className="border-t border-border">
-                      <td className="p-2">{r.row}</td>
-                      <td className="p-2">
-                        {r.status === 'created' && (
-                          <Badge variant="success">
-                            <CheckCircle2 className="mr-1 inline h-3 w-3" />
-                            created
-                          </Badge>
-                        )}
-                        {r.status === 'skipped' && <Badge variant="muted">skipped</Badge>}
-                        {r.status === 'error' && (
-                          <Badge variant="destructive">
-                            <XCircle className="mr-1 inline h-3 w-3" />
-                            error
-                          </Badge>
-                        )}
-                      </td>
-                      <td className="p-2">{r.name ?? '—'}</td>
-                      <td className="p-2 text-xs text-muted-foreground">{r.reason ?? ''}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  upload.reset();
-                  setCsv('');
-                  setFileName(null);
-                }}
-              >
-                Upload another
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
+              Upload another
+            </Button>
+          </Box>
+        </Stack>
+      )}
     </Dialog>
   );
 };
+
+// ----------------------------------------------------------------------
+
+function Tally({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: number;
+  color: 'success' | 'error' | 'default';
+}) {
+  return (
+    <Box sx={{ p: 2, borderRadius: 1.5, bgcolor: 'background.neutral' }}>
+      <Typography variant="h4">{value}</Typography>
+      <Label variant="soft" color={color}>
+        {label}
+      </Label>
+    </Box>
+  );
+}

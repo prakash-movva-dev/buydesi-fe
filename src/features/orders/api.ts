@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, fetchEnvelope } from '@/lib/api';
 import type {
+  EscrowAuditEntry,
   OrdersListMeta,
   OrdersListQuery,
   SafeOrder,
@@ -21,7 +22,9 @@ const fetchOrdersList = async (q: OrdersListQuery): Promise<OrdersListResult> =>
   const params = new URLSearchParams();
   if (q.status) params.set('status', q.status);
   if (q.clusterId) params.set('clusterId', q.clusterId);
-  if (q.problem) params.set('problem', '1');
+  // The API parses this as a literal 'true' / 'false', never a truthy string.
+  if (q.problem !== undefined) params.set('problem', q.problem ? 'true' : 'false');
+  if (q.q) params.set('q', q.q);
   params.set('page', String(q.page));
   params.set('limit', String(q.limit));
   const { data, meta } = await fetchEnvelope<SafeOrder[]>(`/orders?${params.toString()}`);
@@ -101,3 +104,14 @@ export const useRefundOrder = () => {
     },
   });
 };
+
+/**
+ * The escrow trail for one order — who held the money and when it moved.
+ * Staff-only, so the caller passes `undefined` for roles that cannot read it.
+ */
+export const useEscrowAudit = (orderId: string | undefined) =>
+  useQuery({
+    queryKey: ['orders', 'escrow-audit', orderId],
+    queryFn: () => api.get<EscrowAuditEntry[]>(`/admin/escrow/orders/${orderId}/audit`),
+    enabled: Boolean(orderId),
+  });
