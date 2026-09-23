@@ -18,5 +18,13 @@ export default defineConfig({
     // Match CORS_ORIGIN from the backend's .env.example
     port: 3000,
     strictPort: true,
+    proxy: {
+      // Forward all /api/v1 requests to the local backend during development.
+      // This avoids CORS entirely — the browser only talks to localhost:3000.
+      '/api/v1': {
+        target: 'http://localhost:4000',
+        changeOrigin: true,
+      },
+    },
   },
 });

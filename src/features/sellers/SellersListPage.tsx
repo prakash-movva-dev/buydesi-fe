@@ -43,6 +43,7 @@ const STATUS_OPTIONS: Array<{ value: '' | SellerStatus; label: string }> = [
   { value: 'APPROVED', label: 'Approved' },
   { value: 'INFO_REQUESTED', label: 'Info requested' },
   { value: 'REJECTED', label: 'Rejected' },
+  { value: 'SUSPENDED', label: 'Suspended' },
 ];
 
 const TABLE_HEAD = [
@@ -208,6 +209,7 @@ export const SellersListPage = () => {
                     (tab.value === 'PENDING' && 'warning') ||
                     (tab.value === 'REJECTED' && 'error') ||
                     (tab.value === 'INFO_REQUESTED' && 'info') ||
+                    (tab.value === 'SUSPENDED' && 'default') ||
                     'default'
                   }
                 >

@@ -30,11 +30,14 @@ type Props = CardProps & {
   /** Already-formatted figure, for money where a shortened number would mislead. */
   displayTotal?: string;
   chart?: { series: number[]; categories: string[] };
+  /** When provided, the card becomes a clickable navigation shortcut. */
+  onClick?: () => void;
 };
 
 /**
  * Minimal's analytics summary widget — tinted gradient, an icon, the figure,
  * a sparkline, and the period-on-period move in the corner.
+ * Pass `onClick` to make the card a clickable navigation shortcut.
  */
 export function AnalyticsWidget({
   icon,
@@ -44,6 +47,7 @@ export function AnalyticsWidget({
   chart,
   displayTotal,
   color = 'primary',
+  onClick,
   sx,
   ...other
 }: Props) {
@@ -80,6 +84,7 @@ export function AnalyticsWidget({
 
   return (
     <Card
+      onClick={onClick}
       sx={{
         ...bgGradient({
           color: `135deg, ${varAlpha(theme.vars.palette[color].lighterChannel, 0.48)}, ${varAlpha(
@@ -93,13 +98,41 @@ export function AnalyticsWidget({
         position: 'relative',
         color: `${color}.darker`,
         backgroundColor: 'common.white',
+        // Clickable styling — lift + pointer only when onClick is wired up.
+        ...(onClick && {
+          cursor: 'pointer',
+          transition: 'transform 0.18s ease, box-shadow 0.18s ease',
+          '&:hover': {
+            transform: 'translateY(-3px)',
+            boxShadow: theme.customShadows?.z8 ?? '0 8px 24px 0 rgba(0,0,0,0.12)',
+          },
+          '&:active': {
+            transform: 'translateY(-1px)',
+          },
+        }),
         ...sx,
       }}
       {...other}
     >
       <Box sx={{ width: 48, height: 48, mb: 3 }}>{icon}</Box>
 
-      {renderTrending}
+      {/* Arrow icon in top-right when clickable — signals navigation to the user */}
+      {onClick ? (
+        <Box
+          sx={{
+            top: 16,
+            right: 16,
+            position: 'absolute',
+            opacity: 0.55,
+            display: 'flex',
+            alignItems: 'center',
+          }}
+        >
+          <Iconify width={18} icon="eva:arrow-ios-forward-fill" />
+        </Box>
+      ) : (
+        renderTrending
+      )}
 
       <Box
         sx={{

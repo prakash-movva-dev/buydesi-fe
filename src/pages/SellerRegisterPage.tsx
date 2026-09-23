@@ -81,6 +81,14 @@ export const SellerRegisterPage = () => {
       setError('Pincode must be 6 digits.');
       return;
     }
+    if (!email.trim()) {
+      setError('Email is required.');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError('Enter a valid email address.');
+      return;
+    }
     if (password.length < 8) {
       setError('Password must be at least 8 characters.');
       return;
@@ -94,7 +102,7 @@ export const SellerRegisterPage = () => {
           role: UserRole.SELLER,
           name: name.trim(),
           mobile: mobile.trim(),
-          email: email.trim() || undefined,
+          email: email.trim().toLowerCase(),
           password,
           pincode: pincode.trim(),
           preferredLanguage,
@@ -237,10 +245,11 @@ export const SellerRegisterPage = () => {
             <TextField
               fullWidth
               type="email"
-              label="Email (optional)"
+              label="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
+              required
               InputLabelProps={{ shrink: true }}
             />
             <TextField

@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
+import Alert from '@mui/material/Alert';
+
 import Box from '@mui/material/Box';
 import Tab from '@mui/material/Tab';
 import Card from '@mui/material/Card';
@@ -69,11 +71,12 @@ const payoutLabel: Record<string, string> = {
   on_demand: 'On demand',
 };
 
-const STATUS_COLOR: Record<SellerStatus, 'success' | 'warning' | 'error' | 'info'> = {
+const STATUS_COLOR: Record<SellerStatus, 'success' | 'warning' | 'error' | 'info' | 'default'> = {
   APPROVED: 'success',
   PENDING: 'warning',
   REJECTED: 'error',
   INFO_REQUESTED: 'info',
+  SUSPENDED: 'error',
 };
 
 const STATUS_LABEL: Record<SellerStatus, string> = {
@@ -81,6 +84,7 @@ const STATUS_LABEL: Record<SellerStatus, string> = {
   PENDING: 'Pending review',
   REJECTED: 'Rejected',
   INFO_REQUESTED: 'Info requested',
+  SUSPENDED: 'Suspended',
 };
 
 const docLabel: Record<string, string> = {
@@ -246,12 +250,27 @@ export const SellerDetailPage = () => {
           mt: 3,
           p: 3,
           backgroundImage: (theme) =>
-            `linear-gradient(135deg, ${varAlpha(
-              theme.vars.palette.primary.lighterChannel,
-              0.48,
-            )}, ${varAlpha(theme.vars.palette.primary.lightChannel, 0.32)})`,
+            seller.status === 'SUSPENDED'
+              ? `linear-gradient(135deg, ${varAlpha(
+                  theme.vars.palette.error.lighterChannel,
+                  0.28,
+                )}, ${varAlpha(theme.vars.palette.error.lightChannel, 0.18)})`
+              : `linear-gradient(135deg, ${varAlpha(
+                  theme.vars.palette.primary.lighterChannel,
+                  0.48,
+                )}, ${varAlpha(theme.vars.palette.primary.lightChannel, 0.32)})`,
         }}
       >
+        {seller.status === 'SUSPENDED' && (
+          <Alert
+            severity="error"
+            icon={<Iconify icon="solar:forbidden-circle-bold" />}
+            sx={{ mb: 3, fontWeight: 600, fontSize: 14 }}
+          >
+            This seller is <strong>suspended</strong> — they cannot list products or accept orders
+            until reactivated.
+          </Alert>
+        )}
         <Stack
           direction={{ xs: 'column', md: 'row' }}
           spacing={3}
@@ -355,32 +374,44 @@ export const SellerDetailPage = () => {
           <>
             <Divider sx={{ my: 3, borderStyle: 'dashed' }} />
             <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-              <Button
-                size="small"
-                variant="outlined"
-                color="warning"
-                onClick={() => setDisciplinaryAction('warn')}
-                startIcon={<Iconify icon="solar:danger-triangle-bold" />}
-              >
-                Issue warning
-              </Button>
-              <Button
-                size="small"
-                variant="outlined"
-                color="error"
-                onClick={() => setDisciplinaryAction('suspend')}
-                startIcon={<Iconify icon="solar:forbidden-circle-bold" />}
-              >
-                Suspend
-              </Button>
-              <Button
-                size="small"
-                variant="outlined"
-                onClick={() => setDisciplinaryAction('reactivate')}
-                startIcon={<Iconify icon="solar:restart-bold" />}
-              >
-                Reactivate
-              </Button>
+              {/* Warn is always available for approved sellers */}
+              {seller.status !== 'SUSPENDED' && (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="warning"
+                  onClick={() => setDisciplinaryAction('warn')}
+                  startIcon={<Iconify icon="solar:danger-triangle-bold" />}
+                >
+                  Issue warning
+                </Button>
+              )}
+
+              {/* Suspend only when NOT already suspended */}
+              {seller.status !== 'SUSPENDED' && (
+                <Button
+                  size="small"
+                  variant="contained"
+                  color="error"
+                  onClick={() => setDisciplinaryAction('suspend')}
+                  startIcon={<Iconify icon="solar:forbidden-circle-bold" />}
+                >
+                  Suspend
+                </Button>
+              )}
+
+              {/* Reactivate only when suspended */}
+              {seller.status === 'SUSPENDED' && (
+                <Button
+                  size="small"
+                  variant="contained"
+                  color="success"
+                  onClick={() => setDisciplinaryAction('reactivate')}
+                  startIcon={<Iconify icon="solar:restart-bold" />}
+                >
+                  Reactivate seller
+                </Button>
+              )}
             </Stack>
           </>
         )}

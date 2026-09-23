@@ -143,12 +143,14 @@ export const CreateUserDialog = ({ open, onClose }: Props) => {
     role === UserRole.SUPPORT_ADMIN ||
     role === UserRole.SELLER;
 
+  const isCategoryAdmin = role === UserRole.CATEGORY_ADMIN;
+
   // ── Field-level validation (issue US-CA.1 / US-CA.23) ────────────────────
   const nameError = validateName(name);
-  const mobileError = validateMobile(mobile);
-  const emailError = validateEmail(email);
+  const mobileError = validateMobile(mobile, isCategoryAdmin);
+  const emailError = validateEmail(email, isCategoryAdmin);
   const contactError =
-    !email.trim() && !mobile.trim() ? 'Provide an email or mobile.' : null;
+    !isCategoryAdmin && !email.trim() && !mobile.trim() ? 'Provide an email or mobile.' : null;
   const passwordError = password.length < 8 ? 'Password must be at least 8 characters.' : null;
   const categoryError = needsCategory && !categoryId
     ? 'Pick the category this admin will own across the platform.'
@@ -256,6 +258,7 @@ export const CreateUserDialog = ({ open, onClose }: Props) => {
             fullWidth
             type="email"
             label="Email"
+            required={isCategoryAdmin}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             InputLabelProps={{ shrink: true }}
@@ -265,6 +268,7 @@ export const CreateUserDialog = ({ open, onClose }: Props) => {
           <PhoneInput
             fullWidth
             label="Mobile"
+            required={isCategoryAdmin}
             value={mobile}
             onChange={setMobile}
             country="IN"

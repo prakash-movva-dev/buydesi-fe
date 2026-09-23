@@ -38,6 +38,7 @@ import { ApiError } from '@/types/api';
 import { formatInr } from '@/lib/format';
 import { uploadToPresignedUrl } from '@/lib/s3-upload';
 import { useProduct } from '@/features/products/api';
+import { useSellerMe } from '@/features/seller/profile/api';
 
 import {
   VariantEditor,
@@ -168,9 +169,20 @@ export const SellerProductFormPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { data: existing, isLoading } = useProduct(id);
+  const { data: sellerProfile, isLoading: isSellerLoading } = useSellerMe();
   const create = useCreateProduct();
   const update = useUpdateProduct();
   const imageUrl = useProductImageUploadUrl();
+
+  const allowedCategoryIds = useMemo(() => {
+    if (isSellerLoading) return [];
+    if (!sellerProfile) return undefined;
+    const ids = new Set(sellerProfile.categoryIds ?? []);
+    if (isEdit && existing?.categoryId) {
+      ids.add(existing.categoryId);
+    }
+    return Array.from(ids);
+  }, [sellerProfile, isSellerLoading, isEdit, existing?.categoryId]);
 
   // Draft persistence only for new products; edits always prefill from server.
   const storageKey = `buydesi.product-draft.${user?.id ?? 'anon'}`;
@@ -306,9 +318,9 @@ export const SellerProductFormPage = () => {
     const qtyOk = min >= 1 && (max === null || max >= min);
     return [
       form.name.trim().length >= 2 &&
-        !!form.categoryId &&
-        form.description.trim().length >= 2 &&
-        form.unit.trim().length >= 1, // Basic
+      !!form.categoryId &&
+      form.description.trim().length >= 2 &&
+      form.unit.trim().length >= 1, // Basic
       hasPrice && Number(form.quantity) >= 0 && qtyOk, // Pricing & availability
       true, // Produce & logistics (all optional)
       true, // Images & media (images recommended, not required)
@@ -466,10 +478,18 @@ export const SellerProductFormPage = () => {
                   <CategoryPicker
                     label="Category"
                     required
+                    sellerMode
+                    allowedCategoryIds={allowedCategoryIds}
                     value={form.categoryId}
                     onChange={(v) => set('categoryId', v)}
                     error={showErrors && !form.categoryId}
-                    helperText={showErrors && !form.categoryId ? 'Pick a category' : ' '}
+                    helperText={
+                      showErrors && !form.categoryId
+                        ? 'Pick a category'
+                        : sellerProfile && sellerProfile.categoryIds?.length === 0
+                          ? 'No categories assigned to your seller profile'
+                          : ' '
+                    }
                   />
                 </Box>
 
@@ -956,9 +976,8 @@ export const SellerProductFormPage = () => {
                     label="Price"
                     value={
                       hasOptions
-                        ? `${variantRows.length} option${
-                            variantRows.length === 1 ? '' : 's'
-                          }, priced individually`
+                        ? `${variantRows.length} option${variantRows.length === 1 ? '' : 's'
+                        }, priced individually`
                         : Number(form.price) > 0
                           ? formatInr(Number(form.price))
                           : '—'
@@ -974,9 +993,8 @@ export const SellerProductFormPage = () => {
                   />
                   <ReviewRow
                     label="Order qty"
-                    value={`min ${form.minOrderQty || 1}${
-                      form.maxOrderQty ? ` · max ${form.maxOrderQty}` : ''
-                    }`}
+                    value={`min ${form.minOrderQty || 1}${form.maxOrderQty ? ` · max ${form.maxOrderQty}` : ''
+                      }`}
                   />
                   <ReviewRow
                     label="Cash on Delivery"
@@ -1101,9 +1119,9 @@ const KindCard = ({
       border: (theme) => `1px solid ${alpha(theme.palette.grey[500], 0.2)}`,
       ...(selected
         ? {
-            borderColor: 'primary.main',
-            bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
-          }
+          borderColor: 'primary.main',
+          bgcolor: (theme) => alpha(theme.palette.primary.main, 0.08),
+        }
         : { '&:hover': { borderColor: 'text.primary' } }),
     }}
   >
