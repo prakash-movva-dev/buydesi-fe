@@ -27,6 +27,10 @@ type CategoryPickerProps = (SingleProps | MultiProps) & {
   className?: string;
   /** Filter to one of these (defaults to all active). */
   activeOnly?: boolean;
+  /** When true, hides slug and commission rate for cleaner seller-facing UI */
+  sellerMode?: boolean;
+  /** Restricts selectable categories to only these IDs */
+  allowedCategoryIds?: string[];
 };
 
 export const CategoryPicker = (props: CategoryPickerProps) => {
@@ -36,18 +40,21 @@ export const CategoryPicker = (props: CategoryPickerProps) => {
     q: search || undefined,
   });
 
-  const options = useMemo<PickerOption[]>(
-    () =>
-      (data ?? [])
-        .map((c: SafeCategory) => ({
-          id: c.id,
-          label: c.name,
-          detail: `slug ${c.slug} · ${c.defaultCommissionRate}% default`,
-          disabled: c.status !== 'active',
-        }))
-        .sort((a, b) => a.label.localeCompare(b.label)),
-    [data],
-  );
+  const options = useMemo<PickerOption[]>(() => {
+    let items = data ?? [];
+    if (props.allowedCategoryIds !== undefined) {
+      const allowedSet = new Set(props.allowedCategoryIds);
+      items = items.filter((c: SafeCategory) => allowedSet.has(c.id));
+    }
+    return items
+      .map((c: SafeCategory) => ({
+        id: c.id,
+        label: c.name,
+        detail: props.sellerMode ? undefined : `slug ${c.slug} · ${c.defaultCommissionRate}% default`,
+        disabled: c.status !== 'active',
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [data, props.allowedCategoryIds, props.sellerMode]);
 
   if (props.multi) {
     return (

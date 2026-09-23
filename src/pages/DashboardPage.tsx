@@ -177,58 +177,64 @@ function AdminOverview() {
       {isAdmin && (
         <Grid container spacing={3} sx={{ mt: 0 }}>
           <Grid xs={12} sm={6} md={4}>
-            <AnalyticsWidget
+          <AnalyticsWidget
               title="Sellers awaiting KYC"
               total={n(o?.sellers.pendingApproval)}
               color="warning"
               icon={<Iconify width={48} icon="solar:user-check-rounded-bold-duotone" />}
+              onClick={() => navigate('/admin/sellers?status=PENDING')}
             />
           </Grid>
 
           <Grid xs={12} sm={6} md={4}>
-            <AnalyticsWidget
+          <AnalyticsWidget
               title={`Orders ${periodLabel(period)}`}
               total={n(o?.orders.placed)}
               color="info"
               icon={<Iconify width={48} icon="solar:cart-large-4-bold-duotone" />}
+              onClick={() => navigate('/admin/orders')}
             />
           </Grid>
 
           <Grid xs={12} sm={6} md={4}>
-            <AnalyticsWidget
+          <AnalyticsWidget
               title={`Revenue ${periodLabel(period)}`}
               total={n(o?.orders.revenueInr)}
               // Money is shown in full: "₹1.2L" hides the figure people check.
               displayTotal={loading ? undefined : formatInr(o?.orders.revenueInr ?? 0)}
               color="success"
               icon={<Iconify width={48} icon="solar:wallet-money-bold-duotone" />}
+              onClick={() => navigate('/admin/orders')}
             />
           </Grid>
 
           <Grid xs={12} sm={6} md={4}>
-            <AnalyticsWidget
+          <AnalyticsWidget
               title="Open support tickets"
               total={n(o?.support.open)}
               color="error"
               icon={<Iconify width={48} icon="solar:headphones-round-bold-duotone" />}
+              onClick={() => navigate('/admin/support?status=OPEN')}
             />
           </Grid>
 
           <Grid xs={12} sm={6} md={4}>
-            <AnalyticsWidget
+          <AnalyticsWidget
               title="Buyers"
               total={n(o?.buyers)}
               color="primary"
               icon={<Iconify width={48} icon="solar:users-group-rounded-bold-duotone" />}
+              onClick={() => navigate('/admin/users?role=BUYER')}
             />
           </Grid>
 
           <Grid xs={12} sm={6} md={4}>
-            <AnalyticsWidget
+          <AnalyticsWidget
               title="Escrow held"
               total={n(o?.escrow.held)}
               color="secondary"
               icon={<Iconify width={48} icon="solar:lock-password-bold-duotone" />}
+              onClick={() => navigate('/admin/orders?escrowStatus=HELD')}
             />
           </Grid>
 

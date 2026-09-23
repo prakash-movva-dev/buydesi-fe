@@ -1,6 +1,6 @@
 // Mirrors backend `src/modules/sellers/sellers.types.ts` — SafeSellerProfile.
 
-export type SellerStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'INFO_REQUESTED';
+export type SellerStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'INFO_REQUESTED' | 'SUSPENDED';
 export type KycDocType =
   | 'pan'
   | 'aadhaar'

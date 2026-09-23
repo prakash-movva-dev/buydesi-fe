@@ -253,25 +253,25 @@ export const SellerOnboardingPage = () => {
     return [
       true, // Account (read-only)
       form.farmName.trim().length >= 2 &&
-        form.line1.trim().length >= 2 &&
-        form.city.trim().length >= 2 &&
-        !!form.state &&
-        pinOk(form.pincode), // Business
+      form.line1.trim().length >= 2 &&
+      form.city.trim().length >= 2 &&
+      !!form.state &&
+      pinOk(form.pincode), // Business
       form.categoryIds.length > 0, // Products
       Boolean(form.docKeys.pan && form.docKeys.aadhaar && form.docKeys.bank_proof), // Documents
       form.accountHolderName.trim().length >= 2 &&
-        /^\d{9,18}$/.test(form.accountNumber) &&
-        form.accountNumber === form.reAccountNumber &&
-        /^[A-Z]{4}0[A-Z0-9]{6}$/.test(form.ifsc.toUpperCase()) &&
-        form.bankName.trim().length >= 2 &&
-        !!form.accountType, // Banking
+      /^\d{9,18}$/.test(form.accountNumber) &&
+      form.accountNumber === form.reAccountNumber &&
+      /^[A-Z]{4}0[A-Z0-9]{6}$/.test(form.ifsc.toUpperCase()) &&
+      form.bankName.trim().length >= 2 &&
+      !!form.accountType, // Banking
       form.displayName.trim().length >= 2, // Store
       form.agAcceptedPolicies &&
-        form.agAuthorized &&
-        form.agDataConsent &&
-        form.agBackgroundCheck &&
-        form.agFeeTerms &&
-        form.legalName.trim().length >= 2, // Agreement
+      form.agAuthorized &&
+      form.agDataConsent &&
+      form.agBackgroundCheck &&
+      form.agFeeTerms &&
+      form.legalName.trim().length >= 2, // Agreement
     ];
   }, [form]);
 
@@ -587,6 +587,7 @@ export const SellerOnboardingPage = () => {
                 <CategoryPicker
                   multi
                   required
+                  sellerMode
                   label="Categories you'll sell in"
                   values={form.categoryIds}
                   onChange={(v) => set('categoryIds', v)}

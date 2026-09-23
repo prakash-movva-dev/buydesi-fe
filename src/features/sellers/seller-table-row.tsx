@@ -19,11 +19,12 @@ import type { SafeSellerProfile, SellerStatus } from './types';
 
 // ----------------------------------------------------------------------
 
-const STATUS_COLOR: Record<SellerStatus, 'success' | 'warning' | 'error' | 'info'> = {
+const STATUS_COLOR: Record<SellerStatus, 'success' | 'warning' | 'error' | 'info' | 'default'> = {
   APPROVED: 'success',
   PENDING: 'warning',
   REJECTED: 'error',
   INFO_REQUESTED: 'info',
+  SUSPENDED: 'default',
 };
 
 const STATUS_LABEL: Record<SellerStatus, string> = {
@@ -31,6 +32,7 @@ const STATUS_LABEL: Record<SellerStatus, string> = {
   PENDING: 'Pending',
   REJECTED: 'Rejected',
   INFO_REQUESTED: 'Info requested',
+  SUSPENDED: 'Suspended',
 };
 
 type Props = {
