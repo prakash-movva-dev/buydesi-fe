@@ -13,6 +13,8 @@ export interface SafeCluster {
   activeCategories: string[];
   code: string | null;
   description: string | null;
+  /** Cluster photo, shown to buyers. */
+  imageUrl: string | null;
   contactPhone: string | null;
   contactEmail: string | null;
   hubAddress: string | null;
@@ -82,6 +84,7 @@ export interface CreateClusterInput {
   activeCategories?: string[];
   code?: string | null;
   description?: string | null;
+  imageUrl?: string | null;
   contactPhone?: string | null;
   contactEmail?: string | null;
   hubAddress?: string | null;

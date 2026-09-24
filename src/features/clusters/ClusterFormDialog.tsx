@@ -22,6 +22,7 @@ import { Dialog } from '@/components/ui/Dialog';
 import { useRegionsList } from '@/features/regions/api';
 import { INDIA_STATES, districtsForState } from '@/utils/india-geo';
 import { ApiError } from '@/types/api';
+import { ImageUploadField } from '@/components/ImageUploadField';
 import { useCreateCluster, useUpdateCluster } from './api';
 import type { ClusterStatus, SafeCluster } from './types';
 
@@ -56,6 +57,7 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
   // Extended details
   const [code, setCode] = useState('');
   const [description, setDescription] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
   const [contactPhone, setContactPhone] = useState('');
   const [contactEmail, setContactEmail] = useState('');
   const [hubAddress, setHubAddress] = useState('');
@@ -80,6 +82,7 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
       setActiveCategories(editing.activeCategories ?? []);
       setCode(editing.code ?? '');
       setDescription(editing.description ?? '');
+      setImageUrl(editing.imageUrl ?? '');
       setContactPhone(editing.contactPhone ?? '');
       setContactEmail(editing.contactEmail ?? '');
       setHubAddress(editing.hubAddress ?? '');
@@ -149,6 +152,7 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
         activeCategories,
         code: code.trim() || null,
         description: description.trim() || null,
+        imageUrl: imageUrl.trim() || null,
         contactPhone: contactPhone.trim() || null,
         contactEmail: contactEmail.trim() || null,
         hubAddress: hubAddress.trim() || null,
@@ -395,6 +399,19 @@ export const ClusterFormDialog = ({ open, editing, onClose }: Props) => {
               InputLabelProps={{ shrink: true }}
               inputProps={{ maxLength: 2000 }}
             />
+
+            <Box>
+              <Box sx={{ mb: 1, typography: 'subtitle2' }}>Cluster photo</Box>
+              <Box sx={{ mb: 1, typography: 'caption', color: 'text.secondary' }}>
+                Shown to buyers browsing where their food comes from.
+              </Box>
+              <ImageUploadField
+                value={imageUrl}
+                onChange={setImageUrl}
+                kind="cluster"
+                variant="wide"
+              />
+            </Box>
 
             <Box
               sx={{
