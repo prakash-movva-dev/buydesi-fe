@@ -18,6 +18,7 @@ import { Scrollbar } from '@/components/scrollbar';
 import { TableHeadCustom, TableNoData, TablePaginationCustom } from '@/components/table';
 import { useOrdersList } from '@/features/orders/api';
 import { OrderStatusBadge, PaymentStatusBadge } from '@/features/orders/status-badge';
+import { myPackage } from './seller-fulfilment';
 import { formatDate, formatInr } from '@/lib/format';
 import { useAuth } from '@/lib/auth';
 import type { OrderStatus, OrdersListQuery } from '@/features/orders/types';
@@ -150,7 +151,19 @@ export const MyOrdersPage = () => {
                           </Box>
                         </TableCell>
                         <TableCell>
-                          <OrderStatusBadge status={o.status} />
+                          <Stack spacing={0.5} alignItems="flex-start">
+                            {/* A seller's own package, not the order's rollup —
+                                the order reads PLACED until every seller has
+                                packed, which says nothing about this one. */}
+                            <OrderStatusBadge
+                              status={myPackage(o, user?.id ?? '')?.status ?? o.status}
+                            />
+                            {myPackage(o, user?.id ?? '')?.status !== o.status && (
+                              <Box sx={{ typography: 'caption', color: 'text.disabled' }}>
+                                order: {o.status.toLowerCase()}
+                              </Box>
+                            )}
+                          </Stack>
                         </TableCell>
                         <TableCell>
                           <Stack spacing={0.5} alignItems="flex-start">

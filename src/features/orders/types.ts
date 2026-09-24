@@ -44,6 +44,44 @@ export interface OrderItemView {
   weightGrams: number;
   subtotalInr: number;
   payoutId?: string | null;
+  /**
+   * Per-seller fulfilment for this line. A multi-seller order only moves to
+   * PACKED once every seller has packed their own items, so the order-level
+   * status says nothing about whether *you* are done.
+   */
+  sellerStatus?: 'PENDING' | 'PACKED';
+}
+
+/**
+ * One seller's package — the Amazon "Package 1 of 2".
+ *
+ * The buyer places one order and pays once, but each seller packs, ships and
+ * is paid on their own clock. The order's own status is a rollup of these and
+ * says nothing about where any individual seller stands.
+ */
+export interface SubOrderView {
+  id: string;
+  subOrderNumber: string;
+  sellerId: string;
+  sellerName?: string | null;
+  subtotalInr: number;
+  discountInr: number;
+  deliveryFeeInr: number;
+  totalInr: number;
+  status: OrderStatus;
+  escrowStatus: EscrowStatus;
+  returnWindowEndsAt: string | null;
+  shipmentId: string | null;
+  trackingUrl: string | null;
+  deliveryProvider: string | null;
+  packedAt: string | null;
+  dispatchedAt: string | null;
+  deliveredAt: string | null;
+  cancelledAt: string | null;
+  cancelReason: string | null;
+  statusHistory: StatusHistoryEntry[];
+  /** Which of the order's lines are in this package. */
+  itemIds: string[];
 }
 
 /** Who brought the sale, when an affiliate did. */
@@ -78,6 +116,8 @@ export interface OrderPayment {
   razorpayOrderId: string | null;
   razorpayPaymentId: string | null;
   amountInr: number;
+  /** What has gone back to the buyer — a partial cancel refunds one package. */
+  refundedInr?: number;
 }
 
 export interface StatusHistoryEntry {
@@ -115,6 +155,8 @@ export interface SafeOrder {
     at: string | null;
     refundedAt: string | null;
   } | null;
+  /** One per seller. Always present — derived for pre-package orders. */
+  subOrders: SubOrderView[];
   createdAt: string;
   updatedAt: string;
 }

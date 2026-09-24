@@ -52,6 +52,7 @@ import {
   OrderStatusBadge,
   PaymentStatusBadge,
 } from './status-badge';
+import { OrderPackages } from './order-packages';
 
 // ----------------------------------------------------------------------
 
@@ -77,7 +78,7 @@ const ITEM_HEAD = [
   { id: 'subtotal', label: 'Subtotal', align: 'right' as const, width: 140 },
 ];
 
-type TabValue = 'summary' | 'timeline' | 'escrow';
+type TabValue = 'summary' | 'packages' | 'timeline' | 'escrow';
 
 // ----------------------------------------------------------------------
 
@@ -117,6 +118,7 @@ export const OrderDetailPage = () => {
   }
 
   const items = order.items ?? [];
+  const packages = order.subOrders ?? [];
   const statusHistory = order.statusHistory ?? [];
   const buyerName = buyer.data?.name ?? order.buyerName ?? 'Buyer';
 
@@ -252,9 +254,19 @@ export const OrderDetailPage = () => {
           }}
         >
           <Tab value="summary" label={`What was bought (${items.length})`} />
+          {/* Only worth a tab when the order actually split across sellers. */}
+          {packages.length > 1 && (
+            <Tab value="packages" label={`Packages (${packages.length})`} />
+          )}
           <Tab value="timeline" label={`History (${statusHistory.length})`} />
           {canSeeEscrow && <Tab value="escrow" label="Money trail" />}
         </Tabs>
+
+        {tab === 'packages' && (
+          <Box sx={{ p: 3 }}>
+            <OrderPackages packages={packages} items={items} />
+          </Box>
+        )}
 
         {tab === 'summary' && (
           <Grid container spacing={3} sx={{ p: 3 }}>

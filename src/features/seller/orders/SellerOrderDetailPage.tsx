@@ -32,6 +32,7 @@ import { Scrollbar } from '@/components/scrollbar';
 import { TableHeadCustom, TableNoData } from '@/components/table';
 import { useCancelOrder, useOrder } from '@/features/orders/api';
 import { EscrowStatusBadge, OrderStatusBadge, PaymentStatusBadge } from '@/features/orders/status-badge';
+import { myPackage, otherSellerCount } from './seller-fulfilment';
 import { useAuth } from '@/lib/auth';
 import { formatDateTime, formatInr } from '@/lib/format';
 import { ApiError } from '@/types/api';
@@ -78,10 +79,18 @@ export const SellerOrderDetailPage = () => {
   const onMarkPacked = () => transition.mutate({ id: order.id, status: 'PACKED' });
   const onMarkDelivered = () => transition.mutate({ id: order.id, status: 'DELIVERED' });
 
-  const canPack = order.status === 'PLACED';
-  const canDispatch = order.status === 'PACKED';
-  const canMarkDelivered = order.status === 'DISPATCHED';
-  const canCancel = order.status === 'PLACED' || order.status === 'PACKED';
+  // Everything a seller sees comes from their own package. The order's status
+  // is a rollup across every seller, so it cannot answer "where am I?" — an
+  // order reads PLACED while this seller has already packed and shipped.
+  const mine = myPackage(order, user?.id ?? '');
+  const myStatus = mine?.status ?? order.status;
+  const othersOnOrder = otherSellerCount(order, user?.id ?? '');
+  const waitingOnOthers = Boolean(mine) && myStatus !== order.status;
+
+  const canPack = myStatus === 'PLACED';
+  const canDispatch = myStatus === 'PACKED';
+  const canMarkDelivered = myStatus === 'DISPATCHED';
+  const canCancel = myStatus === 'PLACED' || myStatus === 'PACKED';
 
   return (
     <Stack spacing={3}>
@@ -97,7 +106,20 @@ export const SellerOrderDetailPage = () => {
             placed {formatDateTime(order.createdAt)} · {order.shippingAddress.name}
           </Typography>
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <OrderStatusBadge status={order.status} />
+            <OrderStatusBadge status={myStatus} />
+            {/* Without this the seller packs, the order stays PLACED because
+                another seller has not, and nothing on screen acknowledges it. */}
+            {waitingOnOthers && (
+              <Badge variant="muted">
+                order is {order.status.toLowerCase()}
+                {othersOnOrder > 0
+                  ? ` — ${othersOnOrder} other seller${othersOnOrder === 1 ? '' : 's'} on it`
+                  : ''}
+              </Badge>
+            )}
+            {mine && othersOnOrder > 0 && (
+              <Badge variant="muted">{mine.subOrderNumber}</Badge>
+            )}
             <PaymentStatusBadge status={order.payment.status} />
             <EscrowStatusBadge status={order.escrowStatus} />
             <Badge variant="muted">{order.payment.mode}</Badge>
