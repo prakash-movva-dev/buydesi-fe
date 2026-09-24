@@ -47,6 +47,8 @@ import { useOrder } from '@/features/orders/api';
 import { useUser } from '@/features/users/api';
 import { readBoolean, useExposedSettingMap } from '@/features/platform-settings/exposed';
 
+import { toast } from '@/components/snackbar';
+
 import {
   useOverrideTicket,
   usePostTicketMessage,
@@ -54,6 +56,7 @@ import {
   useTicket,
   useTicketAttachmentUrl,
 } from './api';
+import { TicketAttachmentUploader } from './TicketAttachmentUpload';
 import {
   ClaimDialog,
   EscalateDialog,
@@ -471,31 +474,45 @@ export const TicketDetailPage = () => {
 
         {tab === 'attachments' && (
           <CardContent>
-            {ticket.attachments.length === 0 ? (
-              <EmptyContent
-                filled
-                title="No attachments"
-                description="Nothing has been uploaded against this ticket."
-                sx={{ py: 8 }}
-              />
-            ) : (
-              <Box
-                sx={{
-                  display: 'grid',
-                  gap: 2,
-                  gridTemplateColumns: {
-                    xs: '1fr',
-                    sm: 'repeat(2, 1fr)',
-                    md: 'repeat(3, 1fr)',
-                    lg: 'repeat(4, 1fr)',
-                  },
+            <Stack spacing={3}>
+              {/* Evidence often turns up after the ticket is raised, so adding
+                  a file has to be possible here and not only at the start. */}
+              <TicketAttachmentUploader
+                ticketId={ticket.id}
+                existingCount={ticket.attachments.length}
+                // Failures are reported inline by the uploader itself, with
+                // the file name — this only needs to confirm the good news.
+                onDone={({ added }) => {
+                  if (added > 0) toast.success(`Attached ${added} file${added === 1 ? '' : 's'}`);
                 }}
-              >
-                {ticket.attachments.map((key, i) => (
-                  <AttachmentCard key={`${key}-${i}`} ticketId={ticket.id} s3Key={key} />
-                ))}
-              </Box>
-            )}
+              />
+
+              {ticket.attachments.length === 0 ? (
+                <EmptyContent
+                  filled
+                  title="No attachments"
+                  description="Nothing has been uploaded against this ticket yet."
+                  sx={{ py: 6 }}
+                />
+              ) : (
+                <Box
+                  sx={{
+                    display: 'grid',
+                    gap: 2,
+                    gridTemplateColumns: {
+                      xs: '1fr',
+                      sm: 'repeat(2, minmax(0, 1fr))',
+                      md: 'repeat(3, minmax(0, 1fr))',
+                      lg: 'repeat(4, minmax(0, 1fr))',
+                    },
+                  }}
+                >
+                  {ticket.attachments.map((key, i) => (
+                    <AttachmentCard key={`${key}-${i}`} ticketId={ticket.id} s3Key={key} />
+                  ))}
+                </Box>
+              )}
+            </Stack>
           </CardContent>
         )}
 

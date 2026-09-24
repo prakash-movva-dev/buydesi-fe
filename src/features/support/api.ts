@@ -205,3 +205,45 @@ export const useTicketAttachmentUrl = (ticketId: string, s3Key: string) =>
     staleTime: 4 * 60 * 1000,
     enabled: Boolean(ticketId && s3Key),
   });
+
+// ─── Attachments: upload ──────────────────────────────────────────────────
+//
+// Both endpoints are keyed by ticket id, so a file cannot be uploaded before
+// the ticket it belongs to exists. Raising a ticket with files is therefore two
+// phases — create, then attach — and the ticket survives a failed upload.
+
+interface PresignedAttachmentUpload {
+  url: string;
+  headers?: Record<string, string>;
+  fields?: Record<string, string>;
+  s3Key?: string;
+  key?: string;
+}
+
+/** Signed PUT URL for one file on an existing ticket. */
+export const useTicketAttachmentUploadUrl = () =>
+  useMutation({
+    mutationFn: ({
+      ticketId,
+      contentType,
+      ext,
+    }: {
+      ticketId: string;
+      contentType: string;
+      ext?: string;
+    }) =>
+      api.post<PresignedAttachmentUpload>(
+        `/support/tickets/${ticketId}/attachment-upload-url`,
+        { contentType, ...(ext ? { ext } : {}) },
+      ),
+  });
+
+/** Records an uploaded key against the ticket. S3 does not tell us; we do. */
+export const useAppendTicketAttachment = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ ticketId, s3Key }: { ticketId: string; s3Key: string }) =>
+      api.post<SupportTicket>(`/support/tickets/${ticketId}/attachments`, { s3Key }),
+    onSuccess: (_, v) => invalidate(qc, v.ticketId),
+  });
+};
