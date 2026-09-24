@@ -53,6 +53,7 @@ import { TicketsListPage } from '@/features/support/TicketsListPage';
 import { UsersPage } from '@/features/users/UsersPage';
 import { WalletPage } from '@/features/wallet/WalletPage';
 import { LoginPage } from '@/pages/LoginPage';
+import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { ForbiddenPage } from '@/pages/ForbiddenPage';
@@ -129,6 +130,10 @@ const router = createBrowserRouter([
   {
     path: '/login',
     element: <LoginPage />,
+  },
+  {
+    path: '/forgot-password',
+    element: <ForgotPasswordPage />,
   },
   {
     path: '/register/seller',

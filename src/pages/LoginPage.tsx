@@ -69,6 +69,14 @@ export const LoginPage = () => {
         </Stack>
       </Stack>
 
+      {/* A seller who has just reset should be told it worked, or the sign-in
+          screen looks like the reset bounced them back for no reason. */}
+      {new URLSearchParams(location.search).get('reset') === '1' && (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          Password changed. Sign in with your new one.
+        </Alert>
+      )}
+
       {error && (
         <Alert severity="error" sx={{ mb: 3 }}>
           {error}
@@ -107,6 +115,15 @@ export const LoginPage = () => {
               ),
             }}
           />
+
+          <Link
+            component={RouterLink}
+            to="/forgot-password"
+            variant="body2"
+            sx={{ alignSelf: 'flex-end' }}
+          >
+            Forgot password?
+          </Link>
 
           <LoadingButton
             fullWidth
