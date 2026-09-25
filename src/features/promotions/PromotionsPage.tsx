@@ -181,6 +181,8 @@ export const PromotionsPage = () => {
 
   const update = useUpdatePromotion();
   const [formOpen, setFormOpen] = useState(false);
+  // The promotion the form is editing; null means it is creating a new one.
+  const [editing, setEditing] = useState<Promotion | null>(null);
   const [toggling, setToggling] = useState<Promotion | null>(null);
   const [ending, setEnding] = useState<Promotion | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -222,7 +224,10 @@ export const PromotionsPage = () => {
             <Button
               variant="contained"
               startIcon={<Iconify icon="mingcute:add-line" />}
-              onClick={() => setFormOpen(true)}
+              onClick={() => {
+                setEditing(null);
+                setFormOpen(true);
+              }}
             >
               New promotion
             </Button>
@@ -417,6 +422,10 @@ export const PromotionsPage = () => {
                       row={row}
                       canEdit={canEdit}
                       busy={busyId === idOf(row)}
+                      onEdit={() => {
+                        setEditing(row);
+                        setFormOpen(true);
+                      }}
                       onToggleActive={() => setToggling(row)}
                       onEndNow={() => setEnding(row)}
                     />
@@ -437,7 +446,14 @@ export const PromotionsPage = () => {
         />
       </Card>
 
-      <PromotionFormDialog open={formOpen} onClose={() => setFormOpen(false)} />
+      <PromotionFormDialog
+        open={formOpen}
+        editing={editing}
+        onClose={() => {
+          setFormOpen(false);
+          setEditing(null);
+        }}
+      />
 
       <ConfirmDialog
         open={Boolean(toggling)}

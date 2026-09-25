@@ -25,9 +25,9 @@ import { ProductPicker } from '@/components/pickers/ProductPicker';
 import { ClusterPicker } from '@/components/pickers/ClusterPicker';
 import { CategoryPicker } from '@/components/pickers/CategoryPicker';
 
-import { useCreatePromotion } from './api';
+import { useCreatePromotion, useUpdatePromotion } from './api';
 import { TYPE_COLOR, TYPE_ICON } from './promotion-table-row';
-import type { PromotionScope, PromotionType } from './types';
+import type { Promotion, PromotionScope, PromotionType } from './types';
 
 // ----------------------------------------------------------------------
 
@@ -55,12 +55,30 @@ interface Props {
   onClose: () => void;
   /** Pre-select the type when opening from a type-specific tab. */
   defaultType?: PromotionType;
+  /** The promotion being edited; absent when creating a new one. */
+  editing?: Promotion | null;
 }
 
 const toIso = (local: string) => (local ? new Date(local).toISOString() : '');
 
-export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
+/** ISO → the `datetime-local` shape the field wants, in the viewer's own time. */
+const toLocalInput = (iso?: string | null) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+    d.getHours(),
+  )}:${pad(d.getMinutes())}`;
+};
+
+export const PromotionFormDialog = ({ open, onClose, defaultType, editing }: Props) => {
   const createMut = useCreatePromotion();
+  const updateMut = useUpdatePromotion();
+  const isEdit = Boolean(editing);
+  // Once it is running, the start date is history — the storefront has been
+  // showing it since then. The API refuses to move it and so does this.
+  const hasStarted = Boolean(editing && new Date(editing.startsAt) <= new Date());
+  const busy = createMut.isPending || updateMut.isPending;
   const { user } = useAuth();
   // Platform-wide promotions are a Super/Sub-Super privilege. Cluster admins are
   // locked to their own cluster (no platform-wide option).
@@ -100,6 +118,39 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
   useEffect(() => {
     if (!open) return;
     setError(null);
+
+    if (editing) {
+      setType(editing.type);
+      setName(editing.name);
+      setScope(editing.scope);
+      setClusterId(editing.clusterId ?? '');
+      setCategoryId(editing.categoryId ?? '');
+      setStartsAt(toLocalInput(editing.startsAt));
+      setEndsAt(toLocalInput(editing.endsAt));
+
+      setImageUrl(editing.banner?.imageUrl ?? '');
+      setTargetUrl(editing.banner?.targetUrl ?? '');
+      setPlacement(editing.banner?.placement ?? 'hero');
+      setHeadline(editing.banner?.headline ?? '');
+      setSubheadline(editing.banner?.subheadline ?? '');
+      setCtaLabel(editing.banner?.ctaLabel ?? '');
+      setBannerOrder(String(editing.banner?.displayOrder ?? 0));
+
+      setCode(editing.coupon?.code ?? '');
+      setDiscountType(editing.coupon?.discountType ?? 'percent');
+      setDiscountValue(String(editing.coupon?.discountValue ?? 10));
+      setMaxDiscountInr(
+        editing.coupon?.maxDiscountInr != null ? String(editing.coupon.maxDiscountInr) : '',
+      );
+      setMinOrderInr(String(editing.coupon?.minOrderInr ?? 0));
+      setMaxUses(String(editing.coupon?.maxUses ?? 0));
+
+      setProductIds(editing.featured?.productIds ?? []);
+      setStorefrontUserIds(editing.featured?.storefrontUserIds ?? []);
+      setSlotPosition(String(editing.featured?.slotPosition ?? 0));
+      return;
+    }
+
     setType(defaultType ?? 'banner');
     setName('');
     setScope(canPlatform ? 'platform' : 'cluster');
@@ -123,7 +174,59 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
     setProductIds([]);
     setStorefrontUserIds([]);
     setSlotPosition('0');
-  }, [open, defaultType]);
+  }, [open, defaultType, editing]);
+
+  /**
+   * What an edit is allowed to change.
+   *
+   * Not the type, the scope, or the coupon code: the first two would make it a
+   * different promotion, and the code is already in shoppers' hands — changing
+   * it would invalidate every copy handed out. Those fields are locked in the
+   * form, and the API refuses them anyway.
+   */
+  const submitEdit = async () => {
+    const patch: Record<string, unknown> = { name: name.trim(), endsAt: toIso(endsAt) };
+    if (!hasStarted) patch.startsAt = toIso(startsAt);
+
+    switch (type) {
+      case 'banner':
+        if (!imageUrl || !targetUrl) throw new Error('Banner needs an image and a link');
+        patch.banner = {
+          imageUrl,
+          targetUrl,
+          placement,
+          ...(headline.trim() ? { headline: headline.trim() } : {}),
+          ...(subheadline.trim() ? { subheadline: subheadline.trim() } : {}),
+          ...(ctaLabel.trim() ? { ctaLabel: ctaLabel.trim() } : {}),
+          displayOrder: Number(bannerOrder) || 0,
+        };
+        break;
+      case 'coupon': {
+        const dv = Number(discountValue);
+        if (!Number.isFinite(dv) || dv <= 0) throw new Error('Discount value must be positive');
+        if (discountType === 'percent' && dv > 100) throw new Error('Percent must be ≤ 100');
+        patch.coupon = {
+          discountType,
+          discountValue: dv,
+          maxDiscountInr: maxDiscountInr ? Number(maxDiscountInr) : null,
+          minOrderInr: Number(minOrderInr) || 0,
+          maxUses: Number(maxUses) || 0,
+        };
+        break;
+      }
+      case 'featured':
+        if (productIds.length === 0 && storefrontUserIds.length === 0)
+          throw new Error('Pin at least one product or storefront');
+        patch.featured = {
+          productIds,
+          storefrontUserIds,
+          slotPosition: Number(slotPosition) || 0,
+        };
+        break;
+    }
+
+    await updateMut.mutateAsync({ id: editing!.id ?? editing!._id, patch });
+  };
 
   const submit = async () => {
     setError(null);
@@ -137,6 +240,16 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
     }
     if (new Date(endsAt) <= new Date(startsAt)) {
       setError('End must be after start');
+      return;
+    }
+
+    if (isEdit) {
+      try {
+        await submitEdit();
+        onClose();
+      } catch (err) {
+        setError(err instanceof ApiError ? err.message : (err as Error).message);
+      }
       return;
     }
     const base = {
@@ -214,7 +327,7 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
   return (
     <Dialog
       open={open}
-      onClose={createMut.isPending ? undefined : onClose}
+      onClose={busy ? undefined : onClose}
       fullWidth
       maxWidth="md"
     >
@@ -225,7 +338,7 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
             icon={TYPE_ICON[type]}
             sx={{ color: `${TYPE_COLOR[type]}.main` }}
           />
-          New promotion
+          {isEdit ? 'Edit promotion' : 'New promotion'}
         </Stack>
       </DialogTitle>
 
@@ -253,6 +366,8 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
             value={type}
             onChange={(e) => setType(e.target.value as PromotionType)}
             InputLabelProps={{ shrink: true }}
+            disabled={isEdit}
+            helperText={isEdit ? 'A promotion cannot change what kind it is' : undefined}
           >
             {(Object.keys(TYPE_COPY) as PromotionType[]).map((t) => (
               <MenuItem key={t} value={t}>
@@ -286,6 +401,8 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
             value={scope}
             onChange={(e) => setScope(e.target.value as PromotionScope)}
             InputLabelProps={{ shrink: true }}
+            disabled={isEdit}
+            helperText={isEdit ? 'Who it reaches is fixed once it exists' : undefined}
           >
             {canPlatform && <MenuItem value="platform">Platform-wide</MenuItem>}
             <MenuItem value="cluster">Cluster</MenuItem>
@@ -295,6 +412,7 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
             <ClusterPicker
               label="Cluster"
               required
+              disabled={isEdit}
               value={clusterId || null}
               onChange={(id) => setClusterId(id ?? '')}
               placeholder="Pick a cluster…"
@@ -304,6 +422,7 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
             <CategoryPicker
               label="Category"
               required
+              disabled={isEdit}
               value={categoryId || null}
               onChange={(id) => setCategoryId(id ?? '')}
               placeholder="Pick a category…"
@@ -318,7 +437,14 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
             gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)' },
           }}
         >
-          <DateTimeField label="Starts at" required value={startsAt} onChange={setStartsAt} />
+          <DateTimeField
+            label="Starts at"
+            required
+            disabled={hasStarted}
+            helperText={hasStarted ? 'Already running — its start is history' : undefined}
+            value={startsAt}
+            onChange={setStartsAt}
+          />
           <DateTimeField label="Ends at" required value={endsAt} onChange={setEndsAt} />
         </Box>
 
@@ -439,7 +565,12 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
                 placeholder="e.g. WELCOME10"
                 InputLabelProps={{ shrink: true }}
-                helperText="What shoppers type at checkout"
+                disabled={isEdit}
+                helperText={
+                  isEdit
+                    ? 'Shoppers already have this code — make a new coupon to change it'
+                    : 'What shoppers type at checkout'
+                }
                 inputProps={{ maxLength: 40 }}
               />
               <TextField
@@ -563,11 +694,11 @@ export const PromotionFormDialog = ({ open, onClose, defaultType }: Props) => {
       </DialogContent>
 
       <DialogActions>
-        <Button variant="outlined" color="inherit" onClick={onClose} disabled={createMut.isPending}>
+        <Button variant="outlined" color="inherit" onClick={onClose} disabled={busy}>
           Cancel
         </Button>
-        <LoadingButton variant="contained" loading={createMut.isPending} onClick={submit}>
-          Create promotion
+        <LoadingButton variant="contained" loading={busy} onClick={submit}>
+          {isEdit ? 'Save changes' : 'Create promotion'}
         </LoadingButton>
       </DialogActions>
     </Dialog>

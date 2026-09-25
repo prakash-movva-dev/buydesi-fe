@@ -56,7 +56,12 @@ export const useUpdatePromotion = () => {
       patch,
     }: {
       id: string;
-      patch: { active?: boolean; endsAt?: string; isOverride?: boolean };
+      /**
+       * Anything the API's update schema takes: the switches, the dates, and
+       * the promotion's own payload. Kept loose on purpose — the shapes differ
+       * per type and the server is the one that enforces which belongs where.
+       */
+      patch: Record<string, unknown>;
     }) => api.put<Promotion>(`/promotions/${id}`, patch),
     onSuccess: () => qc.invalidateQueries({ queryKey: promotionKeys.all }),
   });

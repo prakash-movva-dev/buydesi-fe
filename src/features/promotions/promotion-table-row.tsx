@@ -217,11 +217,19 @@ type Props = {
   row: Promotion;
   canEdit: boolean;
   busy?: boolean;
+  onEdit: () => void;
   onToggleActive: () => void;
   onEndNow: () => void;
 };
 
-export function PromotionTableRow({ row, canEdit, busy, onToggleActive, onEndNow }: Props) {
+export function PromotionTableRow({
+  row,
+  canEdit,
+  busy,
+  onEdit,
+  onToggleActive,
+  onEndNow,
+}: Props) {
   const popover = usePopover();
   const state = promotionState(row);
 
@@ -319,6 +327,16 @@ export function PromotionTableRow({ row, canEdit, busy, onToggleActive, onEndNow
         slotProps={{ arrow: { placement: 'right-top' } }}
       >
         <MenuList>
+          <MenuItem
+            onClick={() => {
+              onEdit();
+              popover.onClose();
+            }}
+          >
+            <Iconify icon="solar:pen-bold" />
+            Edit
+          </MenuItem>
+
           <MenuItem
             onClick={() => {
               onToggleActive();
