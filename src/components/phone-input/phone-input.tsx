@@ -49,11 +49,20 @@ export const PhoneInput = forwardRef<HTMLDivElement, PhoneInputProps>(
 
     // Always hand the parent a string, never `undefined`, so its state stays a
     // string and never trips the crash above on the next render.
+    //
+    // Indian numbers are capped at ten digits here rather than only on submit:
+    // the field used to take as many digits as you cared to type and only
+    // complain after the round-trip, which reads as the form losing your input.
     const handleChange = useCallback(
       (next?: Value) => {
-        onChange((next ?? '') as Value);
+        const raw = (next ?? '') as string;
+        if (selectedCountry === 'IN') {
+          const digits = raw.replace(/\D/g, '').replace(/^91/, '');
+          if (digits.length > 10) return;
+        }
+        onChange(raw as Value);
       },
-      [onChange]
+      [onChange, selectedCountry]
     );
 
     const handleClear = useCallback(() => {
