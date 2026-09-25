@@ -47,6 +47,7 @@ import { ScopedAdminBanner } from '@/features/scoped-admin/ScopedAdminBanner';
 
 import { useUsersList } from './api';
 import { CreateUserDialog } from './CreateUserDialog';
+import { EditContactDialog } from './EditContactDialog';
 import { UserStatusDialog } from './UserStatusDialog';
 import { ROLE_LABEL, UserTableRow } from './user-table-row';
 import type { SafeUser, UserStatus, UsersListQuery } from './types';
@@ -100,6 +101,7 @@ export const UsersPage = () => {
   const table = useTable({ defaultRowsPerPage: DEFAULT_LIMIT });
 
   const [editing, setEditing] = useState<SafeUser | null>(null);
+  const [editingContact, setEditingContact] = useState<SafeUser | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
   const status = (searchParams.get('status') as UserStatus | null) ?? '';
@@ -158,6 +160,11 @@ export const UsersPage = () => {
     () => new Map((regions ?? []).map((r) => [r.id, r.name])),
     [regions],
   );
+
+  // Changing a login identifier is a route to taking over an account, so it sits
+  // with the super tier rather than with everyone who can create a user.
+  const canEditContact =
+    user?.role === UserRole.SUPER_ADMIN || user?.role === UserRole.SUB_SUPER_ADMIN;
 
   const canCreate =
     user?.role === UserRole.SUPER_ADMIN ||
@@ -317,6 +324,8 @@ export const UsersPage = () => {
                         clusterName={row.clusterId ? clusterName.get(row.clusterId) : undefined}
                         regionName={row.regionId ? regionName.get(row.regionId) : undefined}
                         onEditStatus={() => setEditing(row)}
+                        onEditContact={() => setEditingContact(row)}
+                        canEditContact={canEditContact}
                       />
                     ))}
 
@@ -359,6 +368,7 @@ export const UsersPage = () => {
       </Card>
 
       <CreateUserDialog open={createOpen} onClose={() => setCreateOpen(false)} />
+      <EditContactDialog user={editingContact} onClose={() => setEditingContact(null)} />
       <UserStatusDialog
         open={Boolean(editing)}
         user={editing}

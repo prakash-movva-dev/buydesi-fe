@@ -75,3 +75,22 @@ export const useAdminCreateUser = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: userKeys.all }),
   });
 };
+
+/**
+ * Corrects a user's email or mobile. An explicit null clears that channel; the
+ * API refuses to leave an account with neither, since one of them is the login.
+ */
+export const useUpdateUserContact = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      id,
+      ...body
+    }: {
+      id: string;
+      email?: string | null;
+      mobile?: string | null;
+    }) => api.put<SafeUser>(`/users/${id}/contact`, body),
+    onSuccess: () => qc.invalidateQueries({ queryKey: userKeys.all }),
+  });
+};

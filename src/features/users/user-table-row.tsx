@@ -1,4 +1,6 @@
 import Box from '@mui/material/Box';
+import MenuList from '@mui/material/MenuList';
+import MenuItem from '@mui/material/MenuItem';
 import Stack from '@mui/material/Stack';
 import Avatar from '@mui/material/Avatar';
 import Tooltip from '@mui/material/Tooltip';
@@ -9,6 +11,7 @@ import ListItemText from '@mui/material/ListItemText';
 
 import { Label } from '@/components/label';
 import { Iconify } from '@/components/iconify';
+import { usePopover, CustomPopover } from '@/components/custom-popover';
 
 import { UserRole } from '@/types/api';
 import { fDate, fToNow } from '@/utils/format-time';
@@ -67,6 +70,9 @@ type Props = {
   regionName?: string;
   categoryName?: string;
   onEditStatus: () => void;
+  onEditContact: () => void;
+  /** Only the super tier may change what someone signs in with. */
+  canEditContact?: boolean;
 };
 
 /**
@@ -80,7 +86,10 @@ export function UserTableRow({
   regionName,
   categoryName,
   onEditStatus,
+  onEditContact,
+  canEditContact,
 }: Props) {
+  const popover = usePopover();
   const scope =
     (row.role === UserRole.CATEGORY_ADMIN && (categoryName ?? (row.category ? 'A category' : null))) ||
     (row.role === UserRole.REGIONAL_ADMIN && (regionName ?? (row.regionId ? 'A region' : null))) ||
@@ -159,12 +168,40 @@ export function UserTableRow({
       </TableCell>
 
       <TableCell align="right" sx={{ px: 1 }}>
-        <Tooltip title="Change status" placement="top" arrow>
-          <IconButton onClick={onEditStatus}>
-            <Iconify icon="solar:shield-user-bold" />
-          </IconButton>
-        </Tooltip>
+        <IconButton color={popover.open ? 'inherit' : 'default'} onClick={popover.onOpen}>
+          <Iconify icon="eva:more-vertical-fill" />
+        </IconButton>
       </TableCell>
+
+      <CustomPopover
+        open={popover.open}
+        anchorEl={popover.anchorEl}
+        onClose={popover.onClose}
+        slotProps={{ arrow: { placement: 'right-top' } }}
+      >
+        <MenuList>
+          {canEditContact && (
+            <MenuItem
+              onClick={() => {
+                popover.onClose();
+                onEditContact();
+              }}
+            >
+              <Iconify icon="solar:pen-bold" />
+              Edit email or mobile
+            </MenuItem>
+          )}
+          <MenuItem
+            onClick={() => {
+              popover.onClose();
+              onEditStatus();
+            }}
+          >
+            <Iconify icon="solar:shield-user-bold" />
+            Change status
+          </MenuItem>
+        </MenuList>
+      </CustomPopover>
     </TableRow>
   );
 }
