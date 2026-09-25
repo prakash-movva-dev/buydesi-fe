@@ -10,6 +10,8 @@ export interface SafeCategory {
   defaultCommissionRate: number;
   status: CategoryStatus;
   adminId: string | null;
+  /** Who holds it — resolved by the API so the row can name them. */
+  adminName?: string | null;
   iconUrl?: string;
   imageUrl?: string;
   displayOrder: number;

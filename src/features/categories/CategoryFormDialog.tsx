@@ -256,7 +256,8 @@ export const CategoryFormDialog = ({ open, onClose, editing }: CategoryFormDialo
                   placeholder="Pick a category admin…"
                 />
                 <Typography variant="caption" color="text.secondary">
-                  Clear to unassign. Only users with role=CATEGORY_ADMIN are listed.
+                  Clear to unassign. Only users with role=CATEGORY_ADMIN are listed — the
+                  same person may hold several categories.
                 </Typography>
               </Stack>
             )}

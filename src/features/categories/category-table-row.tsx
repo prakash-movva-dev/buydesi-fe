@@ -78,8 +78,10 @@ export function CategoryTableRow({
 
         <TableCell>
           {row.adminId ? (
+            // Naming them is the point: "Assigned" looks identical before and
+            // after a reassignment, which is what made the change look lost.
             <Label variant="soft" color="info">
-              Assigned
+              {row.adminName ?? 'Assigned'}
             </Label>
           ) : (
             <Box component="span" sx={{ color: 'text.disabled' }}>
