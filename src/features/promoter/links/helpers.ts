@@ -1,12 +1,12 @@
+import { storefrontLink } from '@/lib/storefront-url';
+
 /* What an affiliate actually shares.
    The link points at the storefront, not the admin panel — the person clicking
    it is a shopper. */
 
-const STOREFRONT =
-  import.meta.env.VITE_STOREFRONT_URL?.replace(/\/$/, '') ?? 'https://buydesi.in';
-
 /** The URL to hand out: /r/<code> records the click and forwards the shopper. */
-export const shareUrl = (code: string): string => `${STOREFRONT}/r/${encodeURIComponent(code)}`;
+export const shareUrl = (code: string): string =>
+  storefrontLink(`r/${encodeURIComponent(code)}`);
 
 export interface MessageTemplate {
   locale: string;

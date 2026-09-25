@@ -29,6 +29,7 @@ import { EmptyContent } from '@/components/empty-content';
 import { ConfirmDialog } from '@/components/custom-dialog';
 
 import { AnalyticsWidget } from '@/features/dashboard/AnalyticsWidget';
+import { storefrontLink } from '@/lib/storefront-url';
 
 import { useDeleteStory, useMyStories, useUpdateStory } from './api';
 import { StoryComposer } from './StoryComposer';
@@ -274,11 +275,7 @@ export const MyStoriesPage = () => {
     }
   };
 
-  /** Where the public page lives. Set VITE_STOREFRONT_URL per environment;
-   *  the dev default matches the storefront's own launch config. */
-  const storefrontBase =
-    import.meta.env.VITE_STOREFRONT_URL ?? 'http://localhost:3211';
-  const storefrontUrl = (id: string) => `${storefrontBase}/farmer-stories/${id}`;
+  const storefrontUrl = (id: string) => storefrontLink(`farmer-stories/${id}`);
 
   return (
     <>
