@@ -78,6 +78,8 @@ export interface SafeProduct {
   images: string[];
   kind: ProductKind;
   price: number;
+  /** Printed MRP, when the seller set one above the selling price. */
+  mrp?: number | null;
   stock: ProductStock;
   status: ProductStatus;
   approvalNotes: string | null;

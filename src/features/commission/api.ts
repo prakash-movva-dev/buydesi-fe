@@ -65,3 +65,38 @@ export const useUpdateCommissionRate = () => {
     onSuccess: () => qc.invalidateQueries({ queryKey: commissionKeys.all }),
   });
 };
+
+/** What a seller keeps at a given price — see GET /commission/preview. */
+export interface EarningsPreview {
+  price: number;
+  ratePercent: number;
+  source: ResolvedCommission['source'];
+  commissionInr: number;
+  platformFeePerOrderInr: number;
+  netInr: number;
+}
+
+/**
+ * Live earnings for the price a seller is typing.
+ *
+ * Debounced by the caller, and disabled until there is a category and a price —
+ * there is nothing to resolve a rate against before that.
+ */
+export const useEarningsPreview = (q: {
+  categoryId?: string;
+  price?: number;
+  productId?: string;
+}) =>
+  useQuery({
+    queryKey: ['commission', 'preview', q],
+    queryFn: () => {
+      const params = new URLSearchParams({
+        categoryId: q.categoryId!,
+        price: String(q.price),
+      });
+      if (q.productId) params.set('productId', q.productId);
+      return api.get<EarningsPreview>(`/commission/preview?${params.toString()}`);
+    },
+    enabled: Boolean(q.categoryId) && typeof q.price === 'number' && q.price > 0,
+    staleTime: 60_000,
+  });

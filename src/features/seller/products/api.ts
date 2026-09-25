@@ -53,6 +53,8 @@ export interface CreateProductInput {
   images: string[];
   kind: ProductKind;
   price: number;
+  /** Printed MRP; omitted when the seller did not set one. */
+  mrp?: number;
   stock: ProductStock;
   // Extended listing attributes (all optional).
   highlights?: string[];

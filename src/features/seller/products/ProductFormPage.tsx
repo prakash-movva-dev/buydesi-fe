@@ -39,6 +39,7 @@ import { formatInr } from '@/lib/format';
 import { uploadToPresignedUrl } from '@/lib/s3-upload';
 import { useProduct } from '@/features/products/api';
 import { useSellerMe } from '@/features/seller/profile/api';
+import { EarningsPreviewCard } from './EarningsPreviewCard';
 
 import {
   VariantEditor,
@@ -116,6 +117,7 @@ interface WizardForm {
   organicCertification: string;
   kind: ProductKind;
   price: string;
+  mrp: string;
   quantity: string;
   threshold: string;
   minOrderQty: string;
@@ -146,6 +148,7 @@ const emptyForm = (): WizardForm => ({
   organicCertification: '',
   kind: 'standard',
   price: '',
+  mrp: '',
   quantity: '0',
   threshold: '5',
   minOrderQty: '1',
@@ -202,6 +205,10 @@ export const SellerProductFormPage = () => {
   const [error, setError] = useState<string | null>(null);
   // Missing fields stay quiet until the seller actually tries to move on.
   const [showErrors, setShowErrors] = useState(false);
+
+  // A "saving" that is not a saving is the kind of claim that gets a
+  // marketplace in trouble, so an MRP at or below the price is rejected here.
+  const mrpBelowPrice = Boolean(form.mrp.trim()) && Number(form.mrp) <= Number(form.price);
   // Instant local previews (objectURL) keyed by the stored image URL, so the
   // grid renders immediately without waiting on S3 read propagation.
   const [previews, setPreviews] = useState<Record<string, string>>({});
@@ -250,6 +257,7 @@ export const SellerProductFormPage = () => {
       organicCertification: existing.organicCertification ?? '',
       kind: existing.kind ?? 'standard',
       price: existing.price ? String(existing.price) : '',
+      mrp: existing.mrp ? String(existing.mrp) : '',
       quantity: String(existing.stock.quantity),
       threshold: String(existing.stock.threshold),
       minOrderQty: existing.minOrderQty !== undefined ? String(existing.minOrderQty) : '1',
@@ -321,12 +329,12 @@ export const SellerProductFormPage = () => {
       !!form.categoryId &&
       form.description.trim().length >= 2 &&
       form.unit.trim().length >= 1, // Basic
-      hasPrice && Number(form.quantity) >= 0 && qtyOk, // Pricing & availability
+      hasPrice && !mrpBelowPrice && Number(form.quantity) >= 0 && qtyOk, // Pricing & availability
       true, // Produce & logistics (all optional)
       true, // Images & media (images recommended, not required)
       hasPrice && form.name.trim().length >= 2 && !!form.categoryId, // Review
     ];
-  }, [form]);
+  }, [form, mrpBelowPrice]);
 
   const buildPayload = (): CreateProductInput => {
     const payload: CreateProductInput = {
@@ -338,6 +346,8 @@ export const SellerProductFormPage = () => {
       images: form.images,
       kind: form.kind,
       price: Number(form.price) || 0,
+      // Blank means "no printed MRP" — sending 0 would advertise a 100% saving.
+      mrp: form.mrp.trim() ? Number(form.mrp) : undefined,
       stock: {
         quantity: Number(form.quantity) || 0,
         threshold: Number(form.threshold) || 5,
@@ -642,14 +652,14 @@ export const SellerProductFormPage = () => {
                         fullWidth
                         required
                         type="number"
-                        label="Price"
+                        label="Selling price"
                         value={form.price}
                         onChange={(e) => set('price', e.target.value)}
                         error={showErrors && !(Number(form.price) > 0)}
                         helperText={
                           showErrors && !(Number(form.price) > 0)
                             ? 'Set a price above ₹0'
-                            : `per ${form.unit || 'unit'}`
+                            : `What the buyer pays, per ${form.unit || 'unit'}`
                         }
                         InputProps={{
                           startAdornment: <InputAdornment position="start">₹</InputAdornment>,
@@ -657,7 +667,31 @@ export const SellerProductFormPage = () => {
                         InputLabelProps={{ shrink: true }}
                         inputProps={{ ...softRequired, min: 0, step: '0.5' }}
                       />
+                      <TextField
+                        fullWidth
+                        type="number"
+                        label="MRP (optional)"
+                        value={form.mrp}
+                        onChange={(e) => set('mrp', e.target.value)}
+                        error={showErrors && mrpBelowPrice}
+                        helperText={
+                          showErrors && mrpBelowPrice
+                            ? 'MRP has to be above the selling price'
+                            : 'Printed price. Buyers see it struck through with the saving.'
+                        }
+                        InputProps={{
+                          startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+                        }}
+                        InputLabelProps={{ shrink: true }}
+                        inputProps={{ min: 0, step: '0.5' }}
+                      />
                     </Box>
+
+                    <EarningsPreviewCard
+                      categoryId={form.categoryId ?? ''}
+                      price={Number(form.price) || 0}
+                      productId={id}
+                    />
 
                     <Box sx={rowSx(2)}>
                       <TextField
@@ -973,7 +1007,7 @@ export const SellerProductFormPage = () => {
                   <ReviewRow label="Kind" value={KIND_LABELS[form.kind]} />
                   <ReviewRow label="Unit" value={form.unit || '—'} />
                   <ReviewRow
-                    label="Price"
+                    label="Selling price"
                     value={
                       hasOptions
                         ? `${variantRows.length} option${variantRows.length === 1 ? '' : 's'
@@ -983,6 +1017,9 @@ export const SellerProductFormPage = () => {
                           : '—'
                     }
                   />
+                  {!hasOptions && Number(form.mrp) > 0 && (
+                    <ReviewRow label="MRP" value={formatInr(Number(form.mrp))} />
+                  )}
                   <ReviewRow
                     label="Stock"
                     value={
