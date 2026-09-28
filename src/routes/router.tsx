@@ -57,6 +57,7 @@ import { ForgotPasswordPage } from '@/pages/ForgotPasswordPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { ForbiddenPage } from '@/pages/ForbiddenPage';
+import { MyProfilePage } from '@/features/account/MyProfilePage';
 import { SellerRegisterPage } from '@/pages/SellerRegisterPage';
 import { UserRole } from '@/types/api';
 import { ProtectedRoute } from './ProtectedRoute';
@@ -147,6 +148,9 @@ const router = createBrowserRouter([
         children: [
           { path: '/', element: <DashboardPage /> },
           { path: '/forbidden', element: <ForbiddenPage /> },
+          // Anybody signed in can edit their own details — no role gate, since
+          // the thing being edited is theirs.
+          { path: '/profile', element: <MyProfilePage /> },
           {
             element: <ProtectedRoute roles={SELLER_REVIEW_ROLES} />,
             children: [

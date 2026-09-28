@@ -23,7 +23,7 @@ import { LoadingScreen } from '@/components/loading-screen';
 
 import { useSellerMe } from './api';
 import { AccountAvatarCard } from './AccountAvatarCard';
-import { AccountChangePassword } from './AccountChangePassword';
+import { AccountChangePassword } from '@/components/account/AccountChangePassword';
 
 // ----------------------------------------------------------------------
 

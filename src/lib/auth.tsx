@@ -8,6 +8,8 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   loginWithPassword: (input: LoginInput) => Promise<SafeUser>;
   logout: () => Promise<void>;
+  /** Adopt a freshly-read user, e.g. after someone edits their own profile. */
+  applyUser: (user: SafeUser) => void;
 }
 
 export interface LoginInput {
@@ -32,6 +34,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return session.user;
   }, []);
 
+  const applyUser = useCallback((next: SafeUser) => {
+    tokenStore.setUser(next);
+    setUser(next);
+  }, []);
+
   const logout = useCallback(async () => {
     const refreshToken = tokenStore.refresh;
     // Best-effort server-side invalidation; never block the UI on it.
@@ -48,8 +55,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       isAuthenticated: user !== null,
       loginWithPassword,
       logout,
+      applyUser,
     }),
-    [user, loginWithPassword, logout],
+    [user, loginWithPassword, logout, applyUser],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

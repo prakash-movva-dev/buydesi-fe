@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 
 import Box from '@mui/material/Box';
 import Menu from '@mui/material/Menu';
@@ -10,6 +10,7 @@ import Typography from '@mui/material/Typography';
 import IconButton from '@mui/material/IconButton';
 
 import { useAuth } from '@/lib/auth';
+import { UserRole } from '@/types/api';
 
 // ----------------------------------------------------------------------
 
@@ -30,6 +31,15 @@ export function AccountMenu() {
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
   const initial = (user?.name ?? '?').trim().charAt(0).toUpperCase();
+
+  // Sellers and promoters already have a profile page of their own, with their
+  // storefront and earnings on it. Everyone else goes to the generic one.
+  const profilePath =
+    user?.role === UserRole.SELLER
+      ? '/seller/profile'
+      : user?.role === UserRole.PROMOTER
+        ? '/promoter/profile'
+        : '/profile';
 
   const onSignOut = async () => {
     setAnchorEl(null);
@@ -81,6 +91,12 @@ export function AccountMenu() {
         )}
 
         <Divider sx={{ my: 1, borderStyle: 'dashed' }} />
+
+        {/* Sellers and promoters keep their own richer pages; every other role
+            had nowhere at all to change their own details until now. */}
+        <MenuItem component={RouterLink} to={profilePath} onClick={() => setAnchorEl(null)}>
+          My profile
+        </MenuItem>
 
         <MenuItem onClick={onSignOut} sx={{ color: 'error.main', fontWeight: 600 }}>
           Sign out
