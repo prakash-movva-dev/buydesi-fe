@@ -96,6 +96,11 @@ const CATEGORY_OPTIONS: Array<{ value: SupportCategory; label: string; help: str
   },
   { value: 'delivery', label: 'Delivery', help: 'A shipment is late, lost or stuck.' },
   {
+    value: 'product_support',
+    label: 'Help adding a product',
+    help: 'Stuck listing something? Support can do it for you, with your permission.',
+  },
+  {
     value: 'grievance',
     label: 'A complaint',
     help: 'Something went wrong that needs a person to look at it.',

@@ -10,8 +10,8 @@ import { useAuth } from '@/lib/auth';
  * DashboardContent container supplies the Minimal page gutters + max-width.
  */
 export const MuiAppShell = () => {
-  const { user } = useAuth();
-  const navData = buildNavData(user?.role);
+  const { user, supportSession } = useAuth();
+  const navData = buildNavData(user?.role, Boolean(supportSession));
 
   return (
     <DashboardLayout data={{ nav: navData }}>

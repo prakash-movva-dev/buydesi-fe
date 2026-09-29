@@ -48,6 +48,8 @@ import { useUser } from '@/features/users/api';
 import { readBoolean, useExposedSettingMap } from '@/features/platform-settings/exposed';
 
 import { toast } from '@/components/snackbar';
+import { SellerSupportAccessCard } from '@/features/support-access/SellerSupportAccessCard';
+import { SupportEnterAccountCard } from '@/features/support-access/SupportEnterAccountCard';
 
 import {
   useOverrideTicket,
@@ -402,6 +404,17 @@ export const TicketDetailPage = () => {
 
             <Grid xs={12} lg={4}>
               <Stack spacing={3}>
+                {/* Only on a product-support ticket, and only for the two
+                    people it concerns: the seller who raised it and the admin
+                    it is assigned to. */}
+                {ticket.category === 'product_support' && !isStaff && (
+                  <SellerSupportAccessCard ticketId={ticket.id} ticketOpen={isActive} />
+                )}
+                {ticket.category === 'product_support' &&
+                  isStaff &&
+                  isAssignedToMe &&
+                  isActive && <SupportEnterAccountCard ticketId={ticket.id} />}
+
                 <SlaCard ticket={ticket} />
                 <OrderContextCard
                   orderId={ticket.orderId}

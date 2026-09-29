@@ -55,6 +55,7 @@ export const CATEGORY_LABEL: Record<SupportCategory, string> = {
   refund: 'Refund',
   grievance: 'Grievance',
   product_quality: 'Product quality',
+  product_support: 'Help adding a product',
   delivery: 'Delivery',
   other: 'Other',
 };
@@ -65,6 +66,7 @@ export const CATEGORY_ICON: Record<SupportCategory, string> = {
   refund: 'solar:wallet-money-bold',
   grievance: 'solar:danger-triangle-bold',
   product_quality: 'solar:box-bold',
+  product_support: 'solar:shield-user-bold',
   delivery: 'solar:delivery-bold',
   other: 'solar:chat-round-dots-bold',
 };

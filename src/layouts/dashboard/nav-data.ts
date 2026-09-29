@@ -2,7 +2,11 @@ import { createElement } from 'react';
 
 import type { NavSectionProps } from 'src/components/nav-section';
 
-import { navSections, isItemVisible } from '@/components/layout/nav-config';
+import {
+  navSections,
+  isItemVisible,
+  isHiddenInSupportSession,
+} from '@/components/layout/nav-config';
 import type { UserRole } from '@/types/api';
 
 // ----------------------------------------------------------------------
@@ -11,7 +15,10 @@ import type { UserRole } from '@/types/api';
  * Adapts the back-office role-based nav (`navSections`, lucide icons) into the
  * Minimal `nav-section` data shape, filtered to the current user's role.
  */
-export function buildNavData(role: UserRole | undefined): NavSectionProps['data'] {
+export function buildNavData(
+  role: UserRole | undefined,
+  inSupportSession = false,
+): NavSectionProps['data'] {
   if (!role) return [];
 
   return navSections
@@ -19,6 +26,7 @@ export function buildNavData(role: UserRole | undefined): NavSectionProps['data'
       subheader: section.label,
       items: section.items
         .filter((item) => isItemVisible(item, role))
+        .filter((item) => !inSupportSession || !isHiddenInSupportSession(item.path))
         .map((item) => ({
           title: item.label,
           path: item.path,

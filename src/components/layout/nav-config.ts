@@ -366,3 +366,23 @@ export const isItemVisible = (item: NavItem, role: UserRole): boolean => {
   if (!item.roles || item.roles.length === 0) return true;
   return item.roles.includes(role);
 };
+
+/**
+ * Paths a support admin cannot reach while working inside a seller's account.
+ *
+ * Courtesy only — the server refuses these whatever the sidebar says, so typing
+ * the URL gets nowhere. Leaving them on screen would just mean a support admin
+ * clicking through to a wall of 403s.
+ */
+const HIDDEN_IN_SUPPORT_SESSION: readonly string[] = [
+  '/seller/wallet',
+  '/seller/payouts',
+  '/seller/orders',
+  '/seller/commission',
+  '/seller/analytics',
+  '/seller/profile',
+  '/seller/onboarding',
+];
+
+export const isHiddenInSupportSession = (path: string): boolean =>
+  HIDDEN_IN_SUPPORT_SESSION.some((hidden) => path === hidden || path.startsWith(`${hidden}/`));

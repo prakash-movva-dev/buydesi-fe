@@ -18,6 +18,7 @@ import { HeaderSection } from '../core/header-section';
 import { useNavColorVars } from './styles';
 import { AccountMenu } from '../components/account-menu';
 import { SettingsButton } from '../components/settings-button';
+import { SupportSessionBanner } from '@/features/support-access/SupportSessionBanner';
 
 // ----------------------------------------------------------------------
 
@@ -130,7 +131,12 @@ export function DashboardLayout({ sx, children, header, data }: DashboardLayoutP
         ...sx,
       }}
     >
-      <Main isNavHorizontal={false}>{children}</Main>
+      <Main isNavHorizontal={false}>
+        {/* Above everything, and not dismissible: while this is showing, the
+            screens below belong to somebody else. */}
+        <SupportSessionBanner />
+        {children}
+      </Main>
     </LayoutSection>
   );
 }

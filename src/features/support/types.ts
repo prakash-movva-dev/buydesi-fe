@@ -6,6 +6,8 @@ export type SupportCategory =
   | 'grievance'
   | 'product_quality'
   | 'delivery'
+  /** A seller stuck listing something — the category that can grant support access. */
+  | 'product_support'
   | 'other';
 
 export type SupportRaiserRole = 'BUYER' | 'SELLER';

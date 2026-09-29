@@ -48,7 +48,10 @@ const buildHeaders = (opts: RequestOptions): Headers => {
     headers.set('Content-Type', 'application/json');
   }
   if (!opts.skipAuth) {
-    const tok = tokenStore.access;
+    // While a support session is running every call goes out under it, so the
+    // server sees one identity per request and there is no way to half-act as
+    // the seller.
+    const tok = tokenStore.supportSession?.accessToken ?? tokenStore.access;
     if (tok) headers.set('Authorization', `Bearer ${tok}`);
   }
   return headers;
@@ -79,6 +82,13 @@ export const fetchEnvelope = async <T>(
   let res = await fetch(url, init);
 
   if (res.status === 401 && !opts.skipRefresh && !opts.skipAuth) {
+    // A support session has no refresh token by design — if it is the thing
+    // that expired, drop it and let the admin's own session take over rather
+    // than bouncing them to a login screen.
+    if (tokenStore.supportSession) {
+      tokenStore.clearSupportSession();
+      window.dispatchEvent(new Event('buydesi:support-session-ended'));
+    }
     const refreshed = await refreshTokens();
     if (refreshed) {
       const retryInit: RequestInit = {
@@ -118,6 +128,13 @@ export const request = async <T>(path: string, opts: RequestOptions = {}): Promi
   let res = await fetch(url, init);
 
   if (res.status === 401 && !opts.skipRefresh && !opts.skipAuth) {
+    // A support session has no refresh token by design — if it is the thing
+    // that expired, drop it and let the admin's own session take over rather
+    // than bouncing them to a login screen.
+    if (tokenStore.supportSession) {
+      tokenStore.clearSupportSession();
+      window.dispatchEvent(new Event('buydesi:support-session-ended'));
+    }
     const refreshed = await refreshTokens();
     if (refreshed) {
       // Re-issue with the fresh access token. The headers were already built
